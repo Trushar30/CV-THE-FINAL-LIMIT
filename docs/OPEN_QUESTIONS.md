@@ -9,6 +9,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ## 1. Architectural & Technical Decisions Log
 
 ### D1: Primary Development Language
+
 - **Decision:** **TypeScript (Strict Mode)**
 - **Rules:** `"strict": true` across both frontend (`React + Vite + TypeScript`) and backend (`Node.js + Express + TypeScript`). Zero unnecessary `any`.
 - **Status:** **RESOLVED**
@@ -16,6 +17,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D2: Repository Structure & Monorepo Architecture
+
 - **Decision:** **npm workspaces monorepo**
 - **Layout:**
   - `apps/client/` (React + Vite)
@@ -27,6 +29,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D3: Frontend Styling & Design System
+
 - **Decision:** **Vanilla CSS + CSS Modules**
 - **Rules:** Global design tokens (`styles/tokens.css`, `styles/globals.css`, `styles/themes.css`) + Component-scoped CSS Modules (`Button.module.css`, `Dashboard.module.css`, etc.). No Tailwind in v1.
 - **Status:** **RESOLVED**
@@ -34,6 +37,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D4: Frontend State Management Architecture
+
 - **Decision:** **React Context + Custom Hooks**
 - **Rules:** React Context for Auth, Session, Current user, and Theme. React state is NOT the source of truth; backend/MongoDB is authoritative. No Redux in v1.
 - **Status:** **RESOLVED**
@@ -41,6 +45,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D5: Frontend Client Routing Framework
+
 - **Decision:** **React Router**
 - **Rules:** Protected routes based on two orthogonal dimensions: `careerRole` (`JOB_SEEKER`, `EMPLOYEE`, `FOUNDER`) and `platformRole` (`NONE`, `ADMIN`, `AI_MANAGER`).
 - **Status:** **RESOLVED**
@@ -48,6 +53,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D6: AI Queue Processing Mechanism (MongoDB-Backed)
+
 - **Decision:** **Custom MongoDB-Backed Worker**
 - **Rules:** In-process Node worker with atomic job claiming polling every 2 seconds (`setInterval`). No Redis in v1.
 - **Job States:** `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `RETRYING`, `WAITING_FOR_PROVIDER`, `CANCELLED`.
@@ -56,15 +62,17 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D7: AI Gateway & Provider Model Configuration
+
 - **Decision:** **Decoupled AI Gateway > Provider Router > Adapters**
-- **Rules:** Do NOT hardcode frozen model IDs in architecture. Provider models are configurable in `PlatformConfig`. Adapter contract (`generate(request)`, `healthCheck()`, `getUsage()`) remains stable across Gemini, OpenAI, and Grok.
-- **Default Priority:** 1. Gemini, 2. OpenAI, 3. Grok (configurable by AI Manager).
+- **Rules:** Do NOT hardcode frozen model IDs in architecture. Provider models are configurable in `PlatformConfig`. Adapter contract (`generate(request)`, `healthCheck()`, `getUsage()`) remains stable across Gemini, OpenAI, and Groq.
+- **Default Priority:** 1. Gemini, 2. OpenAI, 3. Groq (configurable by AI Manager).
 - **Retry Policy:** Maximum 3 attempts per provider before fallback; if all fail $\rightarrow$ `WAITING_FOR_PROVIDER`.
 - **Status:** **RESOLVED**
 
 ---
 
 ### D8: ATS Screening Scoring Formula & Passing Threshold
+
 - **Decision:** **Score 0–100, Passing Threshold: 70**
 - **Weights:**
   - Domain Relevance: 40%
@@ -76,6 +84,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D9: Interview Chat Communication Protocol
+
 - **Decision:** **REST API**
 - **Endpoint:** `POST /applications/:id/interview/messages`
 - **Rules:** Request receives AI interviewer response + current interview state. No WebSockets or streaming in v1 to ensure persistence, auditability, and replayability.
@@ -84,6 +93,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D10: Daily Employee Task Assignment Schedule
+
 - **Decision:** **On-Demand Generation**
 - **Rules:** Triggered when employee requests `GET /employee/tasks/today`. If today's task exists, returns it; if not, triggers AI task generation, stores, and returns. Avoids generating tasks for inactive users.
 - **Daily Limits:** 1 Primary Task + 1 Bonus Task = Max 2 tasks/day.
@@ -92,6 +102,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D11: Provider Pools Isolation (DEMO vs PIPELINE)
+
 - **Decision:** **Separate Logical Provider Pools**
 - **Rules:** AI Gateway isolates `DEMO` pool (Admin demonstrations) from `PIPELINE` pool (real job seeker hiring, employee tasks, company AI, founder simulations) with separate quotas, API keys, rate limits, queues, and usage tracking.
 - **Status:** **RESOLVED**
@@ -99,6 +110,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D12: Company Simulation Engine Mathematical Formulas
+
 - **Decision:** **Deterministic Backend Formulas**
 - **Daily Revenue:**
   $$\text{dailyRevenue} = 100 + (\text{employeeCount} \times \text{averageProductivity} \times 5) + (\text{companyRating} \times 2)$$
@@ -113,6 +125,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D13: Bot Shop Expansion & Advanced Bots in V1 Scope
+
 - **Decision:** **Display as "LOCKED — COMING SOON"**
 - **Rules:** Basic bots cost 250 CorpCoin each (Hiring, Task, Evaluation). Advanced bots cost 400 CorpCoin in config, displayed in shop as locked/coming soon, but unpurchasable in v1.
 - **Status:** **RESOLVED**
@@ -120,6 +133,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D14: File Ingestion & Parsing Libraries
+
 - **Decision:** **`file-type` + `pdf-parse` + `mammoth`**
 - **Rules:** Magic-byte validation (`file-type`), PDF text extraction (`pdf-parse`), DOCX text extraction (`mammoth`). Max file size 10 MB.
 - **Status:** **RESOLVED**
@@ -127,6 +141,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D15: Authentication Lockout Parameters & Token Lifetimes
+
 - **Decision:**
   - Password hashing: **Argon2id**
   - Access token lifetime: **15 minutes**
@@ -137,6 +152,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D16: Automated Testing Framework & Tooling
+
 - **Decision:** **Vitest + Supertest**
 - **Rules:** Vitest for services, utilities, AI adapters, and simulation engine. Supertest for Express REST endpoint integration tests.
 - **Status:** **RESOLVED**
@@ -144,6 +160,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D17: Employee Promotion Eligibility Criteria Matrix
+
 - **Decision:** **EXP + Completed Tasks + Average Score + Active Warnings**
 - **Rules:**
   - Minimum average evaluation score: $\ge 70$
@@ -163,6 +180,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D18: Email Verification Flow
+
 - **Decision:** **Mock verification in development, real verification in production**
 - **Rules:** Expose `DEV_VERIFICATION_URL` in development; real OTP/token verification in production.
 - **Status:** **RESOLVED**
@@ -170,6 +188,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### D19: Founder Daily Scenario Storage
+
 - **Decision:** **Dedicated `companyScenarios` collection**
 - **Rules:** States: `ACTIVE`, `DECIDED`, `EXPIRED`. Active scenario displayed to founder until decided, preserving complete scenario history.
 - **Status:** **RESOLVED**
@@ -179,6 +198,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ## 2. Source Document Conflicts Resolutions
 
 ### Conflict C1: Warning Threshold for Demotion / Firing
+
 - **Resolution:** **4 active warnings trigger an Employment Review** (not automatic termination).
 - **Rule:** Reaching 4 active warnings (`warningCount >= 4`) initiates a review where AI recommends and backend decides either Demotion or Termination.
 - **Status:** **RESOLVED**
@@ -186,6 +206,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### Conflict C2: Admin Demo Mode Architecture
+
 - **Resolution:** **Single Hiring Engine with Isolated AI Provider Pools**
 - **Rule:** Demo Mode runs through the exact same Hiring Engine as production, routing requests to the `DEMO` provider pool (D11).
 - **Status:** **RESOLVED**
@@ -193,6 +214,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### Conflict C3: Career Domain Taxonomy & Naming
+
 - **Resolution:**
   - Database tokens: `SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`.
   - Frontend display labels: `Software Engineer`, `Cloud Engineer`, `AI Engineer`.
@@ -201,6 +223,7 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
 ---
 
 ### Conflict C4: Profile Onboarding Field Requirements
+
 - **Resolution:**
   - **Mandatory:** Email, Password, Display Name, Career Domain, Skills, Resume.
   - **Optional:** GitHub, LinkedIn, Portfolio, Projects, Certifications.

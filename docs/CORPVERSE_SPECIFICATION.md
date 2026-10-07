@@ -9,6 +9,7 @@
 **CorpVerse** is an interactive, gamified virtual corporate simulation designed to bridge the gap between academic computer science education and practical corporate software engineering. By synthesizing simulated corporate governance, dual-currency economic mechanics, and a multi-provider artificial intelligence ecosystem, CorpVerse provides students and fresh graduates with an authentic, consequence-driven professional sandbox.
 
 ### 1.1 Core Subsystems
+
 The system is partitioned into three decoupled, collaborating backend subsystems:
 
 ```
@@ -22,16 +23,17 @@ The system is partitioned into three decoupled, collaborating backend subsystems
 ├───────────────────┤ ├───────────────────┤ ├───────────────────┤
 │ • Job Seeker      │ │ • Gemini Adapter  │ │ • EXP Ledger      │
 │ • Employee        │ │ • OpenAI Adapter  │ │ • CorpCoin Ledger │
-│ • Founder         │ │ • Grok Adapter    │ │ • Levels & Rank   │
+│ • Founder         │ │ • Groq Adapter    │ │ • Levels & Rank   │
 │ • State Machines  │ │ • Gateway & Queue │ │ • P&L Simulation  │
 └───────────────────┘ └───────────────────┘ └───────────────────┘
 ```
 
 1. **Career System:** Governs the user progression lifecycle (Job Seeker $\rightarrow$ Employee $\rightarrow$ Founder), job applications, hiring pipelines, on-demand daily task issuance, performance warnings, reviews, demotions, and promotions.
-2. **AI System:** Powers automated ATS evaluations, conversational technical interviews, contextual task creation, submission scoring, transparent feedback delivery, and founder business scenarios across multiple external LLM providers (Google Gemini, OpenAI, xAI Grok).
+2. **AI System:** Powers automated ATS evaluations, conversational technical interviews, contextual task creation, submission scoring, transparent feedback delivery, and founder business scenarios across multiple external LLM providers (Google Gemini, OpenAI, Groq).
 3. **Economy System:** Maintains immutable double-entry ledgers for personal career mastery (EXP) and corporate capital (CorpCoin), computing levels, company balance sheets, deterministic business simulations, and bankruptcy liquidation.
 
 ### 1.2 Problems Addressed
+
 - **The Graduate Reality Gap:** Fresh graduates lack hands-on exposure to corporate workflows, scenario-based debugging, and organizational accountability.
 - **Opaque ATS and Bot Rejections:** Real-world candidate filtering bots reject applicants without actionable diagnostic feedback. CorpVerse mandates rich, constructive feedback across all rejection stages.
 - **Lack of Structured Practice:** Traditional puzzle platforms lack realistic corporate consequences (such as warnings, performance reviews, demotions, promotions, and company bankruptcies).
@@ -41,6 +43,7 @@ The system is partitioned into three decoupled, collaborating backend subsystems
 ## 2. User Roles
 
 User authorization is governed by two orthogonal database fields, ensuring system administration remains separate from in-game progression:
+
 - `careerRole`: In-game simulation progression role.
 - `platformRole`: Privileged system management role.
 
@@ -50,12 +53,14 @@ type PlatformRole = 'NONE' | 'ADMIN' | 'AI_MANAGER';
 ```
 
 ### 2.1 Career Roles (`careerRole`)
+
 - **`JOB_SEEKER`:** The default role upon registration. Can create/edit profiles, upload resumes, browse company directories, and submit up to 5 concurrent job applications.
 - **`EMPLOYEE`:** Activated upon accepting a job offer. Can access daily engineering tasks (1 primary + 1 bonus), receive AI task evaluations, accumulate EXP, receive performance warnings, and earn promotions.
 - **`FOUNDER`:** Unlocked at 12,000 total accumulated EXP upon explicit user confirmation. Can establish a company (cost: 100 CorpCoin), purchase AI bots, recruit employees, and make daily strategic business decisions.
 - **`NONE`:** Assigned to dedicated system or administrative accounts not participating in the career progression loop.
 
 ### 2.2 Platform Roles (`platformRole`)
+
 - **`NONE`:** Assigned to all regular simulation users.
 - **`ADMIN`:** Full platform oversight ("God Mode"). Can inspect, edit, suspend, and restore any user or company; reconfigure `PlatformConfig`; run Hiring Engine Demo simulations; and inspect system audit logs.
 - **`AI_MANAGER`:** AI infrastructure oversight. Controls provider priority order, monitors real-time API latency and health states, toggles providers, inspects token usage, and manages fallback policies.
@@ -67,14 +72,15 @@ type PlatformRole = 'NONE' | 'ADMIN' | 'AI_MANAGER';
 The progression of a user's `careerRole` is strictly authoritative and governed by backend rules.
 
 ### 3.1 Career Role State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Authoritative Side Effects |
-|---|---|---|---|---|
-| *Unregistered* | `JOB_SEEKER` | User | Successful registration & email verification | Creates `users`, `profiles`, `resumes` records. Sets `careerRole: 'JOB_SEEKER'`. |
-| `JOB_SEEKER` | `EMPLOYEE` | User | Accepting job offer (`OFFER` $\rightarrow$ `ACCEPTED`) | Sets `careerRole: 'EMPLOYEE'`, associates `companyEmployees` record, auto-withdraws other active applications. |
-| `EMPLOYEE` | `JOB_SEEKER` | System / Company | 4 active warnings lead to Termination | Sets `careerRole: 'JOB_SEEKER'`, sets `companyEmployees.status: 'TERMINATED'`, preserves personal EXP and career history. |
-| `EMPLOYEE` | `FOUNDER` | User | Reaching $\ge 12,000$ total EXP + User Confirmation | Terminates prior employment (`companyEmployees.status: 'TERMINATED'`), sets `careerRole: 'FOUNDER'`, sets `founderModeUnlockedAt`, grants 1,000 CorpCoin if `founderStarterCoinGranted == false`. |
-| `FOUNDER` | `JOB_SEEKER` | System | Company bankruptcy (Financial Health $\le -1000$) | Liquidates company, releases employees to `JOB_SEEKER`, sets `careerRole: 'JOB_SEEKER'`, retains personal EXP. |
-| Any | Any | Admin | Admin emergency intervention | Writes immutable `auditLogs` entry with actor, old role, new role, and reason. |
+
+| Current State  | Allowed Next States | Triggered By     | Pre-conditions                                         | Authoritative Side Effects                                                                                                                                                                        |
+| -------------- | ------------------- | ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _Unregistered_ | `JOB_SEEKER`        | User             | Successful registration & email verification           | Creates `users`, `profiles`, `resumes` records. Sets `careerRole: 'JOB_SEEKER'`.                                                                                                                  |
+| `JOB_SEEKER`   | `EMPLOYEE`          | User             | Accepting job offer (`OFFER` $\rightarrow$ `ACCEPTED`) | Sets `careerRole: 'EMPLOYEE'`, associates `companyEmployees` record, auto-withdraws other active applications.                                                                                    |
+| `EMPLOYEE`     | `JOB_SEEKER`        | System / Company | 4 active warnings lead to Termination                  | Sets `careerRole: 'JOB_SEEKER'`, sets `companyEmployees.status: 'TERMINATED'`, preserves personal EXP and career history.                                                                         |
+| `EMPLOYEE`     | `FOUNDER`           | User             | Reaching $\ge 12,000$ total EXP + User Confirmation    | Terminates prior employment (`companyEmployees.status: 'TERMINATED'`), sets `careerRole: 'FOUNDER'`, sets `founderModeUnlockedAt`, grants 1,000 CorpCoin if `founderStarterCoinGranted == false`. |
+| `FOUNDER`      | `JOB_SEEKER`        | System           | Company bankruptcy (Financial Health $\le -1000$)      | Liquidates company, releases employees to `JOB_SEEKER`, sets `careerRole: 'JOB_SEEKER'`, retains personal EXP.                                                                                    |
+| Any            | Any                 | Admin            | Admin emergency intervention                           | Writes immutable `auditLogs` entry with actor, old role, new role, and reason.                                                                                                                    |
 
 ---
 
@@ -104,16 +110,19 @@ The progression of a user's `careerRole` is strictly authoritative and governed 
 ## 5. Profile and Resume System
 
 ### 5.1 Profile Data Requirements
+
 - **Mandatory Fields:** Email, Password, Display Name, Career Domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), Skills array, Resume upload.
-- **Optional Fields:** GitHub URL, LinkedIn URL, Portfolio URL, Projects list, Certifications list. *Optional fields are strictly not mandatory.*
+- **Optional Fields:** GitHub URL, LinkedIn URL, Portfolio URL, Projects list, Certifications list. _Optional fields are strictly not mandatory._
 
 ### 5.2 Resume Upload & Ingestion Pipeline
+
 ```
 Upload (PDF/DOCX max 10MB) ──► Magic Byte Verification ──► Stream into MongoDB GridFS
                                                                      │
                                                                      ▼
 User Review Screen ◄── Store ResumeAnalysis ◄── AI Parsing ◄── Text Extraction
 ```
+
 1. **Validation:** Binary magic bytes verified using `file-type` (`%PDF-` for PDF, `PK\x03\x04` for DOCX). Extensions are never trusted on their own. Maximum file size: 10 MB.
 2. **Storage:** Streamed directly into MongoDB GridFS (`resumes.files` and `resumes.chunks`).
 3. **Text Extraction:** Processed server-side using `pdf-parse` for PDFs and `mammoth` for DOCX files.
@@ -128,17 +137,20 @@ User Review Screen ◄── Store ResumeAnalysis ◄── AI Parsing ◄──
 ## 6. Job and Company System
 
 ### 6.1 Platform vs Founder Companies
+
 - **3 Initial Platform Companies:** Pre-seeded at launch, AI-driven, and maintained by the AI Manager to provide immediate employment opportunities.
 - **Founder Companies:** Created by qualified players for 100 CorpCoin. Restricted to 1 active company per founder and a maximum of 20 employees.
 
 ### 6.2 Company Status State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Side Effects |
-|---|---|---|---|---|
-| *Uncreated* | `ACTIVE` | Founder | Founder has $\ge 100$ CorpCoin | Deducts 100 CorpCoin via ledger, creates company record, sets founder ID. |
-| `ACTIVE` | `BANKRUPT` | System | Financial Health $\le -1000$ | Marks company bankrupt, founder reverts to `JOB_SEEKER`, employees released to `JOB_SEEKER`. |
-| `ACTIVE` | `SUSPENDED` | Admin | Administrative shutdown | Company marked suspended, audit log written, employees released. |
+
+| Current State | Allowed Next States | Triggered By | Pre-conditions                 | Side Effects                                                                                 |
+| ------------- | ------------------- | ------------ | ------------------------------ | -------------------------------------------------------------------------------------------- |
+| _Uncreated_   | `ACTIVE`            | Founder      | Founder has $\ge 100$ CorpCoin | Deducts 100 CorpCoin via ledger, creates company record, sets founder ID.                    |
+| `ACTIVE`      | `BANKRUPT`          | System       | Financial Health $\le -1000$   | Marks company bankrupt, founder reverts to `JOB_SEEKER`, employees released to `JOB_SEEKER`. |
+| `ACTIVE`      | `SUSPENDED`         | Admin        | Administrative shutdown        | Company marked suspended, audit log written, employees released.                             |
 
 ### 6.3 Job Postings
+
 Each company advertises open requisitions in `companyJobs` detailing domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), seniority target, required skills, and simulated compensation.
 
 ---
@@ -148,12 +160,15 @@ Each company advertises open requisitions in `companyJobs` detailing domain (`SO
 Job seekers can maintain a **maximum of 5 active job applications simultaneously**. Re-application is unlocked once an application reaches a terminal state.
 
 ### 7.1 The 8-Stage Pipeline
+
 ```
 APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──► INTERVIEW ──► FINAL_REVIEW ──► OFFER ──► ACCEPTED
 ```
+
 - **Terminal States:** `REJECTED`, `WITHDRAWN`, `EXPIRED`, `ACCEPTED`.
 
 ### 7.2 ATS Evaluation Rules
+
 - **Score Range:** 0–100.
 - **Passing Threshold:** 70.
 - **Category Weights:**
@@ -166,16 +181,17 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
   - ATS Score $< 70$: Transitions to `REJECTED` and delivers actionable diagnostic feedback.
 
 ### 7.3 Application State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Side Effects |
-|---|---|---|---|---|
-| `APPLIED` | `ATS_SCREENING` | System | Application submitted | Job seeker active applications count $+1$ ($\le 5$). Enqueues ATS AI task. |
-| `ATS_SCREENING` | `SCREENING`, `REJECTED` | System | ATS evaluation completed | If score $\ge 70 \rightarrow$ `SCREENING`. If score $< 70 \rightarrow$ `REJECTED` + generates diagnostic feedback. |
-| `SCREENING` | `ASSESSMENT`, `REJECTED` | System / Bot | Recruiter bot screening completed | Advances to technical assessment or triggers rejection feedback. |
-| `ASSESSMENT` | `INTERVIEW`, `REJECTED` | System / Candidate | Technical challenge submitted | Evaluates solution. Passes advance to chat interview; failures generate feedback. |
-| `INTERVIEW` | `FINAL_REVIEW`, `REJECTED` | System / Candidate | Chat interview completed | Transcript evaluated by Hiring Bot. Generates comprehensive interview score. |
-| `FINAL_REVIEW` | `OFFER`, `REJECTED` | System | Hiring Bot final evaluation | Creates formal offer terms or delivers final rejection critique. |
-| `OFFER` | `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `EXPIRED` | Candidate / System | Offer issued | If `ACCEPTED` $\rightarrow$ User becomes `EMPLOYEE`, sets company link, auto-withdraws other active applications. |
-| Any non-terminal | `WITHDRAWN` | Candidate | Voluntary candidate withdrawal | Releases 1 active application slot. |
+
+| Current State    | Allowed Next States                            | Triggered By       | Pre-conditions                    | Side Effects                                                                                                       |
+| ---------------- | ---------------------------------------------- | ------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `APPLIED`        | `ATS_SCREENING`                                | System             | Application submitted             | Job seeker active applications count $+1$ ($\le 5$). Enqueues ATS AI task.                                         |
+| `ATS_SCREENING`  | `SCREENING`, `REJECTED`                        | System             | ATS evaluation completed          | If score $\ge 70 \rightarrow$ `SCREENING`. If score $< 70 \rightarrow$ `REJECTED` + generates diagnostic feedback. |
+| `SCREENING`      | `ASSESSMENT`, `REJECTED`                       | System / Bot       | Recruiter bot screening completed | Advances to technical assessment or triggers rejection feedback.                                                   |
+| `ASSESSMENT`     | `INTERVIEW`, `REJECTED`                        | System / Candidate | Technical challenge submitted     | Evaluates solution. Passes advance to chat interview; failures generate feedback.                                  |
+| `INTERVIEW`      | `FINAL_REVIEW`, `REJECTED`                     | System / Candidate | Chat interview completed          | Transcript evaluated by Hiring Bot. Generates comprehensive interview score.                                       |
+| `FINAL_REVIEW`   | `OFFER`, `REJECTED`                            | System             | Hiring Bot final evaluation       | Creates formal offer terms or delivers final rejection critique.                                                   |
+| `OFFER`          | `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `EXPIRED` | Candidate / System | Offer issued                      | If `ACCEPTED` $\rightarrow$ User becomes `EMPLOYEE`, sets company link, auto-withdraws other active applications.  |
+| Any non-terminal | `WITHDRAWN`                                    | Candidate          | Voluntary candidate withdrawal    | Releases 1 active application slot.                                                                                |
 
 ---
 
@@ -209,12 +225,13 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
    - **Hard:** Maximum 100 EXP.
 
 ### 9.1 Employee Status State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Side Effects |
-|---|---|---|---|---|
-| `ACTIVE` | `UNDER_REVIEW` | System | Active warnings reach threshold (4) | Suspends normal promotion eligibility, triggers Employment Review. |
-| `ACTIVE` | `ACTIVE` | System | Level promotion criteria satisfied | Level $+1$, updates position and simulated salary. |
-| `UNDER_REVIEW` | `ACTIVE` | System | Review outcome: Demotion or Warning remediation | If demoted: Level $-1$ (down to min L1), active warnings reset to 0, EXP preserved, returns to `ACTIVE`. |
-| `UNDER_REVIEW` | `TERMINATED` | System | Review outcome: Firing | Role resets to `JOB_SEEKER`, company link severed, EXP preserved. |
+
+| Current State  | Allowed Next States | Triggered By | Pre-conditions                                  | Side Effects                                                                                             |
+| -------------- | ------------------- | ------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ACTIVE`       | `UNDER_REVIEW`      | System       | Active warnings reach threshold (4)             | Suspends normal promotion eligibility, triggers Employment Review.                                       |
+| `ACTIVE`       | `ACTIVE`            | System       | Level promotion criteria satisfied              | Level $+1$, updates position and simulated salary.                                                       |
+| `UNDER_REVIEW` | `ACTIVE`            | System       | Review outcome: Demotion or Warning remediation | If demoted: Level $-1$ (down to min L1), active warnings reset to 0, EXP preserved, returns to `ACTIVE`. |
+| `UNDER_REVIEW` | `TERMINATED`        | System       | Review outcome: Firing                          | Role resets to `JOB_SEEKER`, company link severed, EXP preserved.                                        |
 
 ---
 
@@ -231,8 +248,8 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
    - **L6 Mid-Level+:** 4,500 EXP
    - **L7 Senior:** 6,500 EXP
    - **L8 Senior+:** 9,000 EXP
-   - **L9 Lead:** 12,000 EXP *(Unlocks Founder Mode)*
-   - **L10 Principal:** 16,000 EXP *(Maximum Level)*
+   - **L9 Lead:** 12,000 EXP _(Unlocks Founder Mode)_
+   - **L10 Principal:** 16,000 EXP _(Maximum Level)_
 3. **Authoritative EXP Calculation:**
    The AI evaluates submissions and returns a performance score ($0 \le \text{aiScore} \le 100$).
    The backend deterministically calculates awarded EXP:
@@ -246,6 +263,7 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
 ## 11. Warning / Promotion / Demotion System
 
 ### 11.1 Performance Score Bands
+
 - **90–100:** Excellent
 - **75–89:** Good
 - **60–74:** Acceptable / Normal
@@ -253,15 +271,18 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
 - **0–39:** Poor (Warning Candidate)
 
 ### 11.2 Warning State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Side Effects |
-|---|---|---|---|---|
-| *None* | `ACTIVE` | System | Task score $0 \le \text{score} \le 39$ | Creates warning in `warnings` with 30-day expiration date. Checks active warnings total. |
-| `ACTIVE` | `EXPIRED` | System (Time) | Current time $>$ warning creation $+30$ days | Warning marked `EXPIRED`. No longer counts toward review threshold. |
-| `ACTIVE` | `ESCALATED` | System | Active warnings count reaches 4 | Triggers Employment Review. |
-| `ACTIVE` | `RESOLVED` | Admin | Administrative pardon | Warning resolved, audit log created. |
+
+| Current State | Allowed Next States | Triggered By  | Pre-conditions                               | Side Effects                                                                             |
+| ------------- | ------------------- | ------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| _None_        | `ACTIVE`            | System        | Task score $0 \le \text{score} \le 39$       | Creates warning in `warnings` with 30-day expiration date. Checks active warnings total. |
+| `ACTIVE`      | `EXPIRED`           | System (Time) | Current time $>$ warning creation $+30$ days | Warning marked `EXPIRED`. No longer counts toward review threshold.                      |
+| `ACTIVE`      | `ESCALATED`         | System        | Active warnings count reaches 4              | Triggers Employment Review.                                                              |
+| `ACTIVE`      | `RESOLVED`          | Admin         | Administrative pardon                        | Warning resolved, audit log created.                                                     |
 
 ### 11.3 Promotion Rules Matrix
+
 Promotion requires satisfying ALL four criteria:
+
 1. Accumulated EXP reaches target level threshold.
 2. Minimum completed tasks in current role:
    - L1 $\rightarrow$ L2: 5 completed tasks
@@ -277,6 +298,7 @@ Promotion requires satisfying ALL four criteria:
 4. Active warnings $\le 1$.
 
 ### 11.4 Demotion & Firing Mechanics
+
 - **Demotion:** Drops current level by 1. Reduces compensation simulation. Resets active warnings to 0. Accumulated EXP remains strictly unchanged.
 - **Firing / Termination:** User `careerRole` reverts to `JOB_SEEKER`. User keeps all personal EXP, profile skills, resume, and career history. User loses company position, active salary, and employee status.
 
@@ -339,6 +361,7 @@ Promotion requires satisfying ALL four criteria:
 Leaderboards are calculated deterministically from stored backend database records, never from AI claims or self-reported client state. All rankings reflect `'ALL_TIME'` cumulative metrics in v1.
 
 ### 15.1 Individual User Leaderboards
+
 - Highest Accumulated EXP
 - Highest Job Level
 - Highest CorpCoin Capital
@@ -346,6 +369,7 @@ Leaderboards are calculated deterministically from stored backend database recor
 - Top Ranked Founder
 
 ### 15.2 Company Leaderboards
+
 - Highest Net Profit
 - Highest Cumulative Revenue
 - Largest Active Workforce
@@ -374,23 +398,31 @@ All AI interactions flow through a three-layer decoupled architecture:
 └─────┬─────────────────────┼──────────────────────┬─────┘
       ▼                     ▼                      ▼
 ┌──────────────┐     ┌──────────────┐      ┌──────────────┐
-│Gemini Adapter│     │OpenAI Adapter│      │ Grok Adapter │
+│Gemini Adapter│     │OpenAI Adapter│      │ Groq Adapter │
 └──────┬───────┘     └──────┬───────┘      └──────┬───────┘
        ▼                    ▼                     ▼
-  Gemini API            OpenAI API             Grok API
+  Gemini API            OpenAI API             Groq API
 ```
 
 ### 16.1 Provider Pools Note: DEMO Pool vs PIPELINE Pool (Decision D11)
+
 - **`DEMO` Pool:** Dedicated provider credentials, quotas, and rate limits reserved exclusively for Admin Demo Mode simulations.
 - **`PIPELINE` Pool:** Provider credentials and rate limits allocated to live job seeker hiring, daily employee tasks, evaluations, and founder simulations.
 - Ensures demo presentations never exhaust production quotas or disrupt active users.
 
 ### 16.2 Standard Internal AIRequest Contract
+
 ```typescript
 interface AIRequest {
-  taskType: 'RESUME_PARSING' | 'ATS_EVALUATION' | 'INTERVIEW_QUESTION' | 
-            'INTERVIEW_EVALUATION' | 'TASK_GENERATION' | 'TASK_EVALUATION' | 
-            'SCENARIO_GENERATION' | 'SCENARIO_EVALUATION';
+  taskType:
+    | 'RESUME_PARSING'
+    | 'ATS_EVALUATION'
+    | 'INTERVIEW_QUESTION'
+    | 'INTERVIEW_EVALUATION'
+    | 'TASK_GENERATION'
+    | 'TASK_EVALUATION'
+    | 'SCENARIO_GENERATION'
+    | 'SCENARIO_EVALUATION';
   pool: 'PIPELINE' | 'DEMO';
   systemInstruction: string;
   userInput: string;
@@ -402,10 +434,11 @@ interface AIRequest {
 ```
 
 ### 16.3 Normalized AIResponse Contract
+
 ```typescript
 interface AIResponse {
   success: boolean;
-  provider: 'gemini' | 'openai' | 'grok';
+  provider: 'gemini' | 'openai' | 'groq';
   model: string;
   requestId: string;
   content: string;
@@ -425,6 +458,7 @@ interface AIResponse {
 ```
 
 ### 16.4 AI Boundary Rule: What AI Can vs Cannot Do
+
 - **AI CAN:** Generate interview questions, evaluate answers, generate qualitative feedback, analyze resumes, generate task scenarios, score task submissions (0–100), generate business scenarios, explain decisions, recommend promotions.
 - **AI CANNOT DIRECTLY DECIDE:** EXP balance, CorpCoin balance, user roles, promotions, demotions, terminations, company financial health, bankruptcy, permissions, provider routing configuration.
 
@@ -446,11 +480,11 @@ interface AIResponse {
 
 ---
 
-## 19. Grok Adapter
+## 19. Groq Adapter
 
-- **SDK/Integration:** xAI Grok API integration using server-side `GROK_API_KEY`.
+- **SDK/Integration:** Groq Cloud API integration using server-side `GROQ_API_KEY`.
 - **Model ID:** Configured dynamically via `PlatformConfig` (not hardcoded into architecture).
-- **Contract:** Implements `AIProviderAdapter` interface (`generate`, `healthCheck`, `getUsage`). Translates internal request to Grok format and captures usage.
+- **Contract:** Implements `AIProviderAdapter` interface (`generate`, `healthCheck`, `getUsage`). Translates internal request to Groq format and captures usage.
 
 ---
 
@@ -459,13 +493,15 @@ interface AIResponse {
 The **`AI_MANAGER`** platform role provides runtime operational governance over the multi-provider AI infrastructure.
 
 ### 20.1 Capabilities & Controls
+
 - Manage providers (priority sequence, status, rate limits).
-- Default Priority Sequence: 1. Gemini, 2. OpenAI, 3. Grok (configurable at runtime).
+- Default Priority Sequence: 1. Gemini, 2. OpenAI, 3. Groq (configurable at runtime).
 - Inspect real-time provider health, average latency, and failure logs.
 - Trigger diagnostic health pings.
-- *Constraint: AI Manager does not possess general Admin permissions.*
+- _Constraint: AI Manager does not possess general Admin permissions._
 
 ### 20.2 Provider Health States
+
 - **`HEALTHY`:** Normal operation; latency within nominal thresholds.
 - **`DEGRADED`:** Elevated latency or intermittent retryable errors.
 - **`RATE_LIMITED`:** HTTP 429 triggered; temporarily bypassed until backoff expires.
@@ -477,25 +513,28 @@ The **`AI_MANAGER`** platform role provides runtime operational governance over 
 ## 21. AI Queue and Retry System
 
 ### 21.1 Retry & Fallback Rules
+
 1. **Attempts:** Up to **3 attempts per provider** before falling back to the next provider in configured priority list.
 2. **Fallback Triggers (Transient Errors):** Timeouts, HTTP 429 (Rate Limit), HTTP 5xx (Server Unavailable), network disconnects.
 3. **Non-Fallback Errors (Fast Fail):** HTTP 400 (Invalid input / Schema violation), HTTP 401/403 (Invalid credentials).
 4. **Queue Buffer:** If all providers fail, the job status transitions to `WAITING_FOR_PROVIDER` in the MongoDB-backed queue.
 
 ### 21.2 Custom MongoDB Worker
+
 - In-process background runner polling MongoDB every **2 seconds**.
 - Claims jobs atomically using `findOneAndUpdate` on `status: 'PENDING'`.
 
 ### 21.3 AI Job State Machine Table
-| Current State | Allowed Next States | Triggered By | Pre-conditions | Side Effects |
-|---|---|---|---|---|
-| *Created* | `PENDING` | System | Async AI task created | Document written to `aiJobs`. |
-| `PENDING` | `PROCESSING` | Queue Worker | Worker claims job via optimistic lock | Increments attempt count, records worker heartbeat. |
-| `PROCESSING` | `COMPLETED` | Provider Adapter | Normalized AIResponse received | Updates job result, records token usage, notifies caller. |
-| `PROCESSING` | `RETRYING` | Queue Worker | Transient error & attempts $< 3$ | Schedules exponential backoff retry on same provider. |
-| `PROCESSING` | `WAITING_FOR_PROVIDER` | Queue Worker | Attempts $\ge 3$ on all providers | Holds job until provider health recovers. |
-| `PROCESSING` | `FAILED` | Queue Worker | Fatal non-retryable error | Marks job permanently failed with error diagnosis. |
-| `PENDING` / `WAITING_FOR_PROVIDER` | `CANCELLED` | Admin / System | User cancels or timeout exceeded | Releases job resources. |
+
+| Current State                      | Allowed Next States    | Triggered By     | Pre-conditions                        | Side Effects                                              |
+| ---------------------------------- | ---------------------- | ---------------- | ------------------------------------- | --------------------------------------------------------- |
+| _Created_                          | `PENDING`              | System           | Async AI task created                 | Document written to `aiJobs`.                             |
+| `PENDING`                          | `PROCESSING`           | Queue Worker     | Worker claims job via optimistic lock | Increments attempt count, records worker heartbeat.       |
+| `PROCESSING`                       | `COMPLETED`            | Provider Adapter | Normalized AIResponse received        | Updates job result, records token usage, notifies caller. |
+| `PROCESSING`                       | `RETRYING`             | Queue Worker     | Transient error & attempts $< 3$      | Schedules exponential backoff retry on same provider.     |
+| `PROCESSING`                       | `WAITING_FOR_PROVIDER` | Queue Worker     | Attempts $\ge 3$ on all providers     | Holds job until provider health recovers.                 |
+| `PROCESSING`                       | `FAILED`               | Queue Worker     | Fatal non-retryable error             | Marks job permanently failed with error diagnosis.        |
+| `PENDING` / `WAITING_FOR_PROVIDER` | `CANCELLED`            | Admin / System   | User cancels or timeout exceeded      | Releases job resources.                                   |
 
 ---
 
@@ -504,6 +543,7 @@ The **`AI_MANAGER`** platform role provides runtime operational governance over 
 The **`ADMIN`** platform role provides full administrative governance ("God Mode").
 
 ### 22.1 Permissions & Capabilities
+
 - User Management: View, edit, suspend, or restore accounts.
 - Domain & Taxonomy Management: Add/modify career domains and skill catalogs.
 - Company & Job Oversight: Inspect, edit, or suspend companies and listings.
@@ -531,6 +571,7 @@ The **`ADMIN`** platform role provides full administrative governance ("God Mode
 ## 24. Notification System
 
 In-app notification records are generated in `notifications` to alert users to critical game events:
+
 - **Hiring Updates:** Application stage advancement, chat interview invitations, formal job offers, rejection feedback available.
 - **Employee Lifecycle:** Daily task assignments, task evaluation scores, performance warnings issued/expired, promotion announcements.
 - **Founder Alerts:** Daily business scenario ready for review, low company balance warning, bankruptcy liquidation notification.
@@ -543,6 +584,7 @@ In-app notification records are generated in `notifications` to alert users to c
 Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immutable document to `auditLogs`.
 
 ### 25.1 Schema Fields
+
 - `actorId`: ObjectId of acting administrator.
 - `actorRole`: `'ADMIN'` | `'AI_MANAGER'`.
 - `action`: Specific operation performed (e.g., `'CONFIG_UPDATE'`, `'PROVIDER_DISABLED'`, `'USER_SUSPENDED'`).
@@ -558,6 +600,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 ## 26. MongoDB Data Model
 
 ### 1. `users`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `email`: `String`, required, unique, indexed.
@@ -578,6 +621,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Referenced by `profiles.userId`, `expTransactions.userId`, `corpCoinTransactions.userId`.
 
 ### 2. `profiles`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, unique, ref: `users`, indexed.
@@ -598,6 +642,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`. References `resumes` and `resumeAnalyses`.
 
 ### 3. `resumes`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -611,6 +656,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`. Points to GridFS bucket.
 
 ### 4. `resumeAnalyses`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `resumeId`: `ObjectId`, required, unique, ref: `resumes`, indexed.
@@ -628,6 +674,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `resumes` and `users`.
 
 ### 5. `domains`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `code`: `String`, required, unique, indexed (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
@@ -639,6 +686,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Referenced by `profiles`, `companyJobs`, `employeeTasks`.
 
 ### 6. `skills`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `name`: `String`, required, unique, indexed.
@@ -649,6 +697,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Categorized under `domains`.
 
 ### 7. `companies`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `name`: `String`, required, unique, indexed.
@@ -665,6 +714,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to founder `users`. Has many `companyEmployees`, `companyJobs`, `companyBots`, `companyScenarios`.
 
 ### 8. `companyEmployees`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -680,6 +730,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Links `users` to `companies`.
 
 ### 9. `companyBots`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -692,6 +743,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `companies`.
 
 ### 10. `companyJobs`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -706,6 +758,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `companies`. Referenced by `applications`.
 
 ### 11. `applications`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -721,6 +774,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Links `users` to `companyJobs`. Has many `evaluations`, `feedbacks`.
 
 ### 12. `interviews`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `applicationId`: `ObjectId`, required, unique, ref: `applications`, indexed.
@@ -735,6 +789,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `applications`. Has many `questions`, `answers`.
 
 ### 13. `questions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `interviewId`: `ObjectId`, required, ref: `interviews`, indexed.
@@ -746,6 +801,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `interviews`.
 
 ### 14. `answers`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `questionId`: `ObjectId`, required, unique, ref: `questions`, indexed.
@@ -756,6 +812,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Responds to `questions`.
 
 ### 15. `evaluations`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `applicationId`: `ObjectId`, required, ref: `applications`, indexed.
@@ -768,6 +825,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `applications`.
 
 ### 16. `feedbacks`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `applicationId`: `ObjectId`, required, ref: `applications`, indexed.
@@ -781,6 +839,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `applications` and `users`.
 
 ### 17. `employeeTasks`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -798,6 +857,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to employee `users` and `companies`.
 
 ### 18. `taskSubmissions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `taskId`: `ObjectId`, required, unique, ref: `employeeTasks`, indexed.
@@ -808,6 +868,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `employeeTasks`.
 
 ### 19. `performanceRecords`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `taskSubmissionId`: `ObjectId`, required, unique, ref: `taskSubmissions`, indexed.
@@ -822,6 +883,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `taskSubmissions` and `users`.
 
 ### 20. `warnings`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -835,6 +897,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users` and `companies`.
 
 ### 21. `promotions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -848,6 +911,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`.
 
 ### 22. `demotions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -860,6 +924,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`.
 
 ### 23. `founders`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, unique, ref: `users`, indexed.
@@ -870,6 +935,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Links `users` to `companies`.
 
 ### 24. `companyScenarios`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -885,6 +951,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `companies` and `users`.
 
 ### 25. `companyDecisions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -898,6 +965,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `companies`, `users`, and `companyScenarios`.
 
 ### 26. `companyFinancials`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `companyId`: `ObjectId`, required, ref: `companies`, indexed.
@@ -911,6 +979,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `companies`.
 
 ### 27. `expTransactions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -924,6 +993,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`.
 
 ### 28. `corpCoinTransactions`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -938,9 +1008,10 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Relationships:** Belongs to `users`.
 
 ### 29. `aiProviders`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
-  - `code`: `String`, enum (`'gemini'`, `'openai'`, `'grok'`), required, unique, indexed.
+  - `code`: `String`, enum (`'gemini'`, `'openai'`, `'groq'`), required, unique, indexed.
   - `name`: `String`, required.
   - `priority`: `Number`, required.
   - `pool`: `String`, enum (`'PIPELINE'`, `'DEMO'`), required, default: `'PIPELINE'`.
@@ -952,6 +1023,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ code: 1 }` (unique), `{ status: 1 }`, `{ pool: 1 }`.
 
 ### 30. `aiModels`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `providerCode`: `String`, required, ref: `aiProviders`, indexed.
@@ -962,6 +1034,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ providerCode: 1, modelId: 1 }` (unique).
 
 ### 31. `aiRequests`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `taskType`: `String`, required, indexed.
@@ -972,6 +1045,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ taskType: 1 }`, `{ providerCode: 1 }`, `{ createdAt: -1 }`.
 
 ### 32. `aiResponses`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `requestId`: `ObjectId`, required, unique, ref: `aiRequests`, indexed.
@@ -986,6 +1060,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ requestId: 1 }` (unique).
 
 ### 33. `aiJobs`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `taskType`: `String`, required, indexed.
@@ -1003,6 +1078,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ status: 1, lockedUntil: 1 }`, `{ createdAt: 1 }`.
 
 ### 34. `aiHealthLogs`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `providerCode`: `String`, required, indexed.
@@ -1013,6 +1089,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ providerCode: 1, timestamp: -1 }`.
 
 ### 35. `leaderboards`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `category`: `String`, required, indexed (e.g. `'USER_EXP'`, `'COMPANY_PROFIT'`).
@@ -1022,6 +1099,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ category: 1, period: 1 }` (unique).
 
 ### 36. `notifications`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `userId`: `ObjectId`, required, ref: `users`, indexed.
@@ -1034,6 +1112,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ userId: 1, isRead: 1 }`.
 
 ### 37. `auditLogs`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `actorId`: `ObjectId`, required, ref: `users`, indexed.
@@ -1048,6 +1127,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 - **Indexes:** `{ actorId: 1 }`, `{ action: 1 }`, `{ createdAt: -1 }`.
 
 ### 38. `platformConfigs`
+
 - **Fields:**
   - `_id`: `ObjectId`, required, primary key.
   - `version`: `Number`, required, unique.
@@ -1063,6 +1143,7 @@ Every sensitive mutation performed by an `ADMIN` or `AI_MANAGER` writes an immut
 All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Bearer token in the `Authorization` header.
 
 ### 27.1 Authentication (`/auth`)
+
 - **`POST /auth/register`**
   - **Role Allowed:** Public
   - **Request:** `{ email: string, password: string }`
@@ -1089,6 +1170,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Response (200):** `{ success: true, message: "Logged out" }` (Clears refresh cookie)
 
 ### 27.2 Profile & Resume (`/profile`, `/domains`, `/skills`)
+
 - **`GET /domains`**
   - **Role Allowed:** Public / Authenticated
   - **Response (200):** `{ success: true, data: { domains: Domain[] } }`
@@ -1116,6 +1198,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Errors:** 404 (No analysis found)
 
 ### 27.3 Companies & Jobs (`/companies`, `/jobs`)
+
 - **`GET /companies`**
   - **Role Allowed:** Authenticated
   - **Response (200):** `{ success: true, data: { companies: Company[] } }`
@@ -1133,6 +1216,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Errors:** 404 (Job not found)
 
 ### 27.4 Applications & Hiring (`/applications`)
+
 - **`POST /applications`**
   - **Role Allowed:** `JOB_SEEKER`
   - **Request:** `{ jobId: string }`
@@ -1157,6 +1241,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Errors:** 400 (Application not in OFFER stage)
 
 ### 27.5 Interview Session (`/applications/:id/interview`)
+
 - **`GET /applications/:id/interview`**
   - **Role Allowed:** Candidate (`JOB_SEEKER`)
   - **Response (200):** `{ success: true, data: { interview: Interview, messages: { role: string, content: string }[], isCompleted: boolean } }`
@@ -1167,6 +1252,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Errors:** 400 (Interview already completed), 503 (AI Provider temporarily unavailable)
 
 ### 27.6 Employee Tasks & Performance (`/employee`)
+
 - **`GET /employee/tasks/today`**
   - **Role Allowed:** `EMPLOYEE`
   - **Response (200):** `{ success: true, data: { primaryTask: Task, bonusTask?: Task } }`
@@ -1187,6 +1273,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Response (200):** `{ success: true, data: { promotions: Promotion[], demotions: Demotion[] } }`
 
 ### 27.7 Founder Mode (`/founder`)
+
 - **`POST /founder/unlock`**
   - **Role Allowed:** `EMPLOYEE`
   - **Request:** `{ confirm: true }`
@@ -1220,6 +1307,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Response (200):** `{ success: true, data: { transactions: CorpCoinTransaction[] } }`
 
 ### 27.8 Economy & Notifications (`/economy`, `/notifications`)
+
 - **`GET /economy/exp/history`**
   - **Role Allowed:** Authenticated
   - **Response (200):** `{ success: true, data: { transactions: ExpTransaction[] } }`
@@ -1231,12 +1319,14 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Response (200):** `{ success: true, data: { notification: Notification } }`
 
 ### 27.9 Leaderboards (`/leaderboards`)
+
 - **`GET /leaderboards`**
   - **Role Allowed:** Authenticated
   - **Query:** `?category=USER_EXP|COMPANY_PROFIT`
   - **Response (200):** `{ success: true, data: { rankings: Object[] } }`
 
 ### 27.10 Admin Console (`/admin`)
+
 - **`GET /admin/users`**
   - **Role Allowed:** `ADMIN`
   - **Response (200):** `{ success: true, data: { users: User[] } }`
@@ -1270,6 +1360,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
   - **Response (200):** `{ success: true, data: { logs: AuditLog[] } }`
 
 ### 27.11 AI Manager Console (`/ai-manager`)
+
 - **`GET /ai-manager/providers`**
   - **Role Allowed:** `AI_MANAGER`
   - **Response (200):** `{ success: true, data: { providers: AIProvider[] } }`
@@ -1295,6 +1386,7 @@ All endpoints are prefixed with `/api/v1`. Authentication verified via JWT Beare
 ## 28. Frontend Pages
 
 Built using **React + Vite + TypeScript**, styled with **Vanilla CSS design tokens + CSS Modules**:
+
 1. **Authentication & Landing:**
    - Landing page explaining simulation mechanics.
    - Login & Register views with client-side Zod validation.
@@ -1332,32 +1424,32 @@ Built using **React + Vite + TypeScript**, styled with **Vanilla CSS design toke
 
 ## 29. Permission Matrix
 
-| System Action | `JOB_SEEKER` | `EMPLOYEE` | `FOUNDER` | `ADMIN` | `AI_MANAGER` |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Register / Login | Yes | Yes | Yes | Yes | Yes |
-| Setup / Edit Profile | Yes | Yes | Yes | Read Only | Read Only |
-| Upload Resume | Yes | No | No | No | No |
-| Browse Companies & Jobs | Yes | Yes | Yes | Yes | Read Only |
-| Apply to Jobs (max 5 active) | Yes | No | No | No | No |
-| Participate in Interview Chat | Yes | No | No | Demo Only | No |
-| View Rejection Feedback | Yes | Yes (History) | Yes (History) | Yes | No |
-| Accept Job Offer | Yes | No | No | No | No |
-| View Daily Tasks | No | Yes | No | Yes | No |
-| Submit Daily Tasks | No | Yes | No | No | No |
-| View Warning Status | No | Yes | No | Yes | No |
-| Unlock Founder Mode | No | Yes ($\ge 12k$ EXP) | No | No | No |
-| Create Company | No | No | Yes | Yes | No |
-| Purchase AI Bots | No | No | Yes | No | No |
-| Decide Daily Scenario | No | No | Yes | No | No |
-| View Global Leaderboards | Yes | Yes | Yes | Yes | Yes |
-| Edit Any User Record | No | No | No | Yes (Audit) | No |
-| Add / Edit Career Domains | No | No | No | Yes (Audit) | No |
-| Edit PlatformConfig | No | No | No | Yes (Audit) | No |
-| Run Demo Hiring Engine | No | No | No | Yes | No |
-| View System Audit Logs | No | No | No | Yes | No |
-| Manage AI Providers | No | No | No | No | Yes (Audit) |
-| Change AI Priority & Fallback | No | No | No | No | Yes (Audit) |
-| Test AI Provider Health | No | No | No | No | Yes |
+| System Action                 | `JOB_SEEKER` |     `EMPLOYEE`      |   `FOUNDER`   |   `ADMIN`   | `AI_MANAGER` |
+| ----------------------------- | :----------: | :-----------------: | :-----------: | :---------: | :----------: |
+| Register / Login              |     Yes      |         Yes         |      Yes      |     Yes     |     Yes      |
+| Setup / Edit Profile          |     Yes      |         Yes         |      Yes      |  Read Only  |  Read Only   |
+| Upload Resume                 |     Yes      |         No          |      No       |     No      |      No      |
+| Browse Companies & Jobs       |     Yes      |         Yes         |      Yes      |     Yes     |  Read Only   |
+| Apply to Jobs (max 5 active)  |     Yes      |         No          |      No       |     No      |      No      |
+| Participate in Interview Chat |     Yes      |         No          |      No       |  Demo Only  |      No      |
+| View Rejection Feedback       |     Yes      |    Yes (History)    | Yes (History) |     Yes     |      No      |
+| Accept Job Offer              |     Yes      |         No          |      No       |     No      |      No      |
+| View Daily Tasks              |      No      |         Yes         |      No       |     Yes     |      No      |
+| Submit Daily Tasks            |      No      |         Yes         |      No       |     No      |      No      |
+| View Warning Status           |      No      |         Yes         |      No       |     Yes     |      No      |
+| Unlock Founder Mode           |      No      | Yes ($\ge 12k$ EXP) |      No       |     No      |      No      |
+| Create Company                |      No      |         No          |      Yes      |     Yes     |      No      |
+| Purchase AI Bots              |      No      |         No          |      Yes      |     No      |      No      |
+| Decide Daily Scenario         |      No      |         No          |      Yes      |     No      |      No      |
+| View Global Leaderboards      |     Yes      |         Yes         |      Yes      |     Yes     |     Yes      |
+| Edit Any User Record          |      No      |         No          |      No       | Yes (Audit) |      No      |
+| Add / Edit Career Domains     |      No      |         No          |      No       | Yes (Audit) |      No      |
+| Edit PlatformConfig           |      No      |         No          |      No       | Yes (Audit) |      No      |
+| Run Demo Hiring Engine        |      No      |         No          |      No       |     Yes     |      No      |
+| View System Audit Logs        |      No      |         No          |      No       |     Yes     |      No      |
+| Manage AI Providers           |      No      |         No          |      No       |     No      | Yes (Audit)  |
+| Change AI Priority & Fallback |      No      |         No          |      No       |     No      | Yes (Audit)  |
+| Test AI Provider Health       |      No      |         No          |      No       |     No      |     Yes      |
 
 ---
 
@@ -1410,16 +1502,16 @@ The authoritative system configuration schema is stored as a single document in 
     "retryPerProvider": 3,
     "timeoutMs": 30000,
     "demoPool": {
-      "providerPriority": ["gemini", "openai", "grok"],
+      "providerPriority": ["gemini", "openai", "groq"],
       "geminiModel": "configured-demo-gemini-model",
       "openaiModel": "configured-demo-openai-model",
-      "grokModel": "configured-demo-grok-model"
+      "groqModel": "configured-demo-groq-model"
     },
     "pipelinePool": {
-      "providerPriority": ["gemini", "openai", "grok"],
+      "providerPriority": ["gemini", "openai", "groq"],
       "geminiModel": "configured-pipeline-gemini-model",
       "openaiModel": "configured-pipeline-openai-model",
-      "grokModel": "configured-pipeline-grok-model"
+      "groqModel": "configured-pipeline-groq-model"
     }
   },
   "security": {
@@ -1437,7 +1529,9 @@ The authoritative system configuration schema is stored as a single document in 
 ## 31. Error Handling
 
 ### 31.1 Standardized API Error Response
+
 All API errors return a uniform JSON format:
+
 ```json
 {
   "success": false,
@@ -1450,6 +1544,7 @@ All API errors return a uniform JSON format:
 ```
 
 ### 31.2 Error Codes & Categories
+
 - `VALIDATION_ERROR` (400): Request payload failed Zod schema parsing.
 - `AUTHENTICATION_ERROR` (401): Missing, invalid, or expired JWT.
 - `AUTHORIZATION_ERROR` (403): User role lacks sufficient permissions.
@@ -1484,7 +1579,7 @@ All API errors return a uniform JSON format:
 - Warning system (30-day expiration, 4 active warnings trigger review) and Demotion/Firing logic.
 - Founder Mode unlock (12,000 EXP + confirmation), 1,000 CorpCoin starter grant, Company Creation (100 CorpCoin), Bot Store (3 basic bots at 250 CorpCoin each; advanced bots locked).
 - Founder Daily Scenario (`companyScenarios`) and deterministic simulation engine.
-- AI Gateway with Multi-Provider Adapters (Gemini, OpenAI, Grok) and custom MongoDB-backed worker (2s polling).
+- AI Gateway with Multi-Provider Adapters (Gemini, OpenAI, Groq) and custom MongoDB-backed worker (2s polling).
 - Admin Console with God Mode and unified Hiring Engine Demo Mode.
 - AI Manager Console with provider priority, health monitors, and fallback routing.
 - Double-entry ledgers for EXP and CorpCoin, and system audit logging.
@@ -1508,6 +1603,6 @@ All API errors return a uniform JSON format:
 1. **No Invented Business Rules:** Every progression requirement, EXP boundary, CorpCoin price, warning count, formula, and state transition must originate from this specification or `PlatformConfig`.
 2. **The React Frontend is Never Authoritative:** The client displays state; it never decides EXP awards, levels, warnings, company balances, or role transitions.
 3. **AI Never Mutates Database State Directly:** LLMs generate scores, critiques, and scenario texts. Backend code validates against Zod schemas, clamps numbers to allowed ranges, and executes database mutations.
-4. **No Direct Provider SDK Imports in Business Logic:** Services must never call Gemini, OpenAI, or Grok SDKs directly. All calls flow strictly through `AIGateway` $\rightarrow$ `ProviderRouter` $\rightarrow$ `ProviderAdapter`.
+4. **No Direct Provider SDK Imports in Business Logic:** Services must never call Gemini, OpenAI, or Groq SDKs directly. All calls flow strictly through `AIGateway` $\rightarrow$ `ProviderRouter` $\rightarrow$ `ProviderAdapter`.
 5. **No Mutation Without a Ledger Record:** EXP and CorpCoin balances must never be modified in-place without creating a corresponding entry in `expTransactions` or `corpCoinTransactions`.
 6. **No Silent Changes to Stack or Structure:** The locked technology stack, database schemas, and folder structures must not be altered without an accepted Architecture Decision Record in `docs/DECISIONS.md`.

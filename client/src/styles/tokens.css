@@ -1,0 +1,113 @@
+/**
+ * CorpVerse Design System — Design Tokens
+ * Clean, modern, professional corporate-tech aesthetic.
+ * All tokens adhere to strict modular scales.
+ */
+
+:root {
+  /* Brand Palettes */
+  --cv-brand-primary-50: #eef2ff;
+  --cv-brand-primary-100: #e0e7ff;
+  --cv-brand-primary-200: #c7d2fe;
+  --cv-brand-primary-300: #a5b4fc;
+  --cv-brand-primary-400: #818cf8;
+  --cv-brand-primary-500: #6366f1;
+  --cv-brand-primary-600: #4f46e5;
+  --cv-brand-primary-700: #4338ca;
+  --cv-brand-primary-800: #3730a3;
+  --cv-brand-primary-900: #312e81;
+
+  /* Cyber Accents */
+  --cv-accent-cyan-400: #22d3ee;
+  --cv-accent-cyan-500: #06b6d4;
+  --cv-accent-cyan-600: #0891b2;
+
+  --cv-accent-emerald-400: #34d399;
+  --cv-accent-emerald-500: #10b981;
+  --cv-accent-emerald-600: #059669;
+
+  /* CorpCoin Gold Palette */
+  --cv-gold-400: #fbbf24;
+  --cv-gold-500: #f59e0b;
+  --cv-gold-600: #d97706;
+
+  /* EXP Violet Palette */
+  --cv-violet-400: #a78bfa;
+  --cv-violet-500: #8b5cf6;
+  --cv-violet-600: #7c3aed;
+
+  /* Semantic Status Palettes */
+  --cv-status-success-bg: rgba(16, 185, 129, 0.12);
+  --cv-status-success-border: rgba(16, 185, 129, 0.3);
+  --cv-status-success-text: #10b981;
+
+  --cv-status-warning-bg: rgba(245, 158, 11, 0.12);
+  --cv-status-warning-border: rgba(245, 158, 11, 0.3);
+  --cv-status-warning-text: #f59e0b;
+
+  --cv-status-danger-bg: rgba(239, 68, 68, 0.12);
+  --cv-status-danger-border: rgba(239, 68, 68, 0.3);
+  --cv-status-danger-text: #ef4444;
+
+  --cv-status-info-bg: rgba(59, 130, 246, 0.12);
+  --cv-status-info-border: rgba(59, 130, 246, 0.3);
+  --cv-status-info-text: #3b82f6;
+
+  /* Typography Scale */
+  --cv-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --cv-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+
+  --cv-text-xs: 0.75rem; /* 12px */
+  --cv-text-sm: 0.875rem; /* 14px */
+  --cv-text-base: 1rem; /* 16px */
+  --cv-text-lg: 1.125rem; /* 18px */
+  --cv-text-xl: 1.25rem; /* 20px */
+  --cv-text-2xl: 1.5rem; /* 24px */
+  --cv-text-3xl: 1.875rem; /* 30px */
+  --cv-text-4xl: 2.25rem; /* 36px */
+
+  --cv-font-normal: 400;
+  --cv-font-medium: 500;
+  --cv-font-semibold: 600;
+  --cv-font-bold: 700;
+  --cv-font-extrabold: 800;
+
+  /* Spacing Scale (4px base) */
+  --cv-space-1: 0.25rem; /* 4px */
+  --cv-space-2: 0.5rem; /* 8px */
+  --cv-space-3: 0.75rem; /* 12px */
+  --cv-space-4: 1rem; /* 16px */
+  --cv-space-5: 1.25rem; /* 20px */
+  --cv-space-6: 1.5rem; /* 24px */
+  --cv-space-8: 2rem; /* 32px */
+  --cv-space-10: 2.5rem; /* 40px */
+  --cv-space-12: 3rem; /* 48px */
+  --cv-space-16: 4rem; /* 64px */
+
+  /* Radius Scale */
+  --cv-radius-sm: 4px;
+  --cv-radius-md: 8px;
+  --cv-radius-lg: 12px;
+  --cv-radius-xl: 16px;
+  --cv-radius-2xl: 24px;
+  --cv-radius-full: 9999px;
+
+  /* Transitions */
+  --cv-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cv-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cv-transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout Constants */
+  --cv-sidebar-width: 260px;
+  --cv-sidebar-collapsed-width: 72px;
+  --cv-topbar-height: 64px;
+  --cv-container-max-width: 1440px;
+
+  /* Z-Index Hierarchy */
+  --cv-z-dropdown: 1000;
+  --cv-z-sticky: 1020;
+  --cv-z-fixed: 1030;
+  --cv-z-modal-backdrop: 1040;
+  --cv-z-modal: 1050;
+  --cv-z-toast: 1100;
+}

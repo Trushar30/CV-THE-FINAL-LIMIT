@@ -38,7 +38,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
         message: e.message,
       })),
     };
-  } else if (err instanceof SyntaxError && 'status' in err && (err as { status: number }).status === 400) {
+  } else if (
+    err instanceof SyntaxError &&
+    'status' in err &&
+    (err as { status: number }).status === 400
+  ) {
     statusCode = 400;
     code = 'VALIDATION_ERROR';
     message = 'Malformed JSON payload in request body';

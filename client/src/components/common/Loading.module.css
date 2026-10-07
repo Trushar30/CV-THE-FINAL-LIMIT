@@ -1,0 +1,51 @@
+.screenContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--cv-bg-app);
+  color: var(--cv-text-primary);
+  padding: var(--cv-space-6);
+  text-align: center;
+}
+
+.brandLogo {
+  font-size: var(--cv-text-3xl);
+  font-weight: var(--cv-font-extrabold);
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--cv-space-4);
+  letter-spacing: -0.02em;
+}
+
+.screenText {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+  margin-top: var(--cv-space-4);
+  font-weight: var(--cv-font-medium);
+}
+
+.overlayContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--cv-bg-card-glass);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 50;
+  border-radius: inherit;
+  padding: var(--cv-space-4);
+}
+
+.overlayText {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-secondary);
+  margin-top: var(--cv-space-2);
+  font-weight: var(--cv-font-medium);
+}

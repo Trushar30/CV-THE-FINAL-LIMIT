@@ -1,12 +1,15 @@
 # GEMINI.md - CorpVerse Master Rules & Engineering Protocol
 
 ## 1. ROLE
+
 You are the lead engineer on CorpVerse, a long-running project across many sessions and accounts. You have no memory except the repository.
 
 ---
 
 ## 2. SESSION START
+
 At the beginning of every session:
+
 1. Read `GEMINI.md`
 2. Read `docs/PROJECT_BRIEF.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md`, `docs/DECISIONS.md`, `docs/OPEN_QUESTIONS.md`, and `docs/HANDOFF.md`.
 3. Reply with:
@@ -18,6 +21,7 @@ At the beginning of every session:
 ---
 
 ## 3. NO-INVENTION RULES
+
 - **Never invent business rules.** All gameplay limits, progression requirements, economic values, role permissions, AI retry rules, provider behavior, and state transitions must come from `docs/CORPVERSE_SPECIFICATION.md` or `PlatformConfig`. If a required rule is not defined, write it in `docs/OPEN_QUESTIONS.md` as TODO and ask the user. Do not silently choose a value.
 - **Never invent files, functions, packages, versions, model names, endpoints, or APIs.** Verify in the repository or in official documentation before using.
 - **Never assume the contents of a file you have not opened this session.**
@@ -28,6 +32,7 @@ At the beginning of every session:
 ---
 
 ## 4. ARCHITECTURE PRINCIPLES (Non-Negotiable)
+
 - **The backend is authoritative.** React only displays values; it never decides EXP, CorpCoin, level, warnings, company balance, roles, or permissions.
 - **AI recommends; the backend decides.** AI returns scores, text, and structured recommendations. Backend code calculates and writes EXP, CorpCoin, roles, promotion, demotion, termination, company finances, and permissions. AI output is always validated against a strict schema and clamped.
 - **All AI calls go through the AI Gateway > Provider Router > Provider Adapter.** Business services never call Gemini, OpenAI, or Grok directly. Companies never know which provider powers their bots.
@@ -43,6 +48,7 @@ At the beginning of every session:
 ---
 
 ## 5. FIXED V1 LIMITS (Defaults Seeded into PlatformConfig)
+
 - **Career Domains:** `SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING` (stored in a `domains` collection so Admin can add more later; do not add others now).
 - **Levels (Total EXP Needed):**
   - L1 Intern: 0
@@ -109,6 +115,7 @@ At the beginning of every session:
 ---
 
 ## 6. STACK (Locked)
+
 - **Frontend:** React (Vite)
 - **Backend:** Node.js + Express
 - **Database:** MongoDB with Mongoose
@@ -121,6 +128,7 @@ At the beginning of every session:
 ---
 
 ## 7. WORKING METHOD
+
 - Work on one small task at a time.
 - State a 3-5 bullet plan before coding.
 - Stay strictly inside the task scope and its "Out of scope" list.
@@ -129,6 +137,7 @@ At the beginning of every session:
 ---
 
 ## 8. CLOSING PROTOCOL (After Every Task)
+
 1. Run tests, linter, and build checks; fix any errors.
 2. Update `docs/PROGRESS.md`.
 3. Record all decisions in `docs/DECISIONS.md`.
@@ -146,4 +155,5 @@ At the beginning of every session:
 ---
 
 ## 9. CONTEXT-LOSS RULE
+
 If you notice you are contradicting earlier decisions or the chat context becomes very long, stop immediately and instruct the user to start a fresh session using `docs/HANDOFF.md`.

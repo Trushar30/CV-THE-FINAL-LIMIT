@@ -1,11 +1,14 @@
 import express, { type Express, type Request, type Response, type Router } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.routes.js';
+import { authRouter } from './routes/auth.routes.js';
+import { profileRouter } from './routes/profile.routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
@@ -39,7 +42,8 @@ export function createApp(additionalRouter?: Router): Express {
   });
   app.use(globalLimiter);
 
-  // 5. Body Parsing with configured limits
+  // 5. Body & Cookie Parsing with configured limits
+  app.use(cookieParser());
   app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT }));
 
@@ -55,6 +59,10 @@ export function createApp(additionalRouter?: Router): Express {
 
   // 7. Base Routes
   app.use('/api', healthRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/profile', profileRouter);
+  app.use('/api/v1/profile', profileRouter);
   if (additionalRouter) {
     app.use('/api', additionalRouter);
   }

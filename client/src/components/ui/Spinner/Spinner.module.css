@@ -1,0 +1,59 @@
+.spinner {
+  display: inline-block;
+  border-radius: var(--cv-radius-full);
+  border-style: solid;
+  border-color: currentColor;
+  border-right-color: transparent !important;
+  animation: cv-spin 0.75s linear infinite;
+  vertical-align: middle;
+}
+
+/* Sizes */
+.size-sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.size-md {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.size-lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+.size-xl {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+/* Colors */
+.color-primary {
+  color: var(--cv-brand-primary-500);
+}
+
+.color-white {
+  color: #ffffff;
+}
+
+.color-cyan {
+  color: var(--cv-accent-cyan-500);
+}
+
+.color-emerald {
+  color: var(--cv-accent-emerald-500);
+}
+
+.color-gold {
+  color: var(--cv-gold-500);
+}
+
+.color-muted {
+  color: var(--cv-text-muted);
+}

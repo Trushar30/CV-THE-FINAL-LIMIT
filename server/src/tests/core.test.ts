@@ -17,13 +17,9 @@ describe('Server Core Architecture & Error Handling', () => {
     level: z.number().int().min(1, 'Level must be at least 1'),
   });
 
-  testRouter.post(
-    '/test/validation',
-    validate({ body: testSchema }),
-    (req, res) => {
-      res.status(200).json({ success: true, data: req.body });
-    }
-  );
+  testRouter.post('/test/validation', validate({ body: testSchema }), (req, res) => {
+    res.status(200).json({ success: true, data: req.body });
+  });
 
   // Route specifically added for testing custom AppError throws
   testRouter.get('/test/conflict-error', () => {

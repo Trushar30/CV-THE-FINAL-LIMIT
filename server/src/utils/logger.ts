@@ -10,7 +10,7 @@ const SENSITIVE_KEYS = new Set([
   'jwtsecret',
   'gemini_api_key',
   'openai_api_key',
-  'grok_api_key',
+  'groq_api_key',
   'jwt_access_secret',
   'jwt_refresh_secret',
 ]);

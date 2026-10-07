@@ -14,7 +14,9 @@ async function bootstrap(): Promise<void> {
     try {
       await connectDatabase();
     } catch (dbErr) {
-      logger.warn(`[Server] Starting server with degraded database connectivity: ${(dbErr as Error).message}`);
+      logger.warn(
+        `[Server] Starting server with degraded database connectivity: ${(dbErr as Error).message}`
+      );
     }
 
     server = app.listen(env.PORT, () => {

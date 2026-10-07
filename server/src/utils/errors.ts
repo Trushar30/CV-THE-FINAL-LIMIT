@@ -60,7 +60,14 @@ export class AppError extends Error {
     return new AppError(message, 'BUSINESS_RULE_VIOLATION', 409, details);
   }
 
-  static accountLocked(message = 'Account temporarily locked', details: ErrorDetails = {}): AppError {
+  static businessRuleViolation(message: string, details: ErrorDetails = {}): AppError {
+    return new AppError(message, 'BUSINESS_RULE_VIOLATION', 409, details);
+  }
+
+  static accountLocked(
+    message = 'Account temporarily locked',
+    details: ErrorDetails = {}
+  ): AppError {
     return new AppError(message, 'ACCOUNT_LOCKED', 423, details);
   }
 

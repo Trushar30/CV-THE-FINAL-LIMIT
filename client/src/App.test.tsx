@@ -7,10 +7,13 @@ describe('Client Smoke & App Suite', () => {
     expect(true).toBe(true);
   });
 
-  it('renders CorpVerse heading', () => {
+  it('renders CorpVerse heading and component showcase', () => {
     render(<App />);
-    const heading = screen.getByRole('heading', { level: 1 });
+    const heading = screen.getByRole('heading', { level: 1, name: /corpverse component system/i });
     expect(heading).toBeDefined();
-    expect(heading.textContent).toBe('CorpVerse');
+
+    expect(screen.getByText('CorpVerse Component System')).toBeDefined();
+    expect(screen.getByText('Buttons')).toBeDefined();
+    expect(screen.getByText('Input Fields')).toBeDefined();
   });
 });

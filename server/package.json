@@ -10,18 +10,25 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "argon2": "^0.45.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.10.0",
+    "nodemailer": "^10.0.15",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.13.9",
+    "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.0.0",
     "tsx": "^4.19.3",

@@ -1,0 +1,65 @@
+.container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--cv-radius-lg);
+  border: 1px solid var(--cv-border-default);
+  background-color: var(--cv-bg-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-family: var(--cv-font-sans);
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-primary);
+}
+
+.th {
+  padding: 0.75rem 1rem;
+  font-size: var(--cv-text-xs);
+  font-weight: var(--cv-font-semibold);
+  color: var(--cv-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: var(--cv-bg-surface-subtle);
+  border-bottom: 1px solid var(--cv-border-default);
+  white-space: nowrap;
+}
+
+.td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--cv-border-subtle);
+  color: var(--cv-text-primary);
+  vertical-align: middle;
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
+
+.striped .tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.hoverable .tr:hover {
+  background-color: var(--cv-bg-surface-hover);
+}
+
+.align-left {
+  text-align: left;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.emptyCell {
+  text-align: center;
+  padding: var(--cv-space-10) var(--cv-space-4);
+  color: var(--cv-text-muted);
+}

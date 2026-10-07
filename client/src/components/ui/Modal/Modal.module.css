@@ -1,0 +1,109 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--cv-modal-backdrop-bg);
+  backdrop-filter: var(--cv-backdrop-filter);
+  -webkit-backdrop-filter: var(--cv-backdrop-filter);
+  z-index: var(--cv-z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cv-space-4);
+  animation: cv-fade-in var(--cv-transition-fast) forwards;
+}
+
+.modal {
+  position: relative;
+  background-color: var(--cv-bg-modal);
+  border: 1px solid var(--cv-border-strong);
+  border-radius: var(--cv-radius-xl);
+  box-shadow:
+    var(--cv-shadow-xl),
+    0 0 30px rgba(0, 0, 0, 0.6);
+  z-index: var(--cv-z-modal);
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: cv-modal-enter var(--cv-transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: hidden;
+}
+
+/* Sizes */
+.size-sm {
+  max-width: 420px;
+}
+
+.size-md {
+  max-width: 560px;
+}
+
+.size-lg {
+  max-width: 760px;
+}
+
+.size-xl {
+  max-width: 960px;
+}
+
+.header {
+  padding: var(--cv-space-6) var(--cv-space-6) var(--cv-space-4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--cv-border-subtle);
+  gap: var(--cv-space-4);
+}
+
+.titleArea {
+  flex: 1;
+}
+
+.title {
+  font-size: var(--cv-text-xl);
+  font-weight: var(--cv-font-bold);
+  color: var(--cv-text-primary);
+  margin: 0;
+}
+
+.description {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+  margin-top: 4px;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--cv-text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: var(--cv-space-1);
+  border-radius: var(--cv-radius-sm);
+  cursor: pointer;
+  transition: all var(--cv-transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  color: var(--cv-text-primary);
+  background-color: var(--cv-bg-surface-hover);
+}
+
+.body {
+  padding: var(--cv-space-6);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.footer {
+  padding: var(--cv-space-4) var(--cv-space-6);
+  border-top: 1px solid var(--cv-border-subtle);
+  background-color: var(--cv-bg-surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cv-space-3);
+}

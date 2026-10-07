@@ -32,7 +32,9 @@ export async function connectDatabase(uri: string = env.MONGODB_URI): Promise<ty
   try {
     logger.info(`[Database] Connecting to MongoDB...`);
     const conn = await mongoose.connect(uri);
-    logger.info(`[Database] MongoDB connected successfully to ${conn.connection.host}/${conn.connection.name}`);
+    logger.info(
+      `[Database] MongoDB connected successfully to ${conn.connection.host}/${conn.connection.name}`
+    );
     return conn;
   } catch (error) {
     logger.error(`[Database] MongoDB connection failed: ${(error as Error).message}`);

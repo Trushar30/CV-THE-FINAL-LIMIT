@@ -7,13 +7,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
-    ignores: [
-      '**/dist/**',
-      '**/build/**',
-      '**/coverage/**',
-      '**/node_modules/**',
-      '**/*.log',
-    ],
+    ignores: ['**/dist/**', '**/build/**', '**/coverage/**', '**/node_modules/**', '**/*.log'],
   },
   {
     rules: {

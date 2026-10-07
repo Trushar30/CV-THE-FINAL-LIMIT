@@ -1,0 +1,98 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tabList {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabList::-webkit-scrollbar {
+  display: none;
+}
+
+.tabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cv-space-2);
+  font-family: var(--cv-font-sans);
+  font-size: var(--cv-text-sm);
+  font-weight: var(--cv-font-semibold);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--cv-text-secondary);
+  transition: all var(--cv-transition-fast);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.tabButton:hover:not(:disabled) {
+  color: var(--cv-text-primary);
+}
+
+.tabButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pills Variant */
+.variant-pills .tabList {
+  background-color: var(--cv-bg-surface-elevated);
+  padding: 4px;
+  border-radius: var(--cv-radius-lg);
+  border: 1px solid var(--cv-border-default);
+}
+
+.variant-pills .tabButton {
+  padding: 0.5rem 1rem;
+  border-radius: var(--cv-radius-md);
+}
+
+.variant-pills .tabButton.active {
+  background-color: var(--cv-brand-primary-600);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Underline Variant */
+.variant-underline .tabList {
+  border-bottom: 1px solid var(--cv-border-default);
+  gap: var(--cv-space-6);
+  padding-bottom: 0;
+}
+
+.variant-underline .tabButton {
+  padding: 0.75rem 0.25rem;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+}
+
+.variant-underline .tabButton.active {
+  color: var(--cv-brand-primary-400);
+  border-bottom-color: var(--cv-brand-primary-400);
+}
+
+.tabPanel {
+  padding-top: var(--cv-space-6);
+  animation: cv-fade-in var(--cv-transition-fast) forwards;
+}
+
+.icon {
+  font-size: 1.1em;
+}
+
+.badge {
+  font-size: 0.6875rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--cv-radius-full);
+  background-color: rgba(255, 255, 255, 0.15);
+  color: inherit;
+}
