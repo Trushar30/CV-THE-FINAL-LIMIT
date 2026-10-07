@@ -12,7 +12,6 @@ import {
   WorkplacePage,
   FounderHqPage,
   AdminConsolePage,
-  AiManagerPage,
   UnauthorizedPage,
   NotFoundPage,
 } from './pages/StubPages';
@@ -20,6 +19,8 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { ProfileSetupPage } from './pages/ProfileSetupPage';
+import { AiManagerPage } from './pages/AiManagerPage';
+import { AdminAiHealthPage } from './pages/AdminAiHealthPage';
 
 export function App(): ReactElement {
   return (
@@ -104,6 +105,14 @@ export function App(): ReactElement {
                     element={
                       <RoleRoute allowedPlatformRoles={['ADMIN']}>
                         <AdminConsolePage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ai-health"
+                    element={
+                      <RoleRoute allowedPlatformRoles={['ADMIN']}>
+                        <AdminAiHealthPage />
                       </RoleRoute>
                     }
                   />

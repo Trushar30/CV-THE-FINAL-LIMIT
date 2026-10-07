@@ -55,20 +55,6 @@ export function AdminConsolePage(): ReactElement {
   );
 }
 
-export function AiManagerPage(): ReactElement {
-  return (
-    <Card
-      title="AI Infrastructure Console"
-      subtitle="Provider routing, health diagnostics & fallbacks"
-    >
-      <p style={{ color: 'var(--cv-text-secondary)', marginBottom: '1rem' }}>
-        This view is restricted to users with <code>platformRole: AI_MANAGER</code>.
-      </p>
-      <Badge variant="cyan">AI Operations Active</Badge>
-    </Card>
-  );
-}
-
 export function LoginPage(): ReactElement {
   const { loginStub, isAuthenticated } = useAuth();
   const navigate = useNavigate();

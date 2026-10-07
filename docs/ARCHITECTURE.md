@@ -672,3 +672,147 @@ The backend remains authoritative across all onboarding and career role progress
 - **Route Guard Protection:**
   - `RoleRoute`: If a verified candidate with `careerRole: 'NONE'` attempts to access Job Seeker features (`/job-seeker/*`), the router gracefully redirects them to `/profile/setup`.
   - `Sidebar`: Dynamic navigation renders "Candidate Onboarding" link for candidates with `careerRole: 'NONE'`.
+
+---
+
+## 18. AI Gateway Core, Router & Adapter Architecture (TASK P3.1)
+
+### 18.1 Normalized Contracts & AIError Taxonomy
+
+All internal AI interactions are isolated from vendor-specific payloads through three standardized contracts in `server/src/ai/types.ts`:
+
+- **`AIRequest`:** Encapsulates `taskType` (`RESUME_PARSING`, `ATS_EVALUATION`, `INTERVIEW_QUESTION`, `INTERVIEW_EVALUATION`, `TASK_GENERATION`, `TASK_EVALUATION`, `SCENARIO_GENERATION`, `SCENARIO_EVALUATION`), `systemInstruction`, `userInput`, optional `context`, optional JSON `outputSchema`, `temperature`, and `maxTokens`.
+- **`AIResponse`:** Standardized payload providing `success`, `provider`, `model`, gateway-generated `requestId`, `content`, optional `structuredData`, token `usage` (`inputTokens`, `outputTokens`, `totalTokens`), and measured `latencyMs`.
+- **`AIError`:** Normalized error class categorizing failures into 7 canonical types:
+  - `TIMEOUT`, `RATE_LIMIT`, `PROVIDER_ERROR`, `UNAVAILABLE`, `NETWORK`: Transient faults marked `retryable: true`.
+  - `AUTH_CONFIG`, `INVALID_REQUEST`: Permanent faults marked `retryable: false` (fast-fail, no retry or fallback).
+
+### 18.2 Pool-Isolated Provider Routing (`ProviderRouter`)
+
+- **Strict Pool Isolation:** Providers are registered independently to either `AIProviderPool.DEMO` or `AIProviderPool.PIPELINE`. Registration in one pool never affects or leaks into the other.
+- **Priority-Ordered Selection:** In each pool, providers are evaluated in ascending priority order. The router picks the first provider whose health state is NOT `DISABLED`. Providers in `DEGRADED`, `RATE_LIMITED`, or `TEMPORARILY_FAILED` states remain eligible for attempts until explicitly disabled by circuit breakers.
+- **Health Management:** Dynamic state tracking (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`) per pool and provider with programmatic status inspection and state transitions.
+
+### 18.3 Authoritative Gateway Execution & Validation (`AIGateway`)
+
+- **Centralized Dispatch:** `AIGateway.execute(request, { pool })` resolves the appropriate active provider via `ProviderRouter`.
+- **Gateway Metrics & Tracking:** Generates a unique UUID `requestId` and records round-trip `latencyMs`.
+- **Authoritative Schema Enforcement:** When an `outputSchema` is defined, the gateway enforces structural validation via `validateAgainstSchema()`, rejecting responses missing required properties or containing invalid primitive types before returning to business logic.
+- **Provider SDK Isolation:** Business logic imports strictly from `server/src/ai/`. An automated Vitest architectural guard (`Provider SDK Import Guard`) enforces that no file outside `server/src/ai/` imports `@google/genai`, `openai`, or `groq-sdk`.
+
+### 18.4 Google Gemini Provider Adapter (`GeminiAdapter` — TASK P3.2)
+
+- **REST Protocol Architecture:** Connects to Google's official Generative Language API (`POST /v1beta/models/{model}:generateContent`) via native `fetch`, eliminating third-party SDK dependencies while complying strictly with architectural SDK import restrictions.
+- **Header Authentication:** Passes API credentials via `x-goog-api-key` request header, preventing credential leakage in URL query parameters, proxy logs, and error strings.
+- **Configurable Model & Timeout:** Model ID (`geminiModel`) is dynamically retrieved from PlatformConfig or options, never hardcoded. Timeout is managed via `AbortSignal` with configurable duration.
+- **Structured JSON Output:** When `request.outputSchema` is provided, the adapter injects `generationConfig.responseMimeType: "application/json"` and `generationConfig.responseSchema`, parsing response text into `structuredData`.
+- **Token Accounting:** Extracts input, output, and total token usage from top-level `usageMetadata` (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`).
+- **Comprehensive Error Normalization:**
+  - `429` / `RESOURCE_EXHAUSTED` -> `RATE_LIMIT` (retryable)
+  - `AbortError` / `TimeoutError` -> `TIMEOUT` (retryable)
+  - `500`, `502`, `504` -> `PROVIDER_ERROR` (retryable)
+  - `503` / `UNAVAILABLE` -> `UNAVAILABLE` (retryable)
+  - Transport failure / connection dropped -> `NETWORK` (retryable)
+  - `401`, `403` -> `AUTH_CONFIG` (non-retryable fast-fail)
+  - `400`, `404` -> `INVALID_REQUEST` (non-retryable fast-fail)
+
+### 18.5 OpenAI Provider Adapter (`OpenAIAdapter` — TASK P3.3)
+
+- **Chat Completions Protocol:** Interfaces with OpenAI Chat Completions endpoint (`POST https://api.openai.com/v1/chat/completions`) via native `fetch`, eliminating external SDK packages and maintaining zero direct SDK imports.
+- **Bearer Authentication:** Injects API credentials via standard `Authorization: Bearer <token>` header, shielding keys from query logs and diagnostics.
+- **Dynamic Model Resolution:** Model ID (`openaiModel`) is dynamically retrieved from PlatformConfig or constructor accessor, never hardcoded.
+- **Structured Outputs via `json_schema`:** Uses `response_format: { type: "json_schema", json_schema: { name: "structured_response", strict: true, schema: outputSchema } }`, extracting content into `structuredData`.
+- **Token Accounting:** Maps `usage.prompt_tokens`, `usage.completion_tokens`, and `usage.total_tokens` directly to `AIResponse.usage`.
+- **Canonical Fallback Error Taxonomy:**
+  - `429` / `rate_limit_error` / `insufficient_quota` -> `RATE_LIMIT` (retryable)
+  - `AbortError` / `TimeoutError` -> `TIMEOUT` (retryable)
+  - `500`, `502`, `504` / `server_error` -> `PROVIDER_ERROR` (retryable)
+  - `503` / `service_unavailable` -> `UNAVAILABLE` (retryable)
+  - Transport drops -> `NETWORK` (retryable)
+  - `401`, `403` / `authentication_error`, `permission_error` -> `AUTH_CONFIG` (non-retryable fast-fail)
+  - `400`, `404` / `invalid_request_error`, `not_found_error` -> `INVALID_REQUEST` (non-retryable fast-fail)
+
+### 18.6 Groq Provider Adapter (`GroqAdapter` — TASK P3.4)
+
+- **Chat Completions Protocol:** Interfaces with Groq's high-throughput Chat Completions endpoint (`POST https://api.groq.com/openai/v1/chat/completions`) via native `fetch`, eliminating third-party SDK dependencies (`groq-sdk`) and satisfying architectural SDK import restrictions.
+- **Bearer Authentication:** Injects API credentials via standard `Authorization: Bearer <token>` header, shielding keys from query strings, server logs, and diagnostics.
+- **Dynamic Model Resolution:** Model ID (`groqModel`) is dynamically retrieved from PlatformConfig or constructor accessor (e.g., `llama-3.3-70b-versatile`), never hardcoded.
+- **Structured Outputs via `json_schema`:** Uses `response_format: { type: "json_schema", json_schema: { name: "structured_response", strict: true, schema: outputSchema } }`, extracting content into `structuredData`. Parse failures or empty payloads map to `INVALID_REQUEST`.
+- **Token Accounting:** Maps `usage.prompt_tokens`, `usage.completion_tokens`, and `usage.total_tokens` directly to `AIResponse.usage`.
+- **Canonical Fallback Error Taxonomy:**
+  - `429` / `rate_limit_exceeded` -> `RATE_LIMIT` (retryable)
+  - `AbortError` / `TimeoutError` -> `TIMEOUT` (retryable)
+  - `500`, `502`, `504` / `internal_server_error` -> `PROVIDER_ERROR` (retryable)
+  - `503` / `service_unavailable` -> `UNAVAILABLE` (retryable)
+  - Transport drops / connection errors -> `NETWORK` (retryable)
+  - `401`, `403` / `invalid_api_key`, `unauthorized` -> `AUTH_CONFIG` (non-retryable fast-fail)
+  - `400`, `404` / `invalid_request_error`, `model_not_found` -> `INVALID_REQUEST` (non-retryable fast-fail)
+- **Zero-Token Health Check:** `healthCheck()` verifies provider connectivity against `GET https://api.groq.com/openai/v1/models/{model}` without executing billable generation tokens.
+
+### 18.7 AI Reliability Layer, Queue Model & Worker (TASK P3.5)
+
+- **Asynchronous Queue Model (`AIJobModel`):**
+  - Manages asynchronous AI workload in `aiJobs` collection with full lifecycle statuses (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `RETRYING`, `WAITING_FOR_PROVIDER`, `CANCELLED`).
+  - Supports worker lease tracking with `lockedUntil` and `lockedBy` to guarantee atomic job processing and crash recovery.
+  - Sparse unique index on `idempotencyKey` prevents duplicate job creation when clients or internal services re-submit with the same key.
+- **Authoritative Gateway Submission (`AIGateway.submit`):**
+  - Provides decoupled entrypoint for queue-based tasks, returning a unique `jobId`.
+  - Preserves `AIGateway.execute` for bounded synchronous needs with configurable `timeoutMs` and telemetry logging.
+- **Custom In-Process Queue Worker (`AIWorker`):**
+  - Polls MongoDB at configurable cadence (default 2s) and claims jobs atomically via `findOneAndUpdate`.
+  - Reclaims abandoned or crashed jobs when their lease (`lockedUntil`) expires without completion.
+  - Enforces up to 3 attempts per provider (configurable in `PlatformConfig`) before cascading to the next priority provider.
+  - Transitions jobs to `WAITING_FOR_PROVIDER` when all providers are exhausted.
+  - Resumes waiting jobs automatically (`checkAndResumeWaitingJobs`) without loss or duplication when any provider recovers.
+  - Fast-fails non-retryable errors (`AUTH_CONFIG`, `INVALID_REQUEST`), immediately marking jobs `FAILED` and providers `DEGRADED` without cascading.
+- **Provider Health Lifecycle & Observability (`HealthTracker`):**
+  - Tracks states in `aiProviders` (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`).
+  - Implements backoff recovery checks via `probeAndRecover()`.
+  - Records operational audit trail in `aiRequests`, `aiResponses`, and `aiHealthLogs`, ensuring prompts are truncated and credentials redacted.
+
+### 18.8 AI Manager Console Backend, Key Vault & RBAC (TASK P3.6)
+
+- **Role-Based Access Control (RBAC):**
+  - AI Manager endpoints (`/api/ai-manager/*` and `/api/v1/ai-manager/*`) are guarded by `authenticateJwt` and `requirePlatformRole`.
+  - Mutation endpoints (`POST /providers`, `PATCH /providers/:code`, `POST /providers/:code/enable`, `POST /providers/:code/disable`, `DELETE /providers/:code`, `POST /providers/:code/test`) strictly require `platformRole === 'AI_MANAGER'`.
+  - Telemetry and list endpoints (`GET /health`, `GET /usage`, `GET /providers`) are accessible to both `AI_MANAGER` and `ADMIN`.
+  - Non-privileged accounts (`platformRole: NONE`) are denied access with 403 Forbidden.
+  - Strict boundary enforcement: AI Managers are prohibited from accessing Admin-only routes (`/api/admin/*` returns 403).
+- **Key Vault Encryption Architecture:**
+  - Runtime-added provider API keys are encrypted at rest using AES-256-GCM authenticated encryption (`encryptSecret`) with a unique 12-byte IV and 16-byte authentication tag per secret.
+  - Master encryption key is derived server-side from `AI_KEY_VAULT_SECRET` via SHA-256.
+  - Decryption (`decryptSecret`) occurs exclusively in-memory inside adapter calls when dispatching upstream AI requests.
+  - Plaintext keys are never persisted, never returned in API responses, and never logged.
+  - In MongoDB `aiProviders`, `encryptedApiKey` is configured with `select: false` and explicitly stripped from `toJSON` schema transforms. Only `maskedApiKey` (preserving the last 4 characters, e.g., `sk-••••••••1234` or `••••••••1234`) is exposed via API responses.
+- **Two-Pool Isolation Architecture (Decision D11):**
+  - `DEMO` pool: Populated from static server environment variables for interactive demos and admin testing.
+  - `PIPELINE` pool: Managed in the database by the AI Manager for background workflow tasks, candidate screening, and assessment evaluations.
+- **Dynamic Routing & Health Management:**
+  - Updating provider priority via `AIManagerService` dynamically reorganizes priority order within `ProviderRouter`.
+  - Providers marked `DISABLED` are skipped during routing candidate selection.
+  - Live health testing (`POST /providers/:code/test`) pings upstream adapters and returns latency and diagnostics without disrupting active priority order.
+- **Mandatory Append-Only Audit Logging:**
+  - Every provider mutation (creation, modification, enablement, disablement, deletion) requires a descriptive `reason` ($\ge 3$ characters) and records an immutable log in `AuditLog` via `AuditService.record()` capturing actor ID, actor role, action type, target ID, diff state, and reason.
+
+### 18.9 AI Operations Frontend & Admin Health Telemetry (TASK P3.7)
+
+- **AI Manager Console (`AiManagerPage.tsx` mounted at `/ai-ops`):**
+  - Route guarded strictly for `platformRole === 'AI_MANAGER'`.
+  - Multi-Pool Isolation: Interactive switcher between `PIPELINE` (database-managed runtime providers) and `DEMO` (env-configured bootstrap providers).
+  - Queue Telemetry: Real-time asynchronous queue depth meter and waiting jobs alert card (`depth`, `pending`, `processing`, `waitingForProvider`, `completed`, `failed`).
+  - Dynamic Priority Reordering: Instant priority reorganization via Move Up / Move Down buttons triggering `PATCH /api/ai-manager/providers/:id/priority`.
+  - Modal Workflows: Dedicated modals for Add Provider, Edit Configuration (model ID, rate limit, daily token budget), Disable Provider, and Remove Provider, all requiring mandatory audit reason inputs ($\ge 3$ characters).
+  - Upstream Connectivity Ping: Zero-token/low-cost test button triggering `POST /api/ai-manager/providers/:id/test` with visual latency indicators and failure diagnostics.
+  - Usage & Failure Analytics: Telemetry cards and percentage-fill bar charts visualizing request volume, error counts, and latency across providers.
+  - Credential Protection Invariant: Masked API keys (`sk-••••••••1234` or `••••••••1234`) displayed across all tables and cards; inputs default to `type="password"`.
+- **Admin Read-Only AI Health (`AdminAiHealthPage.tsx` mounted at `/admin/ai-health`):**
+  - Route guarded strictly for `platformRole === 'ADMIN'`.
+  - Read-only diagnostics dashboard featuring an amber Oversight Mode banner explaining AI Manager domain ownership.
+  - Multi-provider health matrix with real-time status badges (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`).
+  - Usage telemetry, queue stats, and recent error incident logs.
+  - Absolute omission of mutation actions, buttons, or configuration controls.
+- **Client API Layer (`client/src/api/aiOps.ts`):**
+  - Strongly typed DTOs matching backend schemas: `ProviderDto`, `QueueStatsDto`, `HealthAndUsageResponseDto`, `TestProviderResponseDto`.
+  - Client methods wrapping all `/api/ai-manager/*` routes with normalized `ApiClientError` error handling.
+- **Backend Queue Stats Telemetry:**
+  - `GET /api/ai-manager/health-usage` enriched with `queueStats` aggregated from `AIJobModel` counting `depth`, `pending`, `processing`, `waitingForProvider`, `completed`, `failed`, and `total`.

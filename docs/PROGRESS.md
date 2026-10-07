@@ -5,19 +5,20 @@
 | Phase       | Description                                                                                   | Status          |
 | ----------- | --------------------------------------------------------------------------------------------- | --------------- |
 | **Phase 0** | **System Initialization, Master Rules, Decisions & Technical Specification**                  | **COMPLETED**   |
-| **Phase 1** | **Foundation Layer: npm Workspaces Monorepo, Strict TypeScript, PlatformConfig, Auth & RBAC** | **IN PROGRESS** |
-| Phase 2     | Resume Ingestion Engine (GridFS, Magic Bytes) & AI Gateway Multi-Provider Core                | UPCOMING        |
-| Phase 3     | Career System: Job Board, ATS Screening & REST Interview Simulation Engine                    | UPCOMING        |
-| Phase 4     | Employee System: On-Demand Tasks, AI Evaluation, EXP Ledger & Warning Workflows               | UPCOMING        |
-| Phase 5     | Founder Mode: Company Setup, Bot Marketplace & Deterministic Simulation Engine                | UPCOMING        |
-| Phase 6     | Admin & AI Manager Consoles: Platform Controls, Demo Mode & AI Diagnostics                    | UPCOMING        |
-| Phase 7     | Leaderboards, Audit Logging, End-to-End Hardening & Deployment                                | UPCOMING        |
+| **Phase 1** | **Foundation Layer: npm Workspaces Monorepo, Strict TypeScript, PlatformConfig, Auth & RBAC** | **COMPLETED**   |
+| **Phase 2** | **User Registration, Auth, Profile & AI Gateway Core**                                        | **IN PROGRESS** |
+| Phase 3     | Resume Ingestion Engine (GridFS, Magic Bytes) & Real Provider Adapters                        | UPCOMING        |
+| Phase 4     | Career System: Job Board, ATS Screening & REST Interview Simulation Engine                    | UPCOMING        |
+| Phase 5     | Employee System: On-Demand Tasks, AI Evaluation, EXP Ledger & Warning Workflows               | UPCOMING        |
+| Phase 6     | Founder Mode: Company Setup, Bot Marketplace & Deterministic Simulation Engine                | UPCOMING        |
+| Phase 7     | Admin & AI Manager Consoles: Platform Controls, Demo Mode & AI Diagnostics                    | UPCOMING        |
+| Phase 8     | Leaderboards, Audit Logging, End-to-End Hardening & Deployment                                | UPCOMING        |
 
 ---
 
 ## 2. Current Status
 
-- **Current Phase:** Phase 1 — Foundation Layer (Status: **IN PROGRESS**)
+- **Current Phase:** Phase 2 — User Registration, Auth, Profile & AI Gateway Core (Status: **IN PROGRESS**)
 - **Completed Tasks:**
   - `TASK P0.1`: Memory system and master rules (`GEMINI.md`, `.agent/rules/corpverse.md`, `PROJECT_BRIEF.md`, `ARCHITECTURE.md`, `PROGRESS.md`, `DECISIONS.md`, `OPEN_QUESTIONS.md`, `HANDOFF.md`).
   - `TASK P0.2`: 35-section `CORPVERSE_SPECIFICATION.md` initial draft.
@@ -32,7 +33,14 @@
   - `TASK P2.1`: Registration with Email Verification (Spec Sections 2, 4, 32, ADR-026: User model with initial `careerRole: NONE`, Argon2id password hashing utility, single-use expiring SHA-256 hashed verification tokens, pluggable Console and SMTP email services, anti-enumeration registration and resend endpoints, sliding-window rate limiters, 20 new tests, 111 passing monorepo tests).
   - `TASK P2.2`: Authentication & Session Management (Spec Section 32, ADR-027: Short-lived access JWT, 7-day httpOnly refresh cookie, token rotation with replay reuse detection, brute-force lockout after 5 failed attempts with 423 error code, `authenticateJwt` middleware rejecting suspended and unverified users, client wiring with `LoginPage`, `RegisterPage`, `VerifyEmailPage`, `AuthContext`, silent refresh, 23 new tests, 134 passing monorepo tests).
   - `TASK P2.3`: User Profile Setup Wizard & Career Domain Selection (Spec Sections 5, 20, 27, ADR-028: Profile model with unique 1-to-1 user link, locked career domains `SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`, mandatory `displayName` and `skills` tagger, authoritative transition to `careerRole: 'JOB_SEEKER'` and `onboardingStep: 'PROFILE_COMPLETED'`, 3-step client wizard `ProfileSetupPage.tsx`, smart route guard redirects, 15 new tests, 149 passing monorepo tests).
-- **Next Task:** `TASK P2.4` — Resume Ingestion Engine (GridFS storage, magic byte verification, PDF/DOCX parsing, separate `ResumeFile` and `ResumeAnalysis` records).
+  - `TASK P3.1`: AI Gateway Core (Spec Sections 16, 21, Decision D11, ADR-029: `AIRequest`, `AIResponse`, `AIError` with auto-derived retryable flag, `ProviderAdapter` interface, `MockAdapter` for tests with error simulation and call tracking, `ProviderRouter` with priority-ordered pool-isolated provider selection skipping DISABLED providers, `AIGateway.execute()` with structured output JSON Schema validation, `validateAgainstSchema` lightweight validator, SDK import guard test, 64 new tests, 213 passing monorepo tests).
+  - `TASK P3.2`: Google Gemini Provider Adapter (Spec Sections 17, 21, Decision D16, ADR-030: `GeminiAdapter` implementing `ProviderAdapter` using official REST API, header-based auth `x-goog-api-key`, dynamic model ID resolution, JSON structured output schema handling, token counting via `usageMetadata`, complete fallback error taxonomy mapping, configurable timeout, 27 new tests with mocked HTTP layer and optional live smoke test, 240 passing monorepo tests).
+  - `TASK P3.3`: OpenAI Provider Adapter (Spec Sections 18, 21, Decision D16, ADR-031: `OpenAIAdapter` implementing `ProviderAdapter` using Chat Completions REST API, Bearer header auth, dynamic model ID resolution, Structured Outputs via `json_schema`, token accounting via `usage`, complete fallback error taxonomy mapping, configurable timeout, 28 new tests with mocked HTTP layer and optional live smoke test, 268 passing monorepo tests).
+  - `TASK P3.4`: Groq Provider Adapter (Spec Sections 19, 21, Decision D16, ADR-032: `GroqAdapter` implementing `ProviderAdapter` using Chat Completions REST API, Bearer header auth, dynamic model ID resolution, Structured Outputs via `json_schema`, token accounting via `usage`, complete fallback error taxonomy mapping, configurable timeout, 27 new tests with mocked HTTP layer and optional live smoke test, 295 passing monorepo tests).
+  - `TASK P3.5`: AI Reliability Layer, Queue Model & Worker (Spec Sections 20, 21, Decision D6, ADR-033: `AIJobModel` with lifecycle states, `idempotencyKey` deduplication, `AIWorker` in-process atomic polling with lease recovery, up to 3 attempts fallback cascading, fast-fail on `AUTH_CONFIG`/`INVALID_REQUEST`, `WAITING_FOR_PROVIDER` hold and auto-resumption, `HealthTracker` provider health lifecycle in `aiProviders`, observability logging in `aiRequests`/`aiResponses`/`aiHealthLogs`, 14 new integration tests, 309 passing monorepo tests).
+  - `TASK P3.6`: AI Manager Backend (Spec Section 20, Decision D10, D11, ADR-034: Provider CRUD, AES-256-GCM authenticated key vault, masked API key protection, dynamic priority routing & disabled provider bypassing, two-pool separation DEMO vs PIPELINE, append-only audit logging with mandatory reasons, RBAC separation denying AI_MANAGER from `/api/admin/*` and granting ADMIN read-only telemetry, 15 new integration tests, 324 passing monorepo tests).
+  - `TASK P3.7`: Frontend for AI Operations (Spec Section 20, ADR-035: AI Manager Console with pool switcher, queue depth & waiting jobs metrics, priority drag/reorder, add/edit/disable/remove modals with mandatory audit reasons, test ping action, usage & failure telemetry, masked API keys; Admin read-only AI Health page with oversight banner and health matrices; 10 new integration tests, 331 passing monorepo tests).
+- **Next Task:** `TASK P2.4` — Resume Ingestion Engine (GridFS, magic bytes, separate `ResumeFile` and `ResumeAnalysis` records).
 
 ---
 
@@ -139,7 +147,70 @@
 
 ---
 
+### TASK P3.1: AI Gateway Core
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented the three-layer AI Gateway architecture core per Specification Sections 16, 21, and Decision D11. Built normalized internal types (`AIRequest`, `AIResponse`, `AIError` with auto-derived retryable flag per Spec Section 21.1), `ProviderAdapter` interface, `MockAdapter` for deterministic testing with error simulation and call tracking, `ProviderRouter` with priority-ordered pool-isolated provider selection (DEMO vs PIPELINE) skipping DISABLED providers, and `AIGateway.execute()` with structured output JSON Schema validation via lightweight `validateAgainstSchema`. Added a provider SDK import guard test ensuring no file outside `server/src/ai/` imports `@google/generative-ai`, `openai`, or `groq-sdk`. All 64 new tests pass (213 total monorepo tests). Recorded ADR-029.
+- **Application Code Written:** `server/src/ai/types.ts`, `server/src/ai/adapters/mock.adapter.ts`, `server/src/ai/provider-router.ts`, `server/src/ai/gateway.ts`, `server/src/ai/index.ts`, `server/src/tests/ai-gateway.test.ts`, `server/src/index.ts`.
+
+---
+
+### TASK P3.2: Google Gemini Provider Adapter
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented `GeminiAdapter` implementing `ProviderAdapter` adhering strictly to Google's official Gemini API documentation, Spec Sections 17 & 21, Decision D16, and ADR-030. Documented all official API findings, endpoints, auth protocols, and schemas in `docs/ai/gemini.md`. Utilized native `fetch` against Google's Generative Language REST API (`POST /v1beta/models/{model}:generateContent`) with secure header authentication (`x-goog-api-key`), ensuring zero API key exposure in query parameters, error messages, or logs. Mapped `AIRequest` payload (`contents`, `system_instruction`, `generationConfig`), dynamically resolving `modelId` (never hardcoded) and applying configurable timeouts via `AbortSignal`. Supported structured JSON schema generation (`responseMimeType: "application/json"`, `responseSchema`) with automatic extraction into `structuredData`. Accurately parsed token consumption from `usageMetadata`. Normalized all failure states to canonical `AIErrorCategory` per Spec Section 21.1 / 33 fallback rules (429 -> RATE_LIMIT, timeout -> TIMEOUT, 500/502/504 -> PROVIDER_ERROR, 503 -> UNAVAILABLE, network -> NETWORK, 401/403 -> AUTH_CONFIG, 400/404 -> INVALID_REQUEST). Implemented lightweight model `healthCheck()`. Created full test suite with mocked HTTP layer covering all error mappings, structured outputs, token metrics, timeout aborts, and an optional live smoke test (27 tests: 26 passed, 1 skipped). Recorded ADR-030.
+- **Application Code Written:** `docs/ai/gemini.md`, `server/src/ai/adapters/gemini.adapter.ts`, `server/src/ai/index.ts`, `server/src/tests/gemini-adapter.test.ts`.
+
+---
+
+### TASK P3.3: OpenAI Provider Adapter
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented `OpenAIAdapter` implementing `ProviderAdapter` adhering strictly to OpenAI's official API documentation, Spec Sections 18 & 21, Decision D16, and ADR-031. Documented all official API findings, endpoints, Bearer auth protocols, and schemas in `docs/ai/openai.md`. Utilized native `fetch` against OpenAI's Chat Completions REST API (`POST https://api.openai.com/v1/chat/completions`) with secure Bearer authentication (`Authorization: Bearer <key>`), ensuring zero API key exposure in query parameters, error messages, or logs. Mapped `AIRequest` payload (`model`, `messages` array with system instruction and context-serialized user turn, `temperature`, `max_tokens`), dynamically resolving `modelId` (never hardcoded) and applying configurable timeouts via `AbortController`. Supported structured JSON generation via `response_format: { type: "json_schema", json_schema: { name: "structured_response", strict: true, schema: outputSchema } }` with automatic extraction into `structuredData`. Accurately parsed token consumption from `usage` object (`prompt_tokens`, `completion_tokens`, `total_tokens`). Normalized all failure states to canonical `AIErrorCategory` per Spec Section 21.1 / 33 fallback rules (429 / insufficient_quota -> RATE_LIMIT, timeout -> TIMEOUT, 500/502/504 -> PROVIDER_ERROR, 503 -> UNAVAILABLE, network -> NETWORK, 401/403 -> AUTH_CONFIG, 400/404 -> INVALID_REQUEST). Implemented lightweight model `healthCheck()` against `GET /v1/models/{model}`. Created full test suite with mocked HTTP layer covering all error mappings, structured outputs, token metrics, timeout aborts, and an optional live smoke test (28 tests: 27 passed, 1 skipped). Recorded ADR-031.
+- **Application Code Written:** `docs/ai/openai.md`, `server/src/ai/adapters/openai.adapter.ts`, `server/src/ai/index.ts`, `server/src/tests/openai-adapter.test.ts`.
+
+---
+
+### TASK P3.4: Groq Provider Adapter
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented `GroqAdapter` implementing `ProviderAdapter` adhering strictly to Groq's official API documentation, Spec Sections 19 & 21, Decision D16, and ADR-032. Documented all official API findings, endpoints, Bearer auth protocols, and schemas in `docs/ai/groq.md`. Utilized native `fetch` against Groq's Chat Completions REST API (`POST https://api.groq.com/openai/v1/chat/completions`) with secure Bearer authentication (`Authorization: Bearer <key>`), ensuring zero API key exposure in query parameters, error messages, or logs. Mapped `AIRequest` payload (`model`, `messages` array with system instruction and context-serialized user turn, `temperature`, `max_tokens`), dynamically resolving `modelId` (never hardcoded) and applying configurable timeouts via `AbortController`. Supported structured JSON generation via `response_format: { type: "json_schema", json_schema: { name: "structured_response", strict: true, schema: outputSchema } }` with automatic extraction into `structuredData`. Accurately parsed token consumption from `usage` object (`prompt_tokens`, `completion_tokens`, `total_tokens`). Normalized all failure states to canonical `AIErrorCategory` per Spec Section 21.1 / 33 fallback rules (429 / rate_limit_exceeded -> RATE_LIMIT, timeout -> TIMEOUT, 500/502/504 -> PROVIDER_ERROR, 503 -> UNAVAILABLE, network -> NETWORK, 401/403 -> AUTH_CONFIG, 400/404 -> INVALID_REQUEST). Implemented lightweight zero-token model `healthCheck()` against `GET https://api.groq.com/openai/v1/models/{model}`. Created full test suite with mocked HTTP layer covering all error mappings, structured outputs, token metrics, timeout aborts, and an optional live smoke test (27 tests: 26 passed, 1 skipped). Recorded ADR-032.
+- **Application Code Written:** `docs/ai/groq.md`, `server/src/ai/adapters/groq.adapter.ts`, `server/src/ai/index.ts`, `server/src/tests/groq-adapter.test.ts`.
+
+---
+
+### TASK P3.5: AI Reliability Layer, Queue Model & Worker
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented the full reliability layer for CorpVerse's multi-provider AI infrastructure per Spec Sections 20, 21, 31–34, Decision D6, and ADR-033. Built the `AIJobModel` targeting collection `aiJobs` with lifecycle states (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `RETRYING`, `WAITING_FOR_PROVIDER`, `CANCELLED`), worker lease fields (`lockedUntil`, `lockedBy`), attempts tracking per provider, and sparse unique `idempotencyKey` index. Extended `AIGateway` with `submit(request, opts)` (queueing with deduplication) and enhanced `execute(request, opts)` (bounded timeout, request/response logging, and telemetry). Built `HealthTracker` managing provider lifecycle states in `aiProviders` (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`), exponential backoffs, zero-token recovery checks via `probeAndRecover()`, and telemetry logging in `aiRequests`, `aiResponses`, and `aiHealthLogs` with prompt truncation and strict credential protection. Implemented `AIWorker` in-process runner with atomic `findOneAndUpdate` job claiming, crash recovery via expired worker leases, up to 3 attempts fallback cascading across priority providers, fast-fail on non-retryable errors (`AUTH_CONFIG`, `INVALID_REQUEST`), and automatic resumption of jobs held in `WAITING_FOR_PROVIDER` when any provider recovers. Created comprehensive integration test suite (`tests/ai-reliability.test.ts`) covering all fallback, recovery, crash, deduplication, and lifecycle requirements with 100% pass rate (14/14 tests). Recorded ADR-033.
+- **Application Code Written:** `server/src/models/AIJob.ts`, `server/src/models/AIProvider.ts`, `server/src/models/AIRequestLog.ts`, `server/src/models/AIResponseLog.ts`, `server/src/models/AIHealthLog.ts`, `server/src/ai/health-tracker.ts`, `server/src/ai/worker.ts`, `server/src/ai/gateway.ts`, `server/src/ai/types.ts`, `server/src/ai/index.ts`, `server/src/index.ts`, `server/src/tests/ai-reliability.test.ts`.
+
+---
+
+### TASK P3.6: AI Manager Backend
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented the AI Manager console backend per Specification Section 20, Decision D10, Decision D11, and ADR-034. Built cryptographic key vault (`utils/crypto.ts`) utilizing authenticated AES-256-GCM encryption with `AI_KEY_VAULT_SECRET` and API key masking (`sk-••••••••1234` or `••••••••1234`), protecting keys at rest and in transit with Mongoose `select: false` and `toJSON` stripping. Implemented `requirePlatformRole` and `requireCareerRole` middleware enforcing strict RBAC: mutations (`/api/ai-manager/providers/*`) are restricted exclusively to `platformRole === 'AI_MANAGER'`, `ADMIN` has read-only access to health/usage telemetry, standard users are rejected with 403, and AI Managers are prohibited from accessing `/api/admin/*` routes. Supported runtime provider CRUD, dynamic priority reorganization within `ProviderRouter`, automatic bypassing of `DISABLED` providers, zero-state testing pings, and two isolated provider pools (`DEMO` and `PIPELINE`). Enforced mandatory append-only audit logging for every configuration mutation via `AuditService.record()` with mandatory reason. Created 15 integration tests covering cryptography, RBAC boundaries, routing priority updates, provider disabling/deletion, audit logging, and health testing with 100% pass rate (324 passing monorepo tests total). Recorded ADR-034.
+- **Application Code Written:** `server/src/utils/crypto.ts`, `server/src/config/env.ts`, `server/src/models/AIProvider.ts`, `server/src/middleware/auth.middleware.ts`, `server/src/ai/provider-router.ts`, `server/src/schemas/aiManager.schema.ts`, `server/src/services/ai/aiManager.service.ts`, `server/src/controllers/aiManager.controller.ts`, `server/src/routes/aiManager.routes.ts`, `server/src/routes/admin.routes.ts`, `server/src/app.ts`, `server/src/index.ts`, `server/src/tests/ai-manager.test.ts`.
+
+---
+
+### TASK P3.7: Frontend for AI Operations
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-07
+- **Description:** Implemented the frontend user interfaces for AI operations per Specification Section 20 and ADR-035. Built `AiManagerPage.tsx` mounted at `/ai-ops` for `AI_MANAGER` users, featuring: multi-pool switcher (`PIPELINE` vs `DEMO`), real-time queue depth and waiting jobs alerts, provider priority ordering (Move Up / Move Down buttons), provider creation modal with encrypted API key input, configuration modal (model ID, rate limit, daily token budget), status toggling (enable/disable), provider removal modal, and health ping action with latency indicator. Enforced mandatory audit `reason` capture on all mutations. Built `AdminAiHealthPage.tsx` mounted at `/admin/ai-health` strictly read-only for `ADMIN` users with an amber oversight mode banner and real-time health matrix. Guaranteed absolute credential protection (all keys displayed as `sk-••••••••1234` or `••••••••1234` and never revealed). Enriched backend `GET /api/ai-manager/health-usage` with `queueStats` aggregated from `AIJobModel`. Built complete Vitest test suite (`src/tests/aiOps.test.tsx`) covering rendering, RBAC constraints, testing pings, modal mutations, and empty states (10 client tests, 52 client tests total, 331 monorepo tests passing). Recorded ADR-035.
+- **Application Code Written:** `client/src/api/aiOps.ts`, `client/src/pages/AiOps.module.css`, `client/src/pages/AiManagerPage.tsx`, `client/src/pages/AdminAiHealthPage.tsx`, `client/src/App.tsx`, `client/src/components/layout/Sidebar.tsx`, `client/src/pages/StubPages.tsx`, `client/src/tests/aiOps.test.tsx`, `server/src/services/ai/aiManager.service.ts`, `server/src/tests/ai-manager.test.ts`.
+
+---
+
 ## 4. Pending / Next Immediate Tasks
 
 1. **TASK P2.4:** Resume Ingestion Engine (GridFS storage, magic byte verification, PDF/DOCX parsing, separate `ResumeFile` and `ResumeAnalysis` records).
-2. **TASK P2.5:** AI Gateway & Multi-Provider Core (Gemini, OpenAI, Groq adapters, retry/fallback router, circuit breaker, MongoDB job queue).
+2. **TASK P4.1:** Career System & Job Board (Job postings catalog, career tracks, job search & application submission).

@@ -159,6 +159,14 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 <span className={styles.navIcon}>📜</span>
                 <span>Audit Explorer</span>
               </NavLink>
+              <NavLink
+                to="/admin/ai-health"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>🛡️</span>
+                <span>AI Health & Telemetry</span>
+              </NavLink>
             </div>
           )}
 

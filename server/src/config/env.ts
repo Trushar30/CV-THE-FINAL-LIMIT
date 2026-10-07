@@ -22,6 +22,7 @@ const envSchema = z.object({
     .string()
     .min(16)
     .default('development_jwt_refresh_secret_at_least_16_chars'),
+  AI_KEY_VAULT_SECRET: z.string().min(16).default('development_ai_key_vault_secret_32chars_min'),
   GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),

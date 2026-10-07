@@ -51,3 +51,43 @@ export async function authenticateJwt(
     return next(AppError.unauthorized('Invalid or expired authentication token'));
   }
 }
+
+/**
+ * Middleware enforcing that the authenticated user possesses one of the allowed platform roles.
+ */
+export function requirePlatformRole(...allowedRoles: Array<'NONE' | 'ADMIN' | 'AI_MANAGER'>) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(AppError.unauthorized('Authentication required'));
+    }
+
+    if (!allowedRoles.includes(req.user.platformRole)) {
+      return next(
+        AppError.forbidden(`Access denied. Required platform role: ${allowedRoles.join(' or ')}`)
+      );
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware enforcing that the authenticated user possesses one of the allowed career roles.
+ */
+export function requireCareerRole(
+  ...allowedRoles: Array<'NONE' | 'JOB_SEEKER' | 'EMPLOYEE' | 'FOUNDER'>
+) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(AppError.unauthorized('Authentication required'));
+    }
+
+    if (!allowedRoles.includes(req.user.careerRole)) {
+      return next(
+        AppError.forbidden(`Access denied. Required career role: ${allowedRoles.join(' or ')}`)
+      );
+    }
+
+    next();
+  };
+}

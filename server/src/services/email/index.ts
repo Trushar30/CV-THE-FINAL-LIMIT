@@ -11,4 +11,6 @@ export * from './smtpEmail.service.js';
  * Singleton email service selected by configuration
  */
 export const emailService: IEmailService =
-  env.EMAIL_SERVICE_TYPE === 'smtp' ? new SmtpEmailService() : new ConsoleEmailService();
+  env.EMAIL_SERVICE_TYPE === 'smtp' && env.NODE_ENV !== 'test'
+    ? new SmtpEmailService()
+    : new ConsoleEmailService();

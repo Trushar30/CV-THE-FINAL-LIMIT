@@ -9,10 +9,17 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { profileRouter } from './routes/profile.routes.js';
+import { aiManagerRouter, createAIManagerRoutes } from './routes/aiManager.routes.js';
+import type { AIManagerController } from './controllers/aiManager.controller.js';
+import { adminRouter } from './routes/admin.routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
-export function createApp(additionalRouter?: Router): Express {
+export interface AppOptions {
+  aiManagerController?: AIManagerController;
+}
+
+export function createApp(additionalRouter?: Router, options?: AppOptions): Express {
   const app = express();
 
   // 1. Security Headers
@@ -63,6 +70,15 @@ export function createApp(additionalRouter?: Router): Express {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/profile', profileRouter);
   app.use('/api/v1/profile', profileRouter);
+
+  const activeAiManagerRouter = options?.aiManagerController
+    ? createAIManagerRoutes(options.aiManagerController)
+    : aiManagerRouter;
+
+  app.use('/api/ai-manager', activeAiManagerRouter);
+  app.use('/api/v1/ai-manager', activeAiManagerRouter);
+  app.use('/api/admin', adminRouter);
+  app.use('/api/v1/admin', adminRouter);
   if (additionalRouter) {
     app.use('/api', additionalRouter);
   }
