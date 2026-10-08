@@ -64,13 +64,10 @@ export function createAIManagerRoutes(controller: AIManagerController): Router {
   return router;
 }
 
-import { ProviderRouter } from '../ai/provider-router.js';
-import { HealthTracker } from '../ai/health-tracker.js';
+import { defaultRouter, defaultTracker } from '../ai/index.js';
 import { AuditService } from '../services/audit/audit.service.js';
 import { AIManagerService } from '../services/ai/aiManager.service.js';
 
-const defaultRouter = new ProviderRouter();
-const defaultTracker = new HealthTracker(defaultRouter);
 const defaultAuditService = new AuditService();
 export const defaultAIManagerService = new AIManagerService(
   defaultRouter,

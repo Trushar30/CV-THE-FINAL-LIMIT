@@ -252,15 +252,30 @@ interface AIResponse {
 
 ## 6. Resume Ingestion & Storage Architecture (GridFS)
 
-1. **Upload Handling:**
-   - Client sends multipart file (PDF or DOCX, max 10 MB).
-   - Middleware reads the first bytes (magic bytes) to verify genuine file signature (`%PDF-` for PDF, `PK\x03\x04` for DOCX). Extensions are never trusted on their own.
-2. **GridFS Storage:**
-   - Binary stream is piped into MongoDB GridFS bucket (`resumes.files` and `resumes.chunks`).
-3. **Decoupled Entities:**
-   - `resumes`: Metadata pointer containing `fileId`, `filename`, `mimeType`, `sizeBytes`, `checksum`.
+1. **Upload & Binary Verification:**
+   - Client sends multipart file (`POST /api/profile/resume/upload` under field `resume` or `file`).
+   - Max file size dynamically validated against `PlatformConfig.security.resumeMaxSizeBytes` (default 10 MB); oversized files reject with HTTP 413.
+   - Backend authoritative validation (`validateResumeFile` in `utils/fileValidation.ts`):
+     - Magic-byte verification (`%PDF-` for PDF, `PK\x03\x04` with OOXML parts for DOCX).
+     - Corrupt file rejection (missing `%%EOF` for PDF, missing `PK\x05\x06` EOCD for DOCX).
+     - Password protection rejection (PDF `/Encrypt` trailer dictionary, DOCX zip encryption flags or OLE `EncryptedPackage`).
+     - Filename sanitization against path traversal (`..`, `/`, `\`) and illegal characters.
+2. **GridFS Storage Subsystem:**
+   - Raw binary stream is written directly into MongoDB GridFS bucket `resumes` (`resumes.files` and `resumes.chunks`).
+3. **Decoupled Entities & Collections:**
+   - `resumes` (`ResumeFile` model): Metadata record containing `_id`, `userId`, `gridFsFileId`, `gridFsId`, `filename`, `mimeType`, `sizeBytes`, `sha256`, `status` (`UPLOADED`, `PROCESSING`, `ANALYZED`, `FAILED`, `ARCHIVED`), `createdAt`, and `updatedAt`.
    - `resumeAnalyses`: Asynchronous parsed representation containing extracted technical skills, years of experience, education, domain classification.
    - `profiles`: User profile document referencing `resumeId` and `resumeAnalysisId`. Binary data is never embedded in user documents.
+4. **Lifecycle & Streamed Download Authorization (ADR-040):**
+   - **Archive & Preserve:** Re-uploading a new resume marks prior resumes for that candidate as `status: 'ARCHIVED'`. Prior GridFS binaries and records are retained for historical audit trails and prior application fidelity. The profile's active `resumeId` is updated to the newest upload.
+   - **Streamed Downloads:** `GET /api/profile/resume/:id/download` streams raw file binary directly from GridFS. Strictly restricted to the resume owner (`userId`) and users with `platformRole === 'ADMIN'`. Unauthorized requests reject with HTTP 403 `AUTHORIZATION_ERROR`.
+5. **Resume Processing Pipeline & Text Extraction (ADR-041):**
+   - **Text Extraction Engine:** `TextExtractionService` (`server/src/services/resume/textExtraction.service.ts`) extracts plain text from GridFS binaries using `pdf-parse` v2 for PDFs and `mammoth` for DOCX files.
+   - **Scanned PDF & Blank Document Detection:** An alphanumeric character threshold (< 40 characters) detects scanned PDFs without an OCR layer; sets `status: 'SCANNED_UNREADABLE'` and `failureReason: 'SCANNED_PDF_NO_TEXT'`, immediately halting pipeline execution to strictly prevent AI hallucination or synthetic fabrication.
+   - **Zero-Fabrication System Prompt:** A non-invention prompt explicitly forbids the LLM from inventing, assuming, inferring, or extrapolating candidate details. Omitted fields are left null or empty.
+   - **Strict Zod Output Validation:** Canonical schema `resumeAnalysisOutputSchema` validates name, contact, skills, education, experience, projects, certifications, domain classification (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), and non-negative experience years.
+   - **Queue Retry Integration & Zero-Dirty-Data Guarantee:** `AIWorker` executes task validation before marking jobs complete; on failure, triggers retries up to 3 times before cascading or transitioning to `WAITING_FOR_PROVIDER`. Unvalidated data is never stored in `resumeAnalyses`.
+   - **Profile Linkage & Status Telemetry:** Upon success, updates candidate `Profile.resumeAnalysisId`. Endpoints `GET /api/profile/resume/analysis` and `GET /api/profile/resume/:id/analysis` provide full status lifecycle (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `SCANNED_UNREADABLE`, `WAITING_FOR_PROVIDER`).
 
 ---
 
@@ -513,12 +528,13 @@ The authoritative system configuration schema is stored as a versioned document 
 
 ### 14.1 Design System & CSS Foundation
 
-- **Tokens & Themes:** Defined in `styles/tokens.css` and `styles/themes.css`. Dark theme is default cyber-corporate; light theme is clean high-contrast. Modular 4px spacing scale, semantic color palettes (EXP violet, CorpCoin gold, cyber cyan, status emerald/warning/danger/info), and typographic hierarchy.
+- **Tokens & Themes:** Defined in `styles/tokens.css` and `styles/themes.css` (ADR-038). Canonical 6-swatch Gamified Learning palette: Child of Light (`#EFF4F8`), Winter Garden (`#C5D0CF`), Charon (`#A1A19C`), Smokehouse (`#706255`), Cascades (`#273E41`), and Vantablack (`#020101`). Apple-level visual polishing includes SF Pro / Inter typography, continuous squircle radii (`6px` to `30px`), tactile specular glass highlights (`inset 0 1px 0 ...`), diffused multi-stop ambient shadows, and smooth spring curves (`cubic-bezier(0.16, 1, 0.3, 1)`).
 - **Pure Vanilla CSS:** Scoped via CSS Modules (`[Component].module.css`) with zero third-party UI dependencies.
 
 ### 14.2 Reusable UI Component Library
 
-- **Core Primitives:** `Button` (loading spinner, disabled, variants, icons), `Input` (labels, error states, prefixes/suffixes), `Card` (glassmorphism, elevation, hoverable), `Modal` (backdrop blur, accessibility, ESC key, scroll lock), `Table` (responsive wrapper, alignment, striped/hoverable), `Badge` (pill styling, dot indicators), `Toast` (`ToastProvider`, stacked floating notifications, auto-dismiss), `Spinner` (sizes, colors), `EmptyState` (action slot), `ProgressBar` (level progression, glow, shimmer animation), `Tabs` (pills and underline variants).
+- **Core Primitives:** `Button` (loading spinner, disabled, variants, icons), `Input` (labels, error states, prefixes/suffixes), `Card` (glassmorphism, elevation, hoverable), `Modal` (backdrop blur, accessibility, ESC key, scroll lock), `Table` (responsive wrapper, alignment, striped/hoverable), `Badge` (pill styling, dot indicators), `Toast` (`ToastProvider`, stacked floating notifications, auto-dismiss), `Spinner` (sizes, colors), `EmptyState` (action slot, vector illustrations), `ProgressBar` (level progression, glow, shimmer animation), `Tabs` (pills and underline variants).
+- **Vector Iconography & Illustrations:** Native SVG symbol library (`components/ui/Icon/Icon.tsx`, ADR-039) providing 20+ SF-style 24×24 vector symbols (`BriefcaseIcon`, `BuildingIcon`, `ZapIcon`, `TrophyIcon`, `SparklesIcon`, `RocketIcon`, `BotIcon`, `ShieldCheckIcon`, `BrainCircuitIcon`, `CoinIcon`, `SunIcon`, `MoonIcon`, etc.) and multi-layer vector illustrations (`EmptyApplicationIllustration`, `FounderBadgeIllustration`) replacing OS emojis with theme-reactive visual assets.
 
 ### 14.3 App Shell & Responsive Layout
 
@@ -627,51 +643,71 @@ The authoritative system configuration schema is stored as a versioned document 
 
 - **Collection:** `profiles` (Specification Section 20, Collection 2).
 - **Unique Linkage:** A strict unique index on `{ userId: 1 }` guarantees exactly one profile document per authenticated user.
-- **Locked Career Domains:** Enforced via TypeScript enum and Mongoose validation:
+- **Case-Insensitive Display Name:** Case-insensitive uniqueness enforced via MongoDB collation index (`{ locale: 'en', strength: 2 }`) and regex pre-validation in `ProfileService.isDisplayNameAvailable()`, rejecting collisions (e.g., "Elena Rostova" vs "elena rostova") with 409 Conflict.
+- **Locked Career Domains:** Enforced via TypeScript enum, `DomainModel` active validation, and Mongoose validation:
   - `SOFTWARE_ENGINEERING`
   - `CLOUD_ENGINEERING`
   - `AI_ENGINEERING`
-  - _Domain is selected once during onboarding and is immutable thereafter._
+  - _Domain is selected during onboarding and is immutable thereafter._
 - **Mandatory Profile Fields:**
   - `displayName`: 2–80 characters string.
   - `domain`: One of the 3 locked career domains.
   - `skills`: Array of 1 to 50 lowercase trimmed strings.
-- **Optional Profile Fields:**
+- **Optional Profile Fields (Never made mandatory):**
   - `bio`: Max 500 characters.
   - `githubUrl`, `linkedinUrl`, `portfolioUrl`: Validated URL strings.
   - `projects`: Subdocuments with `title`, `description`, `technologies`, `repositoryUrl`, `liveUrl`.
   - `certifications`: Subdocuments with `name`, `issuer`, `issueDate`, `credentialId`, `credentialUrl`.
-  - `resumeFileId`: Reserved MongoDB ObjectId referencing `resumeFiles` collection (populated in TASK P2.4).
+  - `resumeId`: Reserved MongoDB ObjectId referencing `resumes` collection.
 
-### 17.2 Authoritative Role Transition Lifecycle
+### 17.2 Authoritative Role Transition Lifecycle & Onboarding Sequence
 
 The backend remains authoritative across all onboarding and career role progressions:
 
 1. **Initial Registration:** User document initialized with `careerRole = 'NONE'` and `onboardingStep = 'REGISTERED'`.
 2. **Email Verification:** User completes verification; `emailVerified = true`, `onboardingStep = 'EMAIL_VERIFIED'`.
-3. **Profile Setup (`POST /api/profile/setup`):**
+3. **Step-by-Step Onboarding Pipeline:**
+   - Sequential progression: `EMAIL_VERIFIED` $\rightarrow$ `NAME` $\rightarrow$ `DOMAIN` $\rightarrow$ `SKILLS` $\rightarrow$ `RESUME` $\rightarrow$ `REVIEW` $\rightarrow$ `COMPLETE`.
+   - Updated via `PATCH /api/profile/step` or all-in-one `POST /api/profile/setup`.
+   - Optional steps (resume upload, links/bio) can be skipped without blocking onboarding completion.
+4. **Authoritative Promotion via Single Service Method (`completeOnboarding`):**
    - Requires verified, active session (`authenticateJwt`).
-   - Checks if a profile already exists for `userId`; if so, rejects with `409 Conflict` (`BUSINESS_RULE_VIOLATION`).
-   - Validates payload against `profileSetupSchema` with strict Zod constraints.
-   - Atomically inserts profile document.
-   - Authoritatively promotes user:
-     - `user.careerRole = 'JOB_SEEKER'`
-     - `user.onboardingStep = 'PROFILE_COMPLETED'`
-   - Dispatches audit log recording `USER_PROFILE_SETUP`.
-4. **Subsequent Profile Management:**
+   - Asserts mandatory fields: valid `displayName`, `domain`, and non-empty `skills`.
+   - Promotes `user.careerRole = 'JOB_SEEKER'` and sets `user.onboardingStep = 'COMPLETE'`.
+   - Guaranteed client isolation: client request payloads cannot directly set or alter `careerRole` (stripped/ignored on all client profile endpoints).
+5. **Subsequent Profile Management:**
    - `GET /api/profile/me`: Retrieves candidate profile linked to current user.
-   - `PUT /api/profile/me`: Allows updating optional details (`bio`, `skills`, URLs, projects, certifications) with strict Zod validation; `domain` and `userId` are protected against modification.
-   - `GET /api/profile/domains`: Serves domain catalog, descriptions, and recommended skill tags.
+   - `PUT /api/profile/me`: Allows updating optional details (`bio`, `skills`, URLs, projects, certifications) with strict Zod validation; `domain` and `userId` are protected against modification; `careerRole` client mutations are completely ignored.
+   - `GET /api/profile/domains` and `GET /api/domains`: Serves active domain catalog.
 
-### 17.3 Client Profile Wizard & Route Guard Navigation
+### 17.3 Client Guided Onboarding Flow & Side-by-Side Review (TASK P4.4)
 
-- **Profile Wizard (`ProfileSetupPage.tsx`):** 3-step interactive onboarding flow:
-  1. _Domain Selection:_ Interactive domain cards highlighting specialization and tech focus.
-  2. _Skills & Details:_ Display name input, quick-add suggested skill chips, custom skill tagging, and optional bio/URLs.
-  3. _Review & Activation:_ Summary review card with authoritative activation submission triggering transition to Job Seeker.
+- **Profile Setup Stepper (`ProfileSetupPage.tsx`):** 6-step progressive onboarding sequence matching backend invariant rules:
+  1. _Candidate Display Name:_ Input validation (2–50 chars, case-insensitive uniqueness check against backend).
+  2. _Career Domain Selection:_ Interactive cards for the 3 canonical domains (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
+  3. _Technical Competencies:_ Searchable multi-select catalog filtered by domain, suggested skill chips, custom tag entry, and chip removal.
+  4. _Resume Dropzone Upload:_ Drag-and-drop and file-picker uploader validating PDF/DOCX (max 10MB), uploading to GridFS via `POST /api/profile/resume/upload` with streaming progress bar.
+  5. _AI Verification & Polling:_ Asynchronous polling of `GET /api/profile/resume/analysis` every 2s with clear handling of `WAITING_FOR_PROVIDER` (queue notice), `SCANNED_UNREADABLE` (advisory warning with manual progression option), `FAILED` (retry/re-upload), and `COMPLETED`.
+  6. _Side-by-Side Review Screen:_ Responsive comparison grid contrasting candidate profile entries (left) with AI-extracted resume entities (right, including contacts, domain classification, experience years, skills chips, education records, work history) with optional fields (bio, GitHub, LinkedIn, portfolio) clearly marked `(Optional)`.
+  7. _Celebratory Activation:_ Authoritative activation via `onboardingApi.completeOnboarding()` promoting user to `careerRole = 'JOB_SEEKER'`, refreshing session, and presenting celebratory activation view.
+- **State Restoration Lifecycle:** On initial mount, `ProfileSetupPage` executes a single restoration lifecycle (`hasRestoredRef`) fetching `onboardingApi.getProfile()` and mapping `user.onboardingStep` to the appropriate active step, allowing seamless resumption across page reloads.
+- **Unverified Email Notification:** Displays amber warning banner when `user.emailVerified === false`, with a one-click resend trigger calling `POST /api/auth/resend-verification`.
 - **Route Guard Protection:**
   - `RoleRoute`: If a verified candidate with `careerRole: 'NONE'` attempts to access Job Seeker features (`/job-seeker/*`), the router gracefully redirects them to `/profile/setup`.
   - `Sidebar`: Dynamic navigation renders "Candidate Onboarding" link for candidates with `careerRole: 'NONE'`.
+
+### 17.4 Domains & Skills Taxonomy and Admin Management (TASK P4.1)
+
+- **`domains` Collection (Spec Section 20, Collection 5):**
+  - Schema: `code` (unique uppercase token), `name`, `description`, `isActive`, `createdAt`, `updatedAt`.
+  - Idempotently seeded on boot with the 3 v1 domains (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
+  - Public retrieval via `GET /api/domains` and `GET /api/v1/domains`.
+  - Admin CRUD endpoints (`POST /api/admin/domains`, `GET /api/admin/domains`, `GET /api/admin/domains/:id`, `PATCH /api/admin/domains/:id`, `DELETE /api/admin/domains/:id`) protected by `authenticateJwt` and `requirePlatformRole('ADMIN')`.
+  - All administrative domain mutations write immutable records to `auditLogs` with mandatory justification reasons.
+- **`skills` Collection (Spec Section 20, Collection 6):**
+  - Schema: `name` (unique), `domainCode` (indexed), `category`, `createdAt`, `updatedAt`.
+  - Pre-seeded with curated skill taxonomy per domain.
+  - Public retrieval via `GET /api/skills?domainCode=...`.
 
 ---
 
@@ -784,12 +820,13 @@ All internal AI interactions are isolated from vendor-specific payloads through 
   - Decryption (`decryptSecret`) occurs exclusively in-memory inside adapter calls when dispatching upstream AI requests.
   - Plaintext keys are never persisted, never returned in API responses, and never logged.
   - In MongoDB `aiProviders`, `encryptedApiKey` is configured with `select: false` and explicitly stripped from `toJSON` schema transforms. Only `maskedApiKey` (preserving the last 4 characters, e.g., `sk-••••••••1234` or `••••••••1234`) is exposed via API responses.
-- **Two-Pool Isolation Architecture (Decision D11):**
-  - `DEMO` pool: Populated from static server environment variables for interactive demos and admin testing.
+- **Two-Pool Isolation Architecture (Decision D11 & ADR-036):**
+  - `DEMO` pool: Automatically seeded into `aiProviders` on server boot from `server/.env` (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`) via `AIManagerService.seedDemoPoolFromEnv()`. Encrypted with AES-256-GCM, masked, and registered into `ProviderRouter` for interactive demos, live health telemetry, and admin testing.
   - `PIPELINE` pool: Managed in the database by the AI Manager for background workflow tasks, candidate screening, and assessment evaluations.
 - **Dynamic Routing & Health Management:**
   - Updating provider priority via `AIManagerService` dynamically reorganizes priority order within `ProviderRouter`.
   - Providers marked `DISABLED` are skipped during routing candidate selection.
+  - On-the-fly adapter resolution: If a provider exists in the database but lacks an active adapter in `ProviderRouter` (e.g., following a worker restart), the adapter is instantiated and registered on-demand during test pings or routing.
   - Live health testing (`POST /providers/:code/test`) pings upstream adapters and returns latency and diagnostics without disrupting active priority order.
 - **Mandatory Append-Only Audit Logging:**
   - Every provider mutation (creation, modification, enablement, disablement, deletion) requires a descriptive `reason` ($\ge 3$ characters) and records an immutable log in `AuditLog` via `AuditService.record()` capturing actor ID, actor role, action type, target ID, diff state, and reason.

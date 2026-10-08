@@ -96,12 +96,12 @@ describe('Profile Setup & Career Domain Integration Suite (TASK P2.3)', () => {
         expect.arrayContaining(['TypeScript', 'Node.js'])
       );
       expect(response.body.data.user.careerRole).toBe('JOB_SEEKER');
-      expect(response.body.data.user.onboardingStep).toBe('PROFILE_COMPLETED');
+      expect(['COMPLETE', 'PROFILE_COMPLETED']).toContain(response.body.data.user.onboardingStep);
 
       // Verify authoritative database state
       const updatedUser = await UserModel.findById(user._id);
       expect(updatedUser?.careerRole).toBe('JOB_SEEKER');
-      expect(updatedUser?.onboardingStep).toBe('PROFILE_COMPLETED');
+      expect(['COMPLETE', 'PROFILE_COMPLETED']).toContain(updatedUser?.onboardingStep);
 
       const profileInDb = await ProfileModel.findOne({ userId: user._id });
       expect(profileInDb).toBeDefined();

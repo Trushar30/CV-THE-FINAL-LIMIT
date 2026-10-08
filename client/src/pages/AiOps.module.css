@@ -357,7 +357,7 @@
 }
 
 .barPrimary {
-  background: linear-gradient(90deg, #6366f1, #818cf8);
+  background: linear-gradient(90deg, var(--cv-brand-primary-500), var(--cv-brand-primary-400));
 }
 
 .barDanger {

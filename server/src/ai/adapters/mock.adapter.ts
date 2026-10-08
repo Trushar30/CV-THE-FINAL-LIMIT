@@ -39,6 +39,8 @@ export class MockAdapter implements ProviderAdapter {
   // Next-call overrides (consumed on use)
   private nextError?: AIErrorCategory;
   private nextResponse?: Partial<AIResponse>;
+  private persistentError?: AIErrorCategory;
+  private persistentResponse?: Partial<AIResponse>;
   private healthCheckResult = true;
 
   // Call tracking
@@ -72,9 +74,21 @@ export class MockAdapter implements ProviderAdapter {
     return this.simulateError(category);
   }
 
+  /** Configure a persistent error for all generate() calls until reset */
+  setPersistentError(category: AIErrorCategory): this {
+    this.persistentError = category;
+    return this;
+  }
+
   /** Configure the next generate() call to return a custom partial response */
   simulateResponse(partial: Partial<AIResponse>): this {
     this.nextResponse = partial;
+    return this;
+  }
+
+  /** Configure a persistent response override for all generate() calls until reset */
+  setPersistentResponse(partial: Partial<AIResponse>): this {
+    this.persistentResponse = partial;
     return this;
   }
 
@@ -88,6 +102,8 @@ export class MockAdapter implements ProviderAdapter {
   reset(): this {
     this.nextError = undefined;
     this.nextResponse = undefined;
+    this.persistentError = undefined;
+    this.persistentResponse = undefined;
     this.healthCheckResult = true;
     this.callHistory.length = 0;
     return this;
@@ -125,10 +141,12 @@ export class MockAdapter implements ProviderAdapter {
     }
 
     // Simulate error if configured
+    const errorCategory = this.nextError ?? this.persistentError;
     if (this.nextError) {
-      const category = this.nextError;
       this.nextError = undefined;
-      throw new AIError(`Mock ${category} error from ${this.name}`, category, this.name);
+    }
+    if (errorCategory) {
+      throw new AIError(`Mock ${errorCategory} error from ${this.name}`, errorCategory, this.name);
     }
 
     // Build default response
@@ -147,10 +165,12 @@ export class MockAdapter implements ProviderAdapter {
     };
 
     // Merge any custom overrides
+    const overrides = this.nextResponse ?? this.persistentResponse;
     if (this.nextResponse) {
-      const overrides = this.nextResponse;
       this.nextResponse = undefined;
+    }
 
+    if (overrides) {
       return {
         ...baseResponse,
         ...overrides,

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth, type CareerRole, type PlatformRole } from '../../store/AuthContext';
 import { useTheme } from '../../store/ThemeContext';
 import { Button } from '../ui/Button/Button';
+import { MenuIcon, ZapIcon, CoinIcon, SunIcon, MoonIcon } from '../ui/Icon';
 import styles from './Topbar.module.css';
 
 export interface TopbarProps {
@@ -45,7 +46,7 @@ export function Topbar({
           onClick={onToggleMobileMenu}
           aria-label="Open navigation menu"
         >
-          ☰
+          <MenuIcon size={18} />
         </button>
         <div className={styles.titleArea}>
           <span className={styles.pageTitle}>{title}</span>
@@ -61,13 +62,13 @@ export function Topbar({
         {user && (
           <div className={styles.balancePills}>
             <div className={`${styles.pill} ${styles.pillExp}`} title="Total EXP">
-              <span>⚡</span>
+              <ZapIcon size={13} color="var(--cv-violet-400)" />
               <span>L{user.level}</span>
               <span>•</span>
               <span>{user.totalExpCached.toLocaleString()} EXP</span>
             </div>
             <div className={`${styles.pill} ${styles.pillCoin}`} title="CorpCoin Balance">
-              <span>🪙</span>
+              <CoinIcon size={13} color="var(--cv-gold-400)" />
               <span>{user.corpCoinBalanceCached.toLocaleString()} CC</span>
             </div>
           </div>
@@ -98,7 +99,7 @@ export function Topbar({
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
         >
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
         </button>
 
         {/* Auth Action */}

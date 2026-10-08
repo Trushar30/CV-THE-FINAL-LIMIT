@@ -23,9 +23,16 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  color: var(--cv-text-muted);
+  color: var(--cv-brand-primary-500);
   margin-bottom: var(--cv-space-4);
   box-shadow: var(--cv-shadow-sm);
+}
+
+.illustrationWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--cv-space-4);
 }
 
 .title {

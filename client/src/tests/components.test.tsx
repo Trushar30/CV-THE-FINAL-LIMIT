@@ -11,6 +11,8 @@ import {
   Tabs,
   EmptyState,
   Spinner,
+  BriefcaseIcon,
+  ZapIcon,
 } from '../components/ui';
 
 describe('Reusable UI Components Suite', () => {
@@ -202,6 +204,17 @@ describe('Reusable UI Components Suite', () => {
       expect(screen.getByText('Nothing here')).toBeDefined();
       expect(screen.getByText('Create Item')).toBeDefined();
     });
+
+    it('renders with custom vector illustration', () => {
+      render(
+        <EmptyState
+          illustration={<svg data-testid="custom-illustration" />}
+          title="No Applications"
+        />
+      );
+      expect(screen.getByTestId('custom-illustration')).toBeDefined();
+      expect(screen.getByText('No Applications')).toBeDefined();
+    });
   });
 
   describe('Spinner Component', () => {
@@ -209,6 +222,24 @@ describe('Reusable UI Components Suite', () => {
       render(<Spinner label="Processing..." />);
       expect(screen.getByRole('status')).toBeDefined();
       expect(screen.getByLabelText('Processing...')).toBeDefined();
+    });
+  });
+
+  describe('Icon & Vector Illustration Suite', () => {
+    it('renders SVG vector icons with custom attributes', () => {
+      render(
+        <div data-testid="icon-container">
+          <BriefcaseIcon size={24} data-testid="briefcase-icon" />
+          <ZapIcon size={16} data-testid="zap-icon" />
+        </div>
+      );
+      const briefcase = screen.getByTestId('briefcase-icon');
+      expect(briefcase.getAttribute('width')).toBe('24');
+      expect(briefcase.getAttribute('height')).toBe('24');
+
+      const zap = screen.getByTestId('zap-icon');
+      expect(zap.getAttribute('width')).toBe('16');
+      expect(zap.getAttribute('height')).toBe('16');
     });
   });
 });

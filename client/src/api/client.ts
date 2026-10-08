@@ -58,14 +58,23 @@ export class ApiClient {
       authHeaders['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
+    const isFormData = typeof FormData !== 'undefined' && customConfig.body instanceof FormData;
+    const defaultHeaders: Record<string, string> = isFormData
+      ? {
+          Accept: 'application/json',
+          ...authHeaders,
+          ...(headers as Record<string, string>),
+        }
+      : {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...authHeaders,
+          ...(headers as Record<string, string>),
+        };
+
     const config: RequestInit = {
       ...customConfig,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...authHeaders,
-        ...headers,
-      },
+      headers: defaultHeaders,
       credentials: 'include', // Includes httpOnly cookies for sessions
     };
 
@@ -156,6 +165,14 @@ export class ApiClient {
 
   public delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  }
+
+  public upload<T>(endpoint: string, formData: FormData, options?: RequestOptions): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: formData,
+    });
   }
 }
 

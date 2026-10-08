@@ -13,6 +13,12 @@ import {
   Tabs,
   type TabItem,
   type Column,
+  BuildingIcon,
+  SparklesIcon,
+  ZapIcon,
+  RocketIcon,
+  ClipboardListIcon,
+  EmptyApplicationIllustration,
 } from '../components/ui';
 import styles from './ShowcasePage.module.css';
 
@@ -75,9 +81,14 @@ export function ShowcasePage(): ReactElement {
   const [progressVal, setProgressVal] = useState<number>(68);
 
   const demoTabs: TabItem[] = [
-    { id: 'components', label: 'All UI Components', icon: '🧩', badge: '11' },
-    { id: 'typography', label: 'Design System Tokens', icon: '🎨' },
-    { id: 'interactive', label: 'State & Overlays', icon: '⚡' },
+    {
+      id: 'components',
+      label: 'All UI Components',
+      icon: <BuildingIcon size={16} />,
+      badge: '11',
+    },
+    { id: 'typography', label: 'Design System Tokens', icon: <SparklesIcon size={16} /> },
+    { id: 'interactive', label: 'State & Overlays', icon: <ZapIcon size={16} /> },
   ];
 
   const tableColumns: Column<DemoTableRow>[] = [
@@ -235,10 +246,10 @@ export function ShowcasePage(): ReactElement {
                       {buttonLoading ? 'Loading' : 'Click for Loading State'}
                     </Button>
                     <Button disabled>Disabled</Button>
-                    <Button leftIcon="🚀" variant="cyan">
+                    <Button leftIcon={<RocketIcon size={16} />} variant="cyan">
                       With Left Icon
                     </Button>
-                    <Button rightIcon="→" variant="outline">
+                    <Button rightIcon={<SparklesIcon size={16} />} variant="outline">
                       With Right Icon
                     </Button>
                   </div>
@@ -265,7 +276,7 @@ export function ShowcasePage(): ReactElement {
                 <Input
                   label="With Prefix Icon"
                   placeholder="name@corpverse.dev"
-                  leftIcon="📧"
+                  leftIcon={<ClipboardListIcon size={16} />}
                   type="email"
                 />
 
@@ -505,7 +516,7 @@ export function ShowcasePage(): ReactElement {
               </div>
 
               <EmptyState
-                icon="📊"
+                illustration={<EmptyApplicationIllustration size={92} />}
                 title="No Active Job Applications"
                 description="You have not submitted applications to any virtual company yet. Explore the Platform Job Board to begin your career progression."
                 action={
@@ -524,32 +535,64 @@ export function ShowcasePage(): ReactElement {
         {/* Design System Tokens Tab */}
         {activeTab === 'typography' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-6)' }}>
-            <Card title="Color Palette Tokens" subtitle="Tailored HSL / Hex cyber-corporate colors">
+            <Card
+              title="Color Palette Tokens"
+              subtitle="Gamified Learning Palette — Child of Light, Winter Garden, Charon, Smokehouse, Cascades & Vantablack"
+            >
               <div className={styles.colorSwatchGrid}>
                 <div
                   className={styles.colorSwatch}
-                  style={{ backgroundColor: 'var(--cv-brand-primary-600)', color: '#fff' }}
+                  style={{ backgroundColor: 'var(--cv-palette-cascades)', color: '#fff' }}
                 >
-                  <span className={styles.colorSwatchName}>Brand Primary</span>
-                  <span className={styles.colorSwatchValue}>#4f46e5</span>
+                  <span className={styles.colorSwatchName}>Cascades (Hero)</span>
+                  <span className={styles.colorSwatchValue}>#273e41</span>
                 </div>
                 <div
                   className={styles.colorSwatch}
-                  style={{ backgroundColor: 'var(--cv-accent-cyan-500)', color: '#fff' }}
+                  style={{
+                    backgroundColor: 'var(--cv-palette-child-of-light)',
+                    color: 'var(--cv-palette-vantablack)',
+                    border: '1px solid var(--cv-palette-winter-garden)',
+                  }}
                 >
-                  <span className={styles.colorSwatchName}>Cyber Cyan</span>
-                  <span className={styles.colorSwatchValue}>#06b6d4</span>
+                  <span className={styles.colorSwatchName}>Child of Light</span>
+                  <span className={styles.colorSwatchValue}>#eff4f8</span>
                 </div>
                 <div
                   className={styles.colorSwatch}
-                  style={{ backgroundColor: 'var(--cv-accent-emerald-500)', color: '#fff' }}
+                  style={{ backgroundColor: 'var(--cv-palette-winter-garden)', color: '#162326' }}
                 >
-                  <span className={styles.colorSwatchName}>Success Emerald</span>
-                  <span className={styles.colorSwatchValue}>#10b981</span>
+                  <span className={styles.colorSwatchName}>Winter Garden</span>
+                  <span className={styles.colorSwatchValue}>#c5d0cf</span>
                 </div>
                 <div
                   className={styles.colorSwatch}
-                  style={{ backgroundColor: 'var(--cv-gold-500)', color: '#0f172a' }}
+                  style={{ backgroundColor: 'var(--cv-palette-charon)', color: '#fff' }}
+                >
+                  <span className={styles.colorSwatchName}>Charon</span>
+                  <span className={styles.colorSwatchValue}>#a1a19c</span>
+                </div>
+                <div
+                  className={styles.colorSwatch}
+                  style={{ backgroundColor: 'var(--cv-palette-smokehouse)', color: '#fff' }}
+                >
+                  <span className={styles.colorSwatchName}>Smokehouse</span>
+                  <span className={styles.colorSwatchValue}>#706255</span>
+                </div>
+                <div
+                  className={styles.colorSwatch}
+                  style={{
+                    backgroundColor: 'var(--cv-palette-vantablack)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <span className={styles.colorSwatchName}>Vantablack</span>
+                  <span className={styles.colorSwatchValue}>#020101</span>
+                </div>
+                <div
+                  className={styles.colorSwatch}
+                  style={{ backgroundColor: 'var(--cv-gold-500)', color: '#020101' }}
                 >
                   <span className={styles.colorSwatchName}>CorpCoin Gold</span>
                   <span className={styles.colorSwatchValue}>#f59e0b</span>
@@ -561,19 +604,12 @@ export function ShowcasePage(): ReactElement {
                   <span className={styles.colorSwatchName}>EXP Violet</span>
                   <span className={styles.colorSwatchValue}>#8b5cf6</span>
                 </div>
-                <div
-                  className={styles.colorSwatch}
-                  style={{ backgroundColor: 'var(--cv-status-danger-text)', color: '#fff' }}
-                >
-                  <span className={styles.colorSwatchName}>Danger Rose</span>
-                  <span className={styles.colorSwatchValue}>#ef4444</span>
-                </div>
               </div>
             </Card>
 
             <Card
               title="Typography Hierarchy Scale"
-              subtitle="Inter font family with crisp geometric weights"
+              subtitle="Apple SF Pro / Inter font family with crisp geometric weights"
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-4)' }}>
                 <div>

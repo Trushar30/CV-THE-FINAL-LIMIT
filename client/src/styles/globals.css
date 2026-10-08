@@ -23,6 +23,8 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
   transition:
     background-color var(--cv-transition-normal),
     color var(--cv-transition-normal);
@@ -35,18 +37,24 @@ body {
   flex-direction: column;
 }
 
-/* Custom Scrollbar */
+/* Apple-Style Text Selection */
+::selection {
+  background-color: rgba(62, 107, 112, 0.35);
+  color: var(--cv-text-primary);
+}
+
+/* Custom Scrollbar — Apple Slim Discrete Style */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--cv-bg-app);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--cv-bg-surface-hover);
+  background: var(--cv-border-strong);
   border-radius: var(--cv-radius-full);
 }
 
@@ -94,7 +102,7 @@ body {
 @keyframes cv-modal-enter {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(-8px);
+    transform: scale(0.97) translateY(-6px);
   }
   to {
     opacity: 1;
@@ -120,6 +128,47 @@ body {
   100% {
     background-position: 200% 0;
   }
+}
+
+@keyframes cv-spring-press {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cv-float-ambient {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Micro-Interaction Utility Classes */
+.cv-spring-interactive {
+  transition:
+    transform var(--cv-transition-fast),
+    box-shadow var(--cv-transition-fast);
+}
+
+.cv-spring-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.cv-spring-interactive:active {
+  transform: scale(0.97);
+}
+
+.cv-float {
+  animation: cv-float-ambient 4s ease-in-out infinite;
 }
 
 /* Accessible utility */

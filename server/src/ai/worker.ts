@@ -17,6 +17,10 @@ import type { HealthTracker } from './health-tracker.js';
 import { validateAgainstSchema } from './gateway.js';
 import { logger } from '../utils/logger.js';
 
+export type JobValidator = (job: IAIJobDocument, response: AIResponse) => void | Promise<void>;
+export type JobCompletionHandler = (job: IAIJobDocument) => Promise<void>;
+export type JobStateChangeHandler = (job: IAIJobDocument) => Promise<void>;
+
 export interface AIWorkerOptions {
   workerId?: string;
   pollIntervalMs?: number; // default: 2000ms
@@ -36,6 +40,10 @@ export class AIWorker {
   private timer: NodeJS.Timeout | null = null;
   private isProcessingTick = false;
 
+  private readonly validators = new Map<string, JobValidator>();
+  private readonly handlers = new Map<string, JobCompletionHandler>();
+  private readonly stateChangeHandlers = new Map<string, JobStateChangeHandler>();
+
   constructor(
     private readonly router: ProviderRouter,
     private readonly healthTracker: HealthTracker,
@@ -46,6 +54,18 @@ export class AIWorker {
     this.leaseDurationMs = options.leaseDurationMs ?? 30000;
     this.pools = options.pools ?? ['PIPELINE', 'DEMO'];
     this.maxAttemptsPerProvider = options.maxAttemptsPerProvider ?? 3;
+  }
+
+  public registerValidator(taskType: string, validator: JobValidator): void {
+    this.validators.set(taskType, validator);
+  }
+
+  public registerHandler(taskType: string, handler: JobCompletionHandler): void {
+    this.handlers.set(taskType, handler);
+  }
+
+  public registerStateChangeHandler(taskType: string, handler: JobStateChangeHandler): void {
+    this.stateChangeHandlers.set(taskType, handler);
   }
 
   /**
@@ -195,6 +215,11 @@ export class AIWorker {
         jobId: job._id.toString(),
         pool,
       });
+
+      const stateHandler = this.stateChangeHandlers.get(job.taskType);
+      if (stateHandler) {
+        await stateHandler(job);
+      }
       return;
     }
 
@@ -244,6 +269,12 @@ export class AIWorker {
           );
         }
       }
+
+      // Execute registered task-specific validator (e.g., Zod schema validation)
+      const validator = this.validators.get(job.taskType);
+      if (validator) {
+        await validator(job, response);
+      }
     } catch (err: unknown) {
       const latencyMs = Date.now() - startTime;
       let aiError: AIError;
@@ -281,6 +312,11 @@ export class AIWorker {
         job.lockedBy = null;
         job.lockedUntil = null;
         await job.save();
+
+        const stateHandler = this.stateChangeHandlers.get(job.taskType);
+        if (stateHandler) {
+          await stateHandler(job);
+        }
         return;
       }
 
@@ -308,11 +344,21 @@ export class AIWorker {
         job.lockedBy = null;
         job.lockedUntil = null;
         await job.save();
+
+        const stateHandler = this.stateChangeHandlers.get(job.taskType);
+        if (stateHandler) {
+          await stateHandler(job);
+        }
       } else {
         job.status = 'WAITING_FOR_PROVIDER';
         job.lockedBy = null;
         job.lockedUntil = null;
         await job.save();
+
+        const stateHandler = this.stateChangeHandlers.get(job.taskType);
+        if (stateHandler) {
+          await stateHandler(job);
+        }
       }
       return;
     }
@@ -335,6 +381,19 @@ export class AIWorker {
     job.lockedBy = null;
     job.lockedUntil = null;
     await job.save();
+
+    // Trigger registered completion handler
+    const handler = this.handlers.get(job.taskType);
+    if (handler) {
+      try {
+        await handler(job);
+      } catch (handlerErr) {
+        logger.error(`Handler for taskType '${job.taskType}' failed`, {
+          jobId: job._id.toString(),
+          error: String(handlerErr),
+        });
+      }
+    }
 
     // After success, attempt resuming any waiting jobs
     await this.checkAndResumeWaitingJobs(pool);

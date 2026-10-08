@@ -2,6 +2,19 @@ import type { ReactElement } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { Badge } from '../ui/Badge/Badge';
+import {
+  SparklesIcon,
+  TrophyIcon,
+  RocketIcon,
+  BriefcaseIcon,
+  ClipboardListIcon,
+  BuildingIcon,
+  ZapIcon,
+  BotIcon,
+  ShieldCheckIcon,
+  BrainCircuitIcon,
+  CloseIcon,
+} from '../ui/Icon';
 import styles from './Sidebar.module.css';
 
 export interface SidebarProps {
@@ -29,7 +42,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
             onClick={onCloseMobile}
             aria-label="Close menu"
           >
-            ✕
+            <CloseIcon size={18} />
           </button>
         </div>
 
@@ -42,7 +55,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
               onClick={onCloseMobile}
             >
-              <span className={styles.navIcon}>✨</span>
+              <span className={styles.navIcon}>
+                <SparklesIcon size={18} />
+              </span>
               <span>Component Showcase</span>
             </NavLink>
             <NavLink
@@ -50,7 +65,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
               onClick={onCloseMobile}
             >
-              <span className={styles.navIcon}>🏆</span>
+              <span className={styles.navIcon}>
+                <TrophyIcon size={18} />
+              </span>
               <span>Global Leaderboards</span>
             </NavLink>
           </div>
@@ -64,7 +81,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🚀</span>
+                <span className={styles.navIcon}>
+                  <RocketIcon size={18} />
+                </span>
                 <span>Profile Setup Wizard</span>
               </NavLink>
             </div>
@@ -79,7 +98,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>💼</span>
+                <span className={styles.navIcon}>
+                  <BriefcaseIcon size={18} />
+                </span>
                 <span>Career Hub</span>
               </NavLink>
               <NavLink
@@ -87,7 +108,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>📋</span>
+                <span className={styles.navIcon}>
+                  <ClipboardListIcon size={18} />
+                </span>
                 <span>Active Applications</span>
               </NavLink>
             </div>
@@ -102,7 +125,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🏢</span>
+                <span className={styles.navIcon}>
+                  <BuildingIcon size={18} />
+                </span>
                 <span>Workplace Dashboard</span>
               </NavLink>
               <NavLink
@@ -110,7 +135,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>⚡</span>
+                <span className={styles.navIcon}>
+                  <ZapIcon size={18} />
+                </span>
                 <span>Daily Tasks</span>
               </NavLink>
             </div>
@@ -125,7 +152,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🚀</span>
+                <span className={styles.navIcon}>
+                  <RocketIcon size={18} />
+                </span>
                 <span>Company Command</span>
               </NavLink>
               <NavLink
@@ -133,7 +162,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🤖</span>
+                <span className={styles.navIcon}>
+                  <BotIcon size={18} />
+                </span>
                 <span>Bot Marketplace</span>
               </NavLink>
             </div>
@@ -148,7 +179,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>⚙️</span>
+                <span className={styles.navIcon}>
+                  <ShieldCheckIcon size={18} />
+                </span>
                 <span>Admin Console</span>
               </NavLink>
               <NavLink
@@ -156,7 +189,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>📜</span>
+                <span className={styles.navIcon}>
+                  <ClipboardListIcon size={18} />
+                </span>
                 <span>Audit Explorer</span>
               </NavLink>
               <NavLink
@@ -164,7 +199,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🛡️</span>
+                <span className={styles.navIcon}>
+                  <ShieldCheckIcon size={18} />
+                </span>
                 <span>AI Health & Telemetry</span>
               </NavLink>
             </div>
@@ -179,7 +216,9 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
-                <span className={styles.navIcon}>🧠</span>
+                <span className={styles.navIcon}>
+                  <BrainCircuitIcon size={18} />
+                </span>
                 <span>AI Infrastructure</span>
               </NavLink>
             </div>
@@ -189,15 +228,17 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
         <div className={styles.sidebarFooter}>
           {user ? (
             <div className={styles.userCard}>
-              <div className={styles.userAvatar}>{user.displayName.slice(0, 2).toUpperCase()}</div>
+              <div className={styles.userAvatar}>
+                {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'CV'}
+              </div>
               <div className={styles.userInfo}>
-                <div className={styles.userName}>{user.displayName}</div>
+                <div className={styles.userName}>{user.displayName || user.email}</div>
                 <div className={styles.userRoles}>
-                  <Badge variant="primary" size="sm">
+                  <Badge variant="cyan" size="sm">
                     {user.careerRole}
                   </Badge>
                   {user.platformRole !== 'NONE' && (
-                    <Badge variant="warning" size="sm">
+                    <Badge variant="danger" size="sm">
                       {user.platformRole}
                     </Badge>
                   )}
@@ -205,10 +246,27 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               </div>
             </div>
           ) : (
-            <div
-              style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--cv-text-muted)' }}
-            >
-              Guest Session (Demo)
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-2)' }}>
+              <NavLink
+                to="/login"
+                className={styles.navLink}
+                style={{ justifyContent: 'center' }}
+                onClick={onCloseMobile}
+              >
+                Sign In
+              </NavLink>
+              <NavLink
+                to="/register"
+                className={styles.navLink}
+                style={{
+                  justifyContent: 'center',
+                  background: 'var(--cv-brand-primary-600)',
+                  color: '#ffffff',
+                }}
+                onClick={onCloseMobile}
+              >
+                Register Account
+              </NavLink>
             </div>
           )}
         </div>

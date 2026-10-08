@@ -2,6 +2,11 @@ import type { Server } from 'node:http';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectDatabase, registerGracefulShutdown } from './config/database.js';
+import { domainService } from './services/domain/domain.service.js';
+import { configService } from './services/config/config.service.js';
+import { defaultAIWorker } from './ai/index.js';
+import { defaultAIManagerService } from './routes/aiManager.routes.js';
+import './services/resume/resumeAnalysis.service.js';
 import { logger } from './utils/logger.js';
 
 const app = createApp();
@@ -13,6 +18,11 @@ async function bootstrap(): Promise<void> {
     // Attempt MongoDB connection
     try {
       await connectDatabase();
+      await domainService.seedDefaultDomains();
+      await domainService.seedDefaultSkills();
+      await configService.seedDefaultsIfMissing();
+      await defaultAIManagerService.seedDemoPoolFromEnv();
+      defaultAIWorker.start();
     } catch (dbErr) {
       logger.warn(
         `[Server] Starting server with degraded database connectivity: ${(dbErr as Error).message}`
@@ -25,6 +35,7 @@ async function bootstrap(): Promise<void> {
     });
 
     registerGracefulShutdown(async () => {
+      defaultAIWorker.stop();
       if (server) {
         await new Promise<void>((resolve, reject) => {
           server?.close((err) => (err ? reject(err) : resolve()));

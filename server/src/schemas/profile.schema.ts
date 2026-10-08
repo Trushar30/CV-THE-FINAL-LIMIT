@@ -91,3 +91,53 @@ export type ProfileSetupInput = z.infer<typeof profileSetupSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type ProjectInput = z.infer<typeof projectSchema>;
 export type CertificationInput = z.infer<typeof certificationSchema>;
+
+export const onboardingStepSchema = z.discriminatedUnion('step', [
+  z.object({
+    step: z.literal('NAME'),
+    displayName: z
+      .string()
+      .trim()
+      .min(2, { message: 'Display name must be at least 2 characters long' })
+      .max(50, { message: 'Display name cannot exceed 50 characters' }),
+  }),
+  z.object({
+    step: z.literal('DOMAIN'),
+    domain: z.enum(CAREER_DOMAINS as [CareerDomain, ...CareerDomain[]], {
+      errorMap: () => ({
+        message: 'Domain must be SOFTWARE_ENGINEERING, CLOUD_ENGINEERING, or AI_ENGINEERING',
+      }),
+    }),
+  }),
+  z.object({
+    step: z.literal('SKILLS'),
+    skills: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, { message: 'Skill cannot be empty' })
+          .max(40, { message: 'Skill cannot exceed 40 characters' })
+      )
+      .min(1, { message: 'At least one technical skill is required' })
+      .max(50, { message: 'Maximum 50 skills allowed' }),
+  }),
+  z.object({
+    step: z.literal('RESUME'),
+    resumeId: z.string().trim().optional(),
+  }),
+  z.object({
+    step: z.literal('REVIEW'),
+    bio: z.string().trim().max(500, { message: 'Bio cannot exceed 500 characters' }).optional(),
+    githubUrl: urlSchema.optional(),
+    linkedinUrl: urlSchema.optional(),
+    portfolioUrl: urlSchema.optional(),
+    projects: z.array(projectSchema).max(20).optional(),
+    certifications: z.array(certificationSchema).max(20).optional(),
+  }),
+  z.object({
+    step: z.literal('COMPLETE'),
+  }),
+]);
+
+export type OnboardingStepInput = z.infer<typeof onboardingStepSchema>;

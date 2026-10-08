@@ -47,3 +47,16 @@ export { OpenAIAdapter } from './adapters/openai.adapter.js';
 export type { OpenAIAdapterOptions } from './adapters/openai.adapter.js';
 export { GroqAdapter } from './adapters/groq.adapter.js';
 export type { GroqAdapterOptions } from './adapters/groq.adapter.js';
+
+// Default platform singletons
+import { ProviderRouter } from './provider-router.js';
+import { HealthTracker } from './health-tracker.js';
+import { AIGateway } from './gateway.js';
+import { AIWorker } from './worker.js';
+
+export const defaultRouter = new ProviderRouter();
+export const defaultTracker = new HealthTracker(defaultRouter);
+export const defaultAIGateway = new AIGateway(defaultRouter, defaultTracker);
+export const defaultAIWorker = new AIWorker(defaultRouter, defaultTracker, {
+  pools: ['PIPELINE', 'DEMO'],
+});

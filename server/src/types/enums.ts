@@ -20,10 +20,26 @@ export type UserStatus = 'ACTIVE' | 'SUSPENDED';
 export const USER_STATUSES: readonly UserStatus[] = ['ACTIVE', 'SUSPENDED'] as const;
 
 // Onboarding Steps
-export type OnboardingStep = 'REGISTERED' | 'EMAIL_VERIFIED' | 'PROFILE_COMPLETED';
+export type OnboardingStep =
+  | 'REGISTERED'
+  | 'EMAIL_VERIFIED'
+  | 'NAME'
+  | 'DOMAIN'
+  | 'SKILLS'
+  | 'RESUME'
+  | 'REVIEW'
+  | 'COMPLETE'
+  | 'PROFILE_COMPLETED'; // Backwards compatibility
+
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   'REGISTERED',
   'EMAIL_VERIFIED',
+  'NAME',
+  'DOMAIN',
+  'SKILLS',
+  'RESUME',
+  'REVIEW',
+  'COMPLETE',
   'PROFILE_COMPLETED',
 ] as const;
 

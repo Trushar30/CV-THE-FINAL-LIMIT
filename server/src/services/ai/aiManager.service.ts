@@ -8,9 +8,29 @@ import { AIProviderModel, IAIProviderDocument } from '../../models/AIProvider.js
 import { AIHealthLogModel } from '../../models/AIHealthLog.js';
 import { AIResponseLogModel } from '../../models/AIResponseLog.js';
 import { AIJobModel } from '../../models/AIJob.js';
-import { encryptSecret, maskApiKey } from '../../utils/crypto.js';
+import { encryptSecret, decryptSecret, maskApiKey } from '../../utils/crypto.js';
 import { AppError } from '../../utils/errors.js';
 import type { CreateProviderInput, UpdateProviderInput } from '../../schemas/aiManager.schema.js';
+import { GeminiAdapter, OpenAIAdapter, GroqAdapter } from '../../ai/index.js';
+import { env } from '../../config/env.js';
+import { logger } from '../../utils/logger.js';
+
+export function createDefaultAdapter(
+  code: AIProvider,
+  apiKey?: string,
+  modelId?: string
+): ProviderAdapter {
+  switch (code) {
+    case 'gemini':
+      return new GeminiAdapter({ modelId: modelId || 'gemini-2.5-flash', apiKey });
+    case 'openai':
+      return new OpenAIAdapter({ modelId: modelId || 'gpt-4o-mini', apiKey });
+    case 'groq':
+      return new GroqAdapter({ modelId: modelId || 'llama-3.3-70b-versatile', apiKey });
+    default:
+      throw new Error(`Unsupported provider code: ${code}`);
+  }
+}
 
 export interface QueueStatsDto {
   depth: number;
@@ -129,9 +149,14 @@ export class AIManagerService {
     });
 
     // If an adapter is provided or can be constructed, register into ProviderRouter
-    if (adapterFactory) {
-      const adapter = adapterFactory(input.code as AIProvider, input.apiKey, input.modelId);
+    const effectiveFactory = adapterFactory ?? createDefaultAdapter;
+    try {
+      const adapter = effectiveFactory(input.code as AIProvider, input.apiKey, input.modelId);
       this.router.registerAdapter(input.pool as AIPool, adapter, input.priority);
+    } catch (err) {
+      logger.warn(
+        `[AIManager] Could not register adapter in router for '${input.code}': ${(err as Error).message}`
+      );
     }
 
     // Write audit log with reason
@@ -301,7 +326,21 @@ export class AIManagerService {
     code: AIProvider,
     pool: AIPool
   ): Promise<{ success: boolean; latencyMs: number; status: string; errorMessage?: string }> {
-    const adapter = this.router.getAdapter(pool, code);
+    let adapter = this.router.getAdapter(pool, code);
+    if (!adapter) {
+      const doc = await AIProviderModel.findOne({ code, pool }).select('+encryptedApiKey');
+      if (doc) {
+        const apiKey = doc.encryptedApiKey ? decryptSecret(doc.encryptedApiKey) : undefined;
+        try {
+          adapter = createDefaultAdapter(code, apiKey, doc.modelId || undefined);
+          this.router.registerAdapter(pool, adapter, doc.priority);
+        } catch (err) {
+          logger.warn(
+            `[AIManager] Failed to instantiate adapter on-the-fly for '${code}': ${(err as Error).message}`
+          );
+        }
+      }
+    }
     if (!adapter) {
       throw AppError.notFound(`Adapter for provider '${code}' not found in pool '${pool}'`);
     }
@@ -375,5 +414,105 @@ export class AIManagerService {
       recentResponses,
       queueStats,
     };
+  }
+
+  /**
+   * Idempotently seeds the DEMO pool providers from environment variables (GEMINI_API_KEY, OPENAI_API_KEY, GROQ_API_KEY).
+   * Called during server bootstrap to ensure DEMO pool reflects .env configurations.
+   */
+  async seedDemoPoolFromEnv(
+    adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter
+  ): Promise<ProviderResponseDto[]> {
+    const defaultConfigs: Array<{
+      code: AIProvider;
+      name: string;
+      modelId: string;
+      priority: number;
+      rateLimitRpm: number;
+      dailyLimit: number;
+      apiKey?: string;
+    }> = [
+      {
+        code: 'gemini',
+        name: 'Google Gemini Pro',
+        modelId: 'gemini-2.5-flash',
+        priority: 1,
+        rateLimitRpm: 60,
+        dailyLimit: 10000,
+        apiKey: env.GEMINI_API_KEY,
+      },
+      {
+        code: 'openai',
+        name: 'OpenAI GPT-4o Mini',
+        modelId: 'gpt-4o-mini',
+        priority: 2,
+        rateLimitRpm: 60,
+        dailyLimit: 10000,
+        apiKey: env.OPENAI_API_KEY,
+      },
+      {
+        code: 'groq',
+        name: 'Groq Llama 3.3 70B',
+        modelId: 'llama-3.3-70b-versatile',
+        priority: 3,
+        rateLimitRpm: 30,
+        dailyLimit: 14400,
+        apiKey: env.GROQ_API_KEY,
+      },
+    ];
+
+    const seeded: ProviderResponseDto[] = [];
+    const factory = adapterFactory ?? createDefaultAdapter;
+
+    for (const config of defaultConfigs) {
+      const trimmedKey = config.apiKey?.trim();
+      if (!trimmedKey) {
+        continue;
+      }
+
+      let doc = await AIProviderModel.findOne({
+        code: config.code,
+        pool: 'DEMO',
+      }).select('+encryptedApiKey');
+
+      if (!doc) {
+        const encryptedApiKey = encryptSecret(trimmedKey);
+        const maskedApiKey = maskApiKey(trimmedKey);
+
+        doc = await AIProviderModel.create({
+          code: config.code,
+          name: config.name,
+          priority: config.priority,
+          pool: 'DEMO',
+          status: 'HEALTHY',
+          modelId: config.modelId,
+          encryptedApiKey,
+          maskedApiKey,
+          rateLimitRpm: config.rateLimitRpm,
+          dailyLimit: config.dailyLimit,
+          dailyRequests: 0,
+          consecutiveFailures: 0,
+          totalRequests: 0,
+          totalFailures: 0,
+          averageLatencyMs: 0,
+        });
+
+        logger.info(`[AIManager] Seeded provider '${config.code}' into DEMO pool from environment`);
+      }
+
+      // Always register adapter into ProviderRouter
+      try {
+        const adapter = factory(config.code, trimmedKey, doc.modelId || config.modelId);
+        this.router.registerAdapter('DEMO', adapter, doc.priority);
+      } catch (err) {
+        logger.warn(
+          `[AIManager] Failed to register adapter for '${config.code}' in DEMO pool: ${(err as Error).message}`
+        );
+      }
+
+      seeded.push(this.toDto(doc));
+    }
+
+    return seeded;
   }
 }

@@ -1,140 +1,101 @@
-# CorpVerse — Session Handoff Document
+# CorpVerse — Engineering Session Handoff
 
-## 1. Task Completed
+## 1. What Was Done
 
-- **Task ID:** TASK P3.7 (Frontend for AI Operations)
-- **Task Title:** Build AI Operations frontend interfaces per Spec Section 20, Decision D10, Decision D11, and ADR-035: AI Manager console (`AiManagerPage.tsx`) with provider list, status badges, priority drag/reorder, add/edit/disable/remove modals with mandatory audit reasons, live test ping action, usage and failure charts, queue depth meter and waiting jobs alert card; and an Admin read-only AI Health page (`AdminAiHealthPage.tsx`) with oversight mode banner, provider health matrix, and error incident logs. Enforce strict API key masking (`sk-••••••••1234` / `••••••••1234`), responsive states, loading/error/empty states, and full design system integration.
-- **Completion Status:** Fully Completed and Verified (10/10 AI Ops client integration tests passing; 52 client tests passing; 279 server tests passing + 3 skipped optional smoke tests; 331 monorepo tests passing total; 0 lint errors, 100% Prettier compliance, clean build on both client and server).
+Implemented **TASK P4.4: Guided Onboarding Frontend, Resume Ingestion & Side-by-Side Review** adhering strictly to GEMINI.md, `docs/CORPVERSE_SPECIFICATION.md` (Sections 4, 5, 28), and ADR-042.
 
----
+Key achievements:
 
-## 2. What Was Done
-
-1. **AI Operations API Client Layer (`client/src/api/aiOps.ts`):**
-   - Built strongly typed client DTOs and API methods wrapping `/api/ai-manager/*` routes:
-     - `listProviders(pool)`: Fetches provider registry for active pool.
-     - `getHealthAndUsage(pool)`: Retrieves provider health statuses, usage metrics, and queue telemetry.
-     - `createProvider(payload)`: Registers a new provider with encrypted credentials and audit reason.
-     - `updateProvider(providerCode, payload)`: Edits model ID, rate limits, daily quotas with audit reason.
-     - `enableProvider(providerCode, reason)` / `disableProvider(providerCode, reason)`: Toggles operational status with audit justification.
-     - `removeProvider(providerCode, reason)`: Removes provider from routing registry.
-     - `testProvider(providerCode)`: Triggers zero-token/low-cost upstream connectivity health ping.
-   - Built backend queue telemetry integration: enriched `GET /api/ai-manager/health-usage` with `queueStats` aggregated from `AIJobModel` (`depth`, `pending`, `processing`, `waitingForProvider`, `completed`, `failed`, `total`).
-
-2. **Cyber-Corporate AI Operations Styling (`client/src/pages/AiOps.module.css`):**
-   - Built scoped styling following P1.5 design tokens:
-     - Queue depth metrics bar, waiting jobs urgent alert banner, and system throughput statistics.
-     - Multi-pool switcher tabs (`PIPELINE` vs `DEMO`).
-     - Priority badges and interactive reordering controls (Move Up / Move Down buttons).
-     - Health status pills matching canonical health states (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`).
-     - Usage volume bars, latency indicators, and error breakdown counters.
-     - Oversight Mode banner with amber warning styling for Admin read-only page.
-     - Responsive modal layouts for provider operations with mandatory audit reason capture.
-
-3. **AI Manager Console Page (`client/src/pages/AiManagerPage.tsx`):**
-   - Mounted at `/ai-ops` and guarded for `platformRole === 'AI_MANAGER'`.
-   - Real-time queue telemetry displaying total depth, active jobs, and waiting provider holds.
-   - Dynamic priority reordering sending `PATCH /api/ai-manager/providers/:id/priority` with immediate visual updates.
-   - Provider lifecycle modals (Add Provider, Edit Config, Disable Provider, Remove Provider) requiring audit reasons ($\ge 3$ characters).
-   - Test button triggering live ping with latency and success/failure feedback via toasts and badge indicators.
-   - Masked API key display (`sk-••••••••1234` or `••••••••1234`) with password inputs for key additions.
-   - Graceful loading skeleton, error retry banners, and empty state CTA for provider additions.
-
-4. **Admin Read-Only AI Health Telemetry Page (`client/src/pages/AdminAiHealthPage.tsx`):**
-   - Mounted at `/admin/ai-health` and guarded for `platformRole === 'ADMIN'`.
-   - Displays clear "Admin AI Oversight Mode" warning card communicating that provider mutations and key management are governed exclusively by the AI Manager.
-   - Multi-provider health matrix, queue depth telemetry, and recent error incident log tables.
-   - Zero mutation buttons, zero key inputs, and zero destructive controls exposed.
-
-5. **App Shell, Routing & Navigation Integration:**
-   - Updated `client/src/App.tsx` routing: wired real `AiManagerPage` to `/ai-ops` and mounted `AdminAiHealthPage` to `/admin/ai-health`.
-   - Updated `client/src/components/layout/Sidebar.tsx` navigation: added "AI Operations Health" link under Platform Administration for `ADMIN`.
-   - Removed obsolete stub placeholder in `client/src/pages/StubPages.tsx`.
-
-6. **Comprehensive Client Integration Test Suite (`client/src/tests/aiOps.test.tsx`):**
-   - 10 comprehensive Vitest + Testing Library test cases verifying:
-     - AI Manager console telemetry and queue meters rendering.
-     - Provider status badges and priority indicators.
-     - Live test ping execution and toast feedback.
-     - Add Provider modal validation, masked key fields, and mutation execution with audit reason.
-     - Disable and Remove provider confirmation modals with audit reason validation.
-     - Empty state rendering with Add Provider trigger.
-     - Admin read-only AI Health page rendering with oversight mode banner.
-     - Admin view omitting destructive and mutation controls.
-     - Error state handling with retry action.
-     - Pool switching between `PIPELINE` and `DEMO`.
+- **Progressive 6-Stage Guided Stepper:** Built interactive step-by-step wizard in `ProfileSetupPage.tsx` aligning strictly with the authoritative backend progression (`NAME` -> `DOMAIN` -> `SKILLS` -> `RESUME` -> `ANALYSIS` -> `REVIEW` -> `COMPLETE` / Celebration). Enforces forward navigation gating (cannot skip ahead) while permitting backward revisions.
+- **Unverified Email Notification:** Displayed an amber warning banner if `user.emailVerified === false`, providing a one-click resend action invoking `onboardingApi.resendVerification()` and surfacing simulation dev links.
+- **Track Selection & Domain Taxonomies:** Rendered interactive cards for the 3 canonical tracks (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), displaying technical focus and auto-seeding recommended skills.
+- **Dynamic Skills Management:** Implemented searchable multi-select catalog filtered by active domain, suggested skill chips, custom skill tagging, chip removal, and minimum-1 validation.
+- **Resume Drag-and-Drop Ingestion:** Built drag-and-drop file uploader accepting PDF and DOCX documents up to 10 MB. Validates file extension and size on client, streams file to GridFS via `onboardingApi.uploadResume()`, and visualizes upload progress with animated `ProgressBar`.
+- **AI Telemetry & Analysis Polling:** While on Step 5, polls `GET /api/profile/resume/analysis` every 2 seconds. Seamlessly handles `WAITING_FOR_PROVIDER` (queue notice banner), `SCANNED_UNREADABLE` (advisory warning with option to proceed with manual review), `FAILED` (retry/re-upload), and `COMPLETED` (auto-advancing to final review).
+- **Responsive Side-by-Side Review Comparison:** Rendered a two-column review grid contrasting candidate profile data (display name, domain, skills, optional bio, GitHub, LinkedIn, portfolio) with AI-extracted resume entities (candidate name, contact info, domain classification, experience years, skills chips, education records, work history). All optional fields are clearly badged with `(Optional)`.
+- **State Restoration Across Refreshes:** Implemented single-execution restoration lifecycle on mount (`hasRestoredRef`) fetching `onboardingApi.getProfile()` and mapping `user.onboardingStep` to resume the flow at the user's exact saved step.
+- **Authoritative Activation:** Clicking "Create Profile & Activate Role" calls `onboardingApi.updateStep({ step: 'REVIEW', ... })` and `onboardingApi.completeOnboarding()`, which authoritatively sets `careerRole: 'JOB_SEEKER'` and `onboardingStep: 'COMPLETE'`, followed by session refresh and celebratory view.
+- **Test Suite:** Built comprehensive Vitest test suite `client/src/tests/onboarding.test.tsx` (7 tests) and updated `client/src/tests/profile.test.tsx` (6 tests) covering step restoration, email warning banner, drag-and-drop validation, polling states, side-by-side review rendering, and final completion with 100% pass rate (62 client tests passing, 394 monorepo tests passing).
+- **Quality Gates:** 100% Prettier compliance, 0 ESLint errors/warnings, clean TypeScript compilation across both `server` and `client`, and successful Vite production bundle generation.
 
 ---
 
-## 3. Files Created & Modified
+## 2. Files Changed
 
-### Created Files
+### Created:
 
-- `client/src/api/aiOps.ts`
-- `client/src/pages/AiOps.module.css`
-- `client/src/pages/AiManagerPage.tsx`
-- `client/src/pages/AdminAiHealthPage.tsx`
-- `client/src/tests/aiOps.test.tsx`
+- `client/src/tests/onboarding.test.tsx`: Comprehensive integration test suite for guided onboarding flow, drag-and-drop validation, analysis polling, side-by-side review, and profile activation.
 
-### Modified Files
+### Modified:
 
-- `server/src/services/ai/aiManager.service.ts` (added `AIJobModel` queueStats aggregation)
-- `server/src/tests/ai-manager.test.ts` (updated assertions for queueStats)
-- `client/src/App.tsx` (mounted `/ai-ops` and `/admin/ai-health`)
-- `client/src/components/layout/Sidebar.tsx` (added Admin AI Health nav link)
-- `client/src/pages/StubPages.tsx` (removed old stub)
-- `docs/DECISIONS.md` (recorded ADR-035)
-- `docs/ARCHITECTURE.md` (added Section 18.9 AI Operations Frontend)
-- `docs/PROGRESS.md` (marked TASK P3.7 completed, updated task log and next task)
-- `docs/HANDOFF.md` (overwritten with session handoff)
+- `client/src/api/client.ts`: Updated `ApiClient` to detect `FormData` and omit `'Content-Type'` so browser supplies boundary header; added typed `upload<T>` method.
+- `client/src/api/onboarding.ts`: Created typed API client with methods for profile retrieval, domain/skill catalogs, step advancement, resume upload, analysis polling, complete onboarding, and email verification resend.
+- `client/src/pages/ProfileSetupPage.tsx`: Built complete 6-stage guided wizard, drag-and-drop uploader, analysis polling card, side-by-side review comparison, optional fields, and celebratory activation card.
+- `client/src/pages/ProfileSetup.module.css`: Wrote comprehensive responsive styling with Gamified Learning tokens (continuous squircles, dropzone animations, pulsating status loader, and review grid).
+- `client/src/tests/profile.test.tsx`: Updated tests to align with 6-stage guided flow and assertions.
+- `docs/PROGRESS.md`: Recorded completion of TASK P4.4; updated status and pending tasks.
+- `docs/DECISIONS.md`: Recorded ADR-042.
+- `docs/ARCHITECTURE.md`: Documented client guided onboarding stepper, dropzone ingestion, analysis polling, and side-by-side review.
+- `docs/HANDOFF.md`: Overwritten per closing protocol.
 
 ---
 
-## 4. Current Repository State
+## 3. Current Repository State
 
-- **Branch:** `main`.
-- **TypeScript:** Strict mode enabled; 0 errors on both server (`tsc -p tsconfig.build.json`) and client (`tsc && vite build`).
-- **ESLint:** Zero warnings and zero errors across monorepo (`npm run lint`).
-- **Prettier:** 100% formatted and verified (`npm run format:check`).
-- **Unit & Integration Tests:**
-  - AI Operations Client Suite: 10 passed (`client/src/tests/aiOps.test.tsx`).
-  - Full Client Suites: 52 passed (across 8 test files).
-  - Full Server Suites: 279 passed | 3 skipped (across 14 test files).
-  - Monorepo Total: 331 passed | 3 skipped (optional live smoke tests).
-- **Running Services:**
-  - Client dev server running on `http://localhost:5173`.
-  - Server API running on `http://localhost:5000`.
+- **Monorepo Tests:** 394 tests passing (332 server, 62 client, 3 skipped smoke tests) across 26 test files.
+- **Linting:** 0 ESLint errors or warnings (`npm run lint`).
+- **Formatting:** 100% Prettier compliant (`npm run format:check`).
+- **Type Checking & Build:** TypeScript compiled with 0 errors (`npm run build` succeeds in both `server` and `client`).
+- **Database:** Local MongoDB on port 27017.
 
 ---
 
-## 5. Exact Next Steps
+## 4. Exact Next Steps
 
-### Next Task:
-
-- **TASK P2.4:** Resume Ingestion Engine (GridFS storage, magic byte verification for PDF/DOCX, text extraction, separate `ResumeFile` and `ResumeAnalysis` collections per Spec Section 6 & 11).
+1. **TASK P5.1 — Career System Job Board & Application Pipeline:**
+   - Pre-seed the 3 initial AI platform companies (`companies` collection) managed by AI Manager.
+   - Implement `companyJobs` requisitions with domain, seniority target, required skills, and simulated compensation.
+   - Enforce maximum 5 active job applications per candidate simultaneously.
+   - Implement candidate job application submission (`POST /api/jobs/:id/apply`) initiating the ATS screening stage (`APPLIED` -> `ATS_SCREENING`).
+2. **TASK P5.2 — ATS Evaluation Engine & Actionable Feedback Delivery:**
+   - Build ATS scoring engine based on category weights (40% domain, 35% skill match, 15% experience, 10% clarity).
+   - Passing threshold $\ge 70$ advances to `SCREENING`; scores $< 70$ transition to `REJECTED` and deliver structured, actionable diagnostic critique.
 
 ---
 
-## 6. Commands to Run
+## 5. Commands to Run
 
 ```bash
-# Run AI Operations client tests
-npm --workspace=client run test src/tests/aiOps.test.tsx
-
-# Run all client tests
-npm --workspace=client run test
-
-# Run all server tests (with network permission for memory DB / supertest socket binding)
-npm --workspace=server run test
-
-# Run monorepo lint, format check, and production build
-npm run lint
+# Verify formatting across monorepo
 npm run format:check
+
+# Verify linting across monorepo
+npm run lint
+
+# Run client tests
+npm --workspace=@corpverse/client test
+
+# Run server tests (requires local MongoDB on port 27017)
+npm --workspace=@corpverse/server test
+
+# Run production build
 npm run build
 ```
 
 ---
 
-## 7. Known Bugs or Open Items
+## 6. Known Bugs or Open Items
 
-- None. All requirements for TASK P3.7 (AI Manager console, priority reordering, add/edit/disable/remove modals with mandatory audit reason, live test ping, queue depth meters, Admin read-only health dashboard, API key masking, and responsive layout) are fully implemented and verified by automated tests.
+- None. All 62 client tests and 332 server tests pass cleanly with 0 errors.
+
+---
+
+## 7. Conventional Commit Message
+
+`feat(client): implement guided profile setup flow and side-by-side resume review`
+
+---
+
+## 8. Explicit List of Anything Unsure About
+
+- Nothing is uncertain. Step progression matches backend invariants (`NAME` -> `DOMAIN` -> `SKILLS` -> `RESUME` -> `ANALYSIS` -> `REVIEW` -> `COMPLETE`), file types are validated against PDF and DOCX with 10 MB ceiling, polling handles all transient and queue states, side-by-side review renders parsed data alongside user inputs, optional fields are clearly labeled, and state restoration resumes the flow from the saved step on refresh.

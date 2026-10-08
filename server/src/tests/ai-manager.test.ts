@@ -13,6 +13,7 @@ import { HealthTracker } from '../ai/health-tracker.js';
 import { AIManagerService } from '../services/ai/aiManager.service.js';
 import { AIManagerController } from '../controllers/aiManager.controller.js';
 import { AuditService } from '../services/audit/audit.service.js';
+import { AIProvider } from '../types/enums.js';
 import { MockAdapter } from '../ai/adapters/mock.adapter.js';
 
 const TEST_MONGODB_URI = 'mongodb://localhost:27017/corpverse_test_ai_manager';
@@ -454,6 +455,30 @@ describe('AI Manager Console, Key Vault & RBAC Integration Suite (TASK P3.6)', (
       expect(testRes.body.success).toBe(true);
       expect(testRes.body.data.status).toBe('HEALTHY');
       expect(testRes.body.data.latencyMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should idempotently seed DEMO pool providers from environment and register adapters', async () => {
+      const mockFactory = (code: AIProvider): MockAdapter =>
+        new MockAdapter({ provider: code, model: `${code}-model` });
+
+      const seeded = await aiManagerService.seedDemoPoolFromEnv(mockFactory);
+
+      // Verify returned seeded list has entries for any configured key in env
+      expect(Array.isArray(seeded)).toBe(true);
+      for (const p of seeded) {
+        expect(p.pool).toBe('DEMO');
+        expect(p.status).toBe('HEALTHY');
+        expect(p.maskedApiKey).toBeDefined();
+        // Router should have the registered adapter
+        const adapter = router.getAdapter('DEMO', p.code);
+        expect(adapter).toBeDefined();
+      }
+
+      // Idempotence test: running seed again should not create duplicate documents
+      const countBefore = await AIProviderModel.countDocuments({ pool: 'DEMO' });
+      await aiManagerService.seedDemoPoolFromEnv(mockFactory);
+      const countAfter = await AIProviderModel.countDocuments({ pool: 'DEMO' });
+      expect(countAfter).toBe(countBefore);
     });
   });
 });

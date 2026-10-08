@@ -40,6 +40,13 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-032: Groq Provider Adapter Chat Completions Protocol, Bearer Authentication, and Error Normalization](#adr-032-groq-provider-adapter-chat-completions-protocol-bearer-authentication-and-error-normalization)
 - [ADR-033: AI Reliability Layer, Queue Model, Worker Atomic Claiming, and Provider Health Lifecycle](#adr-033-ai-reliability-layer-queue-model-worker-atomic-claiming-and-provider-health-lifecycle)
 - [ADR-034: AI Manager Backend, Key Vault (AES-256-GCM), Two-Pool Configuration, and RBAC Separation](#adr-034-ai-manager-backend-key-vault-aes-256-gcm-two-pool-configuration-and-rbac-separation)
+- [ADR-035: AI Operations Frontend Architecture, AI Manager Console, and Admin Health Telemetry](#adr-035-ai-operations-frontend-architecture-ai-manager-console-and-admin-health-telemetry)
+- [ADR-037: Domains and Skills Catalogs, Admin Domain Management, Case-Insensitive Display Names, and Authoritative Onboarding State Transitions](#adr-037-domains-and-skills-catalogs-admin-domain-management-case-insensitive-display-names-and-authoritative-onboarding-state-transitions)
+- [ADR-038: Gamified Learning Color System & Apple-Level Polish Tokens (Dark & Light)](#adr-038-gamified-learning-color-system--apple-level-polish-tokens-dark--light)
+- [ADR-039: Native Vector Iconography, Illustrations & Apple Fluid Spring Animations](#adr-039-native-vector-iconography-illustrations--apple-fluid-spring-animations)
+- [ADR-040: Resume Binary Storage in MongoDB GridFS, Magic-Byte Integrity Verification, and Archive & Preserve Lifecycle Policy](#adr-040-resume-binary-storage-in-mongodb-gridfs-magic-byte-integrity-verification-and-archive--preserve-lifecycle-policy)
+- [ADR-041: Server-Side Text Extraction, AI Resume Parsing Pipeline, Zero-Fabrication Guardrails & Output Validation](#adr-041-server-side-text-extraction-ai-resume-parsing-pipeline-zero-fabrication-guardrails--output-validation)
+- [ADR-042: Guided Candidate Profile Setup Flow, Resume Dropzone Ingestion, Polling Telemetry & Side-by-Side Review Screen](#adr-042-guided-candidate-profile-setup-flow-resume-dropzone-ingestion-polling-telemetry--side-by-side-review-screen)
 
 ---
 
@@ -332,3 +339,94 @@ This document tracks all foundational architectural and technical decisions made
   - Built typed API client module `client/src/api/aiOps.ts` wrapping `/api/ai-manager/*` routes.
   - Updated App router (`App.tsx`) and Sidebar navigation (`Sidebar.tsx`) with proper role guards.
   - Enriched `GET /api/ai-manager/health-usage` with `queueStats` aggregated from `AIJobModel` to power real-time queue depth visualizations.
+
+### ADR-036: Automated Seeding and Live Monitoring of DEMO Pool Providers from Environment Variables
+
+- **Status:** ACCEPTED
+- **Decision:**
+  - Automated Startup Seeding: When the server boots and connects to MongoDB (`server/src/server.ts`), `AIManagerService.seedDemoPoolFromEnv()` inspects `GEMINI_API_KEY`, `OPENAI_API_KEY`, and `GROQ_API_KEY` defined in `server/.env`.
+  - Idempotent Database Registration: For each present key, if no corresponding provider exists in the `aiProviders` collection for `pool: 'DEMO'`, a record is created with initial status `HEALTHY`, encrypted API key in the AES-256-GCM vault, masked API key (`sk-••••••••1234` or `••••••••1234`), default priorities (`gemini: 1`, `openai: 2`, `groq: 3`), and default model IDs (`gemini-2.5-flash`, `gpt-4o-mini`, `llama-3.3-70b-versatile`). Subsequent server restarts execute idempotently without duplicating entries.
+  - Active Adapter Registration: Instantiates and registers corresponding provider adapters in `ProviderRouter` for the `DEMO` pool immediately upon boot and dynamically on-the-fly if missing during test pings, ensuring the AI Operations Console **Demo Pool (ENV)** tab provides immediate monitoring, live health status pills, test pings, and telemetry without requiring manual provider re-entry.
+
+### ADR-037: Domains and Skills Catalogs, Admin Domain Management, Case-Insensitive Display Names, and Authoritative Onboarding State Transitions
+
+- **Status:** ACCEPTED
+- **Decision:**
+  - **Domains & Skills Collections:** Stored in separate MongoDB collections `domains` (Spec Section 20, Collection 5) and `skills` (Collection 6). The `domains` collection is seeded on boot idempotently with exactly the 3 v1 domains (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`). Skills are seeded with domain associations and queryable via `GET /api/skills?domainCode=...`.
+  - **Admin Domain CRUD:** Protected by `authenticateJwt` and `requirePlatformRole('ADMIN')`. Supports creation (`POST /api/admin/domains`), querying, updates (`PATCH /api/admin/domains/:id`), and deactivation (`DELETE /api/admin/domains/:id`). All administrative domain mutations write immutable records to `auditLogs` with mandatory justification reasons.
+  - **Decoupled Profiles & Case-Insensitive Display Names:** The `profiles` collection (Collection 2) maintains a strict 1-to-1 linkage via indexed `userId`. Case-insensitive uniqueness for `displayName` is enforced via MongoDB collation index (`{ locale: 'en', strength: 2 }`) and regex validation in `ProfileService.isDisplayNameAvailable()`, rejecting collisions (e.g. "Elena Rostova" vs "elena rostova") with 409 Conflict.
+  - **Onboarding Step Tracking:** Candidates advance through explicit sequential onboarding stages: `EMAIL_VERIFIED` $\rightarrow$ `NAME` $\rightarrow$ `DOMAIN` $\rightarrow$ `SKILLS` $\rightarrow$ `RESUME` $\rightarrow$ `REVIEW` $\rightarrow$ `COMPLETE` via `PATCH /api/profile/step`.
+  - **Mandatory vs Optional Field Enforcement:** Per Spec Section 5.1, `displayName`, `domain`, and `skills` (at least 1) are mandatory. All links (`githubUrl`, `linkedinUrl`, `portfolioUrl`), `bio`, `projects`, `certifications`, and `resumeId` are strictly optional. Candidates can complete onboarding without supplying optional fields.
+  - **Authoritative Single-Method Role Transition:** Promotion to `careerRole = 'JOB_SEEKER'` happens exclusively within the single backend service method `completeOnboarding()` upon validating mandatory fields. Any client request attempting to supply or mutate `careerRole` (via `POST /api/profile/setup`, `PUT /api/profile/me`, or `PATCH /api/profile/step`) is strictly stripped and ignored.
+
+### ADR-038: Gamified Learning Color System & Apple-Level Polish Tokens (Dark & Light)
+
+- **Status:** ACCEPTED
+- **Context:** The frontend required an evolution toward a modern, unique gamified design language with Apple-level visual polishing, continuous squircle curvature, specular glass highlights, and fatigue-free contrast across both dark and light display modes.
+- **Decision:**
+  - Adopted the 6-swatch Gamified Learning canonical color palette:
+    - `#EFF4F8` (_Child of Light_): Light mode canvas and dark mode primary text.
+    - `#C5D0CF` (_Winter Garden_): Soft sage/frosted sea-glass for borders, badge highlights, and secondary text in dark mode.
+    - `#A1A19C` (_Charon_): Mineral slate/neutral stone for dividers and muted elements.
+    - `#706255` (_Smokehouse_): Warm roasted mocha for grounding brand accents, tags, and gamified badges.
+    - `#273E41` (_Cascades_): Hero Nordic pine spruce teal anchor for primary brand ramps, high-contrast actions, and focus states.
+    - `#020101` (_Vantablack_): Absolute obsidian black for crisp light mode text and deep dark mode foundation.
+  - Implemented Apple-grade design system refinements in `client/src/styles/tokens.css` and `themes.css`:
+    - SF Pro / Inter typography stack with tighter tracking (`-0.01em` to `-0.02em`) and enhanced font rendering.
+    - Multi-stop diffused ambient + key shadows avoiding harsh single-drop shadows.
+    - Specular glass top highlights (`inset 0 1px 0 rgba(255, 255, 255, ...)`) across cards, modals, and buttons.
+    - Apple squircle corner radii (`--cv-radius-md: 10px`, `--cv-radius-lg: 16px`, `--cv-radius-xl: 22px`, `--cv-radius-2xl: 30px`).
+    - Smooth Apple spring curve transitions (`cubic-bezier(0.16, 1, 0.3, 1)`).
+    - Slim discrete scrollbars with smooth rounded thumbs and customized non-jarring text selection highlights.
+
+### ADR-039: Native Vector Iconography, Illustrations & Apple Fluid Spring Animations
+
+- **Status:** ACCEPTED
+- **Context:** System emojis (`✨`, `🏆`, `💼`, `📋`, `🏢`, `⚡`, `🚀`, `🤖`, `🪙`, `☀️`, `🌙`, etc.) suffered from operating-system fragmentation, visual inconsistency, and lack of thematic harmony with the Gamified Learning palette. An Apple-grade vector icon and animation system was required to replace all emojis across navigation, economic pills, action buttons, onboarding wizards, and empty states.
+- **Decision:**
+  - Implemented a zero-dependency native SVG icon and vector illustration library (`client/src/components/ui/Icon/Icon.tsx`):
+    - 24×24 pixel-grid vector symbols: `BriefcaseIcon`, `ClipboardListIcon`, `BuildingIcon`, `ZapIcon`, `TrophyIcon`, `SparklesIcon`, `RocketIcon`, `BotIcon`, `ShieldCheckIcon`, `BrainCircuitIcon`, `CoinIcon`, `SunIcon`, `MoonIcon`, `BarChartIcon`, `FolderEmptyIcon`, `MenuIcon`, `CloseIcon`, `CheckIcon`, `ActivityIcon`, `LaptopIcon`, and `CloudIcon`.
+    - Dynamic sizing, theme-reactive `currentColor` binding, and smooth SVG hover micro-interactions.
+    - Vector Illustrations: `EmptyApplicationIllustration` (layered frosted desk document with soft teal shadows) and `FounderBadgeIllustration` (3D squircle metallic badge with golden amber laurel and Cascades spruce sheen).
+  - Implemented Apple Fluid Spring Animations in `client/src/styles/globals.css`:
+    - `@keyframes cv-spring-press`: Tactile spring compression on button and control clicks (`scale(0.96) -> scale(1)`).
+    - `@keyframes cv-float-ambient`: Gentle ambient floating animation (`.cv-float`).
+    - `.cv-spring-interactive`: Interactive hover elevate and active scale spring transform utility.
+  - Replaced all emojis in [Sidebar.tsx](file:///Users/trushargpatel/Downloads/IT/SEM%20-%207/SGP/CV/client/src/components/layout/Sidebar.tsx), [Topbar.tsx](file:///Users/trushargpatel/Downloads/IT/SEM%20-%207/SGP/CV/client/src/components/layout/Topbar.tsx), [EmptyState.tsx](file:///Users/trushargpatel/Downloads/IT/SEM%20-%207/SGP/CV/client/src/components/ui/EmptyState/EmptyState.tsx), [ProfileSetupPage.tsx](file:///Users/trushargpatel/Downloads/IT/SEM%20-%207/SGP/CV/client/src/pages/ProfileSetupPage.tsx), and [ShowcasePage.tsx](file:///Users/trushargpatel/Downloads/IT/SEM%20-%207/SGP/CV/client/src/pages/ShowcasePage.tsx).
+
+### ADR-040: Resume Binary Storage in MongoDB GridFS, Magic-Byte Integrity Verification, and Archive & Preserve Lifecycle Policy
+
+- **Status:** ACCEPTED
+- **Context:** Candidate resume documents represent core simulation artifacts used for ATS screening, conversational AI interviews, and skill verification. Files must be verified at the binary level, stored in MongoDB GridFS, protected by strict download authorization, and governed by an explicit replace/delete policy.
+- **Decision:**
+  - **Storage Subsystem:** Raw binary files are stored in MongoDB GridFS using bucket `resumes` (`resumes.files` and `resumes.chunks`), with metadata stored in the `resumes` collection (`ResumeFile` model) referencing `gridFsFileId`, `userId`, `filename`, `mimeType`, `sizeBytes`, `sha256`, and `status`.
+  - **Magic-Byte & Content Validation:** File extensions and client MIME headers are strictly untrusted. The backend inspects binary magic bytes (`%PDF-` for PDF, `PK\x03\x04` with OOXML parts for DOCX). Corrupted files missing end-of-file markers (`%%EOF` for PDF, EOCD `PK\x05\x06` for DOCX) are rejected with HTTP 400 (`CORRUPT_FILE`). Password-protected/encrypted files (PDF `/Encrypt` dictionaries, DOCX zip encryption flags or OLE `EncryptedPackage`) are rejected with HTTP 400 (`PASSWORD_PROTECTED_FILE`). Oversized files exceeding `PlatformConfig.security.resumeMaxSizeBytes` (default 10 MB) are rejected with HTTP 413.
+  - **Filename Sanitization:** All incoming filenames are stripped of path traversal patterns (`..`, `/`, `\`), quotes, and special characters, retaining only `[a-zA-Z0-9_\-.]` and appending the verified canonical extension (`.pdf` or `.docx`).
+  - **Archive & Preserve Lifecycle Policy:** When a candidate uploads a new resume, previous `ResumeFile` records for that user are marked `status: 'ARCHIVED'`. The underlying GridFS binary files are preserved to maintain an immutable audit trail and historical record for prior job applications. The active candidate profile (`profile.resumeId`) is updated to the newest resume ID.
+  - **Streamed Download Authorization:** Streamed downloads (`GET /api/profile/resume/:id/download`) are restricted strictly to the document owner (`userId`) and users with `platformRole === 'ADMIN'`. Non-owners receive HTTP 403 `AUTHORIZATION_ERROR`, and unauthenticated requests receive HTTP 401 `AUTHENTICATION_ERROR`.
+
+### ADR-041: Server-Side Text Extraction, AI Resume Parsing Pipeline, Zero-Fabrication Guardrails & Output Validation
+
+- **Status:** ACCEPTED
+- **Context:** Following binary resume upload and GridFS ingestion, raw candidate resumes must be transformed into structured profile data (contact, technical skills, employment history, education, certifications, and domain classification) to power automated ATS screening and dynamic AI interviews. Scanned image PDFs without text layers and LLM hallucination risks necessitate strict safeguards against data fabrication.
+- **Decision:**
+  - **Verified Extraction Engine:** Integrated verified npm packages `pdf-parse` (v2.4.5) for PDF text streams and `mammoth` (v1.13.0) for DOCX OpenXML payloads in `TextExtractionService`. Pagination artifacts (e.g., `-- 1 of 1 --`) and excess whitespace are normalized.
+  - **Scanned PDF & Blank Detection:** Enforced an alphanumeric character threshold of 40 characters. Documents yielding fewer than 40 alphanumeric characters are immediately flagged as `status: 'SCANNED_UNREADABLE'` with `failureReason: 'SCANNED_PDF_NO_TEXT'`. The system strictly halts further pipeline execution, avoiding any AI calls and preventing synthetic or fabricated information from entering candidate records.
+  - **Zero-Fabrication Prompting:** Engineered a strict system instruction explicitly forbidding the LLM from inventing, assuming, inferring, or extrapolating candidate details. Any attribute missing from the source text must be omitted or returned as null/empty.
+  - **Strict Zod Output Validation:** Implemented canonical Zod schema `resumeAnalysisOutputSchema` validating all extracted attributes (name, contact, skills, education, experience, projects, certifications, domain classification clamped to `CAREER_DOMAINS`, and non-negative years of experience).
+  - **Queue Retry Integration & Zero-Dirty-Data Guarantee:** Enhanced `AIWorker` with a task validator hook. If LLM output fails Zod validation, `AIWorker` throws a retryable `PROVIDER_ERROR`, incrementing attempts and triggering provider retries (up to 3 attempts) or fallback priority cascading. Unvalidated or malformed AI data is never written to `resumeAnalyses`.
+  - **Decoupled Collection 4 Model:** Stored parsed results in `ResumeAnalysis` (`resumeAnalyses` collection) referencing `resumeId` and `userId`. Upon successful completion, the candidate's `Profile.resumeAnalysisId` is automatically linked.
+  - **Secure Telemetry & Results Endpoints:** Exposed `GET /api/profile/resume/analysis` (caller's active resume analysis) and `GET /api/profile/resume/:id/analysis` (by resume ID). Restricted strictly to document owner and users with `platformRole === 'ADMIN'`. Returns clear status representations (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `SCANNED_UNREADABLE`, and `WAITING_FOR_PROVIDER`).
+
+### ADR-042: Guided Candidate Profile Setup Flow, Resume Dropzone Ingestion, Polling Telemetry & Side-by-Side Review Screen
+
+- **Status:** ACCEPTED
+- **Context:** Spec Sections 4, 5, 28 mandate a guided multi-step candidate onboarding flow in the React frontend. Candidates must verify their email, register a unique display name, select from the 3 canonical engineering tracks, tag technical competencies, drag-and-drop their resume for GridFS upload, observe AI Gateway analysis progress, compare their entered profile data against AI-extracted resume records in a side-by-side review screen, and complete profile activation. Page refresh must seamlessly resume from the saved backend step.
+- **Decision:**
+  - **Sequential Step Model with Backend Invariant Parity:** Configured 6 onboarding steps matching the authoritative backend progression (`NAME` -> `DOMAIN` -> `SKILLS` -> `RESUME` -> `ANALYSIS` -> `REVIEW` -> `COMPLETE` / Celebration). Backward navigation across reached steps is permitted, while forward jumps beyond the current step are strictly disabled.
+  - **State Restoration on Mount:** On initial page load, `ProfileSetupPage` executes a single restoration lifecycle (`hasRestoredRef`) calling `onboardingApi.getProfile()` to prefill form fields and mapping `user.onboardingStep` to the appropriate active step (e.g., `DOMAIN` resumes at Skills, `RESUME` resumes at Analysis/Review).
+  - **Unverified Email Notification:** Displayed an amber warning banner if `user.emailVerified === false`, providing a one-click resend trigger calling `POST /api/auth/resend-verification` and displaying simulation dev links.
+  - **Client-Side File Validation & Progress Telemetry:** Implemented drag-and-drop and file-picker dropzone accepting only `.pdf` and `.docx` within the 10 MB limit. Streaming progress is visualized using `ProgressBar`.
+  - **Asynchronous Analysis Polling & Queue State Handling:** While on Step 5, the client polls `GET /api/profile/resume/analysis` at a 2-second interval. It handles all states: `WAITING_FOR_PROVIDER` (informational queue banner), `SCANNED_UNREADABLE` (advisory warning with manual progression option), `FAILED` (retry or re-upload options), and `COMPLETED` (automatic progression to Review).
+  - **Side-by-Side Review Comparison:** Rendered a two-column responsive grid contrasting candidate-entered profile data (left) with AI-extracted entities from `ResumeAnalysis` (right), including contact details, domain classification, experience years, skills, education, and work history. All optional fields (bio, GitHub, LinkedIn, portfolio) are explicitly marked with `(Optional)` tags.
+  - **Authoritative Activation:** Clicking "Create Profile & Activate Role" calls `onboardingApi.updateStep({ step: 'REVIEW', ... })` followed by `onboardingApi.completeOnboarding()`, which authoritatively sets `careerRole: 'JOB_SEEKER'` and `onboardingStep: 'COMPLETE'`, followed by session refresh and celebratory activation view.

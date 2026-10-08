@@ -45,13 +45,13 @@
   color: #ffffff;
   font-weight: var(--cv-font-bold);
   font-size: 1.1rem;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+  box-shadow: 0 2px 8px rgba(39, 62, 65, 0.4);
 }
 
 .logoText {
   font-size: var(--cv-text-lg);
   font-weight: var(--cv-font-extrabold);
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  background: linear-gradient(135deg, #38b0b9 0%, var(--cv-brand-primary-500) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.02em;
@@ -112,9 +112,9 @@
 }
 
 .navLink.active {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: var(--cv-brand-primary-400);
-  border-color: rgba(99, 102, 241, 0.25);
+  background-color: var(--cv-brand-primary-active-bg);
+  color: var(--cv-brand-primary-active-text);
+  border-color: var(--cv-brand-primary-active-border);
   font-weight: var(--cv-font-semibold);
 }
 

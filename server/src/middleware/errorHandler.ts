@@ -46,6 +46,17 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     statusCode = 400;
     code = 'VALIDATION_ERROR';
     message = 'Malformed JSON payload in request body';
+  } else if ((err as { name?: string }).name === 'MulterError') {
+    const multerErr = err as { code?: string; message: string };
+    if (multerErr.code === 'LIMIT_FILE_SIZE') {
+      statusCode = 413;
+      code = 'VALIDATION_ERROR';
+      message = 'File size exceeds the allowed limit';
+    } else {
+      statusCode = 400;
+      code = 'VALIDATION_ERROR';
+      message = multerErr.message;
+    }
   } else if (err instanceof Error) {
     // Unknown standard error
     if (env.NODE_ENV !== 'production') {

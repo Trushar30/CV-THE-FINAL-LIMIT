@@ -228,3 +228,16 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
   - **Mandatory:** Email, Password, Display Name, Career Domain, Skills, Resume.
   - **Optional:** GitHub, LinkedIn, Portfolio, Projects, Certifications.
 - **Status:** **RESOLVED**
+
+---
+
+## 3. Open Questions (Pending User Decisions)
+
+### Q1: Resume Replace and Delete Behavior
+
+- **Context:** Spec Section 5.2 and Section 20 define `resumes` and `profiles.resumeId`, but do not specify what happens when an existing candidate uploads a new resume or requests resume deletion.
+- **Resolution:**
+  - **Replacement (Archive & Preserve):** When a user with an existing resume uploads a new one, the previous `ResumeFile` record is updated to `status: 'ARCHIVED'`. The previous GridFS binary and metadata are preserved for historical audit trails and past job applications. `profile.resumeId` is updated to point to the latest uploaded resume.
+  - **Deletion:** Deletion is disallowed if active job applications exist. Re-upload acts as replacement through archiving.
+- **Reference:** ADR-040.
+- **Status:** **RESOLVED**

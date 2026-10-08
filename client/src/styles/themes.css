@@ -1,85 +1,98 @@
 /**
  * CorpVerse Design System — Themes (Dark & Light)
+ * Gamified Learning & Apple-Grade Modern Corporate Aesthetic
  * Supports root classes: .theme-dark (default) and .theme-light
  */
 
 :root,
 .theme-dark {
-  /* Surface Colors */
-  --cv-bg-app: #0a0e17;
-  --cv-bg-surface: #111827;
-  --cv-bg-surface-elevated: #1e293b;
-  --cv-bg-surface-hover: #334155;
-  --cv-bg-surface-subtle: #0f172a;
-  --cv-bg-card: rgba(17, 24, 39, 0.75);
-  --cv-bg-card-glass: rgba(15, 23, 42, 0.65);
-  --cv-bg-modal: #111827;
-  --cv-bg-input: rgba(15, 23, 42, 0.8);
-  --cv-bg-tooltip: #1e293b;
+  /* Surface Colors — Deep Obsidian Teal (#020101 + Cascades #273E41) */
+  --cv-bg-app: #080d0f;
+  --cv-bg-surface: #10181a;
+  --cv-bg-surface-elevated: #162225;
+  --cv-bg-surface-hover: #1f3034;
+  --cv-bg-surface-subtle: #0b1214;
+  --cv-bg-card: rgba(16, 24, 26, 0.82);
+  --cv-bg-card-glass: rgba(14, 21, 23, 0.72);
+  --cv-bg-modal: #131c1f;
+  --cv-bg-input: rgba(11, 18, 20, 0.85);
+  --cv-bg-tooltip: #1d2c30;
 
-  /* Text Colors */
-  --cv-text-primary: #f8fafc;
-  --cv-text-secondary: #94a3b8;
-  --cv-text-muted: #64748b;
-  --cv-text-inverse: #0f172a;
+  /* Text Colors — Child of Light (#EFF4F8) & Winter Garden (#C5D0CF) */
+  --cv-text-primary: #eff4f8; /* Child of Light */
+  --cv-text-secondary: #c5d0cf; /* Winter Garden */
+  --cv-text-muted: #798b8c; /* Charon Soft Tone */
+  --cv-text-inverse: #020101; /* Vantablack */
 
-  /* Borders & Dividers */
-  --cv-border-subtle: rgba(255, 255, 255, 0.06);
-  --cv-border-default: rgba(255, 255, 255, 0.12);
-  --cv-border-strong: rgba(255, 255, 255, 0.2);
-  --cv-border-focus: var(--cv-brand-primary-500);
+  /* Borders & Frosted Winter Garden Highlights */
+  --cv-border-subtle: rgba(197, 208, 207, 0.08);
+  --cv-border-default: rgba(197, 208, 207, 0.14);
+  --cv-border-strong: rgba(197, 208, 207, 0.25);
+  --cv-border-focus: #5f8a8e;
 
-  /* Shadows */
-  --cv-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
-  --cv-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  --cv-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
-  --cv-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
-  --cv-shadow-glow-primary: 0 0 20px rgba(99, 102, 241, 0.35);
-  --cv-shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.35);
-  --cv-shadow-glow-emerald: 0 0 20px rgba(16, 185, 129, 0.35);
-  --cv-shadow-glow-gold: 0 0 20px rgba(245, 158, 11, 0.35);
+  /* Active Navigation States */
+  --cv-brand-primary-active-bg: rgba(95, 138, 142, 0.15);
+  --cv-brand-primary-active-text: #93b2b5;
+  --cv-brand-primary-active-border: rgba(95, 138, 142, 0.3);
 
-  /* Glassmorphism */
-  --cv-backdrop-filter: blur(14px) saturate(160%);
-  --cv-modal-backdrop-bg: rgba(5, 7, 13, 0.75);
+  /* Apple Pro Dark Multi-Stop Shadows */
+  --cv-shadow-sm: 0 1px 3px 0 rgba(2, 1, 1, 0.5);
+  --cv-shadow-md: 0 4px 8px -1px rgba(2, 1, 1, 0.6), 0 2px 4px -2px rgba(2, 1, 1, 0.5);
+  --cv-shadow-lg: 0 14px 26px -3px rgba(2, 1, 1, 0.75), 0 4px 10px -2px rgba(2, 1, 1, 0.5);
+  --cv-shadow-xl: 0 26px 40px -5px rgba(2, 1, 1, 0.85), 0 10px 18px -4px rgba(2, 1, 1, 0.65);
+  --cv-shadow-glow-primary: 0 0 22px rgba(62, 107, 112, 0.45);
+  --cv-shadow-glow-cyan: 0 0 22px rgba(56, 176, 185, 0.4);
+  --cv-shadow-glow-emerald: 0 0 22px rgba(16, 185, 129, 0.4);
+  --cv-shadow-glow-gold: 0 0 22px rgba(245, 158, 11, 0.4);
+
+  /* Apple Glassmorphism & Specular Highlights */
+  --cv-backdrop-filter: blur(20px) saturate(180%);
+  --cv-glass-specular: inset 0 1px 0 rgba(197, 208, 207, 0.12);
+  --cv-modal-backdrop-bg: rgba(2, 1, 1, 0.78);
 }
 
 .theme-light {
-  /* Surface Colors */
-  --cv-bg-app: #f8fafc;
+  /* Surface Colors — Child of Light Canvas (#EFF4F8) with Floating Apple Cards */
+  --cv-bg-app: #eff4f8; /* Child of Light */
   --cv-bg-surface: #ffffff;
   --cv-bg-surface-elevated: #ffffff;
-  --cv-bg-surface-hover: #f1f5f9;
-  --cv-bg-surface-subtle: #f8fafc;
-  --cv-bg-card: rgba(255, 255, 255, 0.9);
-  --cv-bg-card-glass: rgba(255, 255, 255, 0.8);
+  --cv-bg-surface-hover: rgba(197, 208, 207, 0.32); /* Winter Garden Wash */
+  --cv-bg-surface-subtle: #e6edf2;
+  --cv-bg-card: rgba(255, 255, 255, 0.88);
+  --cv-bg-card-glass: rgba(255, 255, 255, 0.76);
   --cv-bg-modal: #ffffff;
   --cv-bg-input: #ffffff;
-  --cv-bg-tooltip: #0f172a;
+  --cv-bg-tooltip: #273e41; /* Cascades */
 
-  /* Text Colors */
-  --cv-text-primary: #0f172a;
-  --cv-text-secondary: #475569;
-  --cv-text-muted: #94a3b8;
-  --cv-text-inverse: #f8fafc;
+  /* Text Colors — Crisp Vantablack (#020101) Hierarchy */
+  --cv-text-primary: #020101; /* Vantablack */
+  --cv-text-secondary: #515c5e;
+  --cv-text-muted: #798788;
+  --cv-text-inverse: #eff4f8; /* Child of Light */
 
-  /* Borders & Dividers */
-  --cv-border-subtle: rgba(0, 0, 0, 0.05);
-  --cv-border-default: rgba(0, 0, 0, 0.1);
-  --cv-border-strong: rgba(0, 0, 0, 0.2);
-  --cv-border-focus: var(--cv-brand-primary-600);
+  /* Borders & Specular Highlights */
+  --cv-border-subtle: rgba(39, 62, 65, 0.08);
+  --cv-border-default: rgba(39, 62, 65, 0.14);
+  --cv-border-strong: rgba(39, 62, 65, 0.26);
+  --cv-border-focus: var(--cv-brand-primary-600); /* Cascades */
 
-  /* Shadows */
-  --cv-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
-  --cv-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
-  --cv-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --cv-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
-  --cv-shadow-glow-primary: 0 0 15px rgba(99, 102, 241, 0.2);
-  --cv-shadow-glow-cyan: 0 0 15px rgba(6, 182, 212, 0.2);
-  --cv-shadow-glow-emerald: 0 0 15px rgba(16, 185, 129, 0.2);
-  --cv-shadow-glow-gold: 0 0 15px rgba(245, 158, 11, 0.2);
+  /* Active Navigation States */
+  --cv-brand-primary-active-bg: rgba(39, 62, 65, 0.08);
+  --cv-brand-primary-active-text: var(--cv-brand-primary-600);
+  --cv-brand-primary-active-border: rgba(39, 62, 65, 0.2);
 
-  /* Glassmorphism */
-  --cv-backdrop-filter: blur(12px) saturate(140%);
-  --cv-modal-backdrop-bg: rgba(15, 23, 42, 0.45);
+  /* Apple Light Diffused Multi-Stop Shadows */
+  --cv-shadow-sm: 0 1px 2px 0 rgba(39, 62, 65, 0.05), 0 1px 3px 0 rgba(2, 1, 1, 0.03);
+  --cv-shadow-md: 0 4px 8px -2px rgba(39, 62, 65, 0.06), 0 2px 4px -1px rgba(2, 1, 1, 0.04);
+  --cv-shadow-lg: 0 12px 24px -4px rgba(39, 62, 65, 0.08), 0 4px 8px -2px rgba(2, 1, 1, 0.04);
+  --cv-shadow-xl: 0 24px 38px -6px rgba(39, 62, 65, 0.1), 0 8px 16px -4px rgba(2, 1, 1, 0.05);
+  --cv-shadow-glow-primary: 0 0 20px rgba(39, 62, 65, 0.2);
+  --cv-shadow-glow-cyan: 0 0 20px rgba(56, 176, 185, 0.22);
+  --cv-shadow-glow-emerald: 0 0 20px rgba(16, 185, 129, 0.2);
+  --cv-shadow-glow-gold: 0 0 20px rgba(245, 158, 11, 0.22);
+
+  /* Apple Glassmorphism & Specular Highlights */
+  --cv-backdrop-filter: blur(20px) saturate(180%);
+  --cv-glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --cv-modal-backdrop-bg: rgba(39, 62, 65, 0.35);
 }

@@ -18,6 +18,7 @@ export type { AIProvider, ProviderHealthState };
 // ---------------------------------------------------------------------------
 
 export type AITaskType =
+  | 'RESUME_ANALYSIS'
   | 'RESUME_PARSING'
   | 'ATS_EVALUATION'
   | 'INTERVIEW_QUESTION'
@@ -28,6 +29,7 @@ export type AITaskType =
   | 'SCENARIO_EVALUATION';
 
 export const AI_TASK_TYPES: readonly AITaskType[] = [
+  'RESUME_ANALYSIS',
   'RESUME_PARSING',
   'ATS_EVALUATION',
   'INTERVIEW_QUESTION',

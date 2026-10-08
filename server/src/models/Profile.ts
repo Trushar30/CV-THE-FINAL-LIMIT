@@ -18,7 +18,7 @@ export interface ICertification {
 export interface IProfile {
   userId: Types.ObjectId;
   displayName: string;
-  domain: CareerDomain;
+  domain?: CareerDomain;
   skills: string[];
   resumeId?: Types.ObjectId;
   resumeAnalysisId?: Types.ObjectId;
@@ -69,20 +69,21 @@ const ProfileSchema = new Schema<IProfileDocument>(
       type: String,
       required: true,
       trim: true,
+      index: {
+        unique: true,
+        collation: { locale: 'en', strength: 2 },
+      },
     },
     domain: {
       type: String,
       enum: CAREER_DOMAINS,
-      required: true,
+      required: false,
       index: true,
     },
-    skills: [
-      {
-        type: String,
-        required: true,
-        trim: true,
-      },
-    ],
+    skills: {
+      type: [String],
+      default: [],
+    },
     resumeId: {
       type: Schema.Types.ObjectId,
       ref: 'Resume',

@@ -9,6 +9,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { profileRouter } from './routes/profile.routes.js';
+import { domainRouter } from './routes/domain.routes.js';
+import { skillRouter } from './routes/skill.routes.js';
 import { aiManagerRouter, createAIManagerRoutes } from './routes/aiManager.routes.js';
 import type { AIManagerController } from './controllers/aiManager.controller.js';
 import { adminRouter } from './routes/admin.routes.js';
@@ -70,6 +72,10 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use('/api/v1/auth', authRouter);
   app.use('/api/profile', profileRouter);
   app.use('/api/v1/profile', profileRouter);
+  app.use('/api/domains', domainRouter);
+  app.use('/api/v1/domains', domainRouter);
+  app.use('/api/skills', skillRouter);
+  app.use('/api/v1/skills', skillRouter);
 
   const activeAiManagerRouter = options?.aiManagerController
     ? createAIManagerRoutes(options.aiManagerController)

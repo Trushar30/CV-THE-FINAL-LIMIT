@@ -66,3 +66,22 @@ export const refreshLimiter = rateLimit({
     next(AppError.rateLimitExceeded('Too many token refresh requests. Please try again later.'));
   },
 });
+
+/**
+ * Rate limiter for resume upload endpoint
+ * 10 uploads per 15 minutes per IP
+ */
+export const resumeUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  handler: (_req: Request, _res: Response, next) => {
+    next(
+      AppError.rateLimitExceeded(
+        'Too many resume upload attempts. Please wait before uploading again.'
+      )
+    );
+  },
+});

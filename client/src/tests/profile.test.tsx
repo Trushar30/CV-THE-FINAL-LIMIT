@@ -3,11 +3,44 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, DEFAULT_MOCK_USER } from '../store/AuthContext';
 import { ProfileSetupPage } from '../pages/ProfileSetupPage';
-import apiClient from '../api/client';
+import { onboardingApi } from '../api/onboarding';
 
 describe('ProfileSetupPage Wizard Suite', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(onboardingApi, 'getProfile').mockResolvedValue({ profile: null });
+    vi.spyOn(onboardingApi, 'getDomains').mockResolvedValue({
+      domains: [
+        {
+          code: 'SOFTWARE_ENGINEERING',
+          name: 'Software Engineering',
+          description: 'Design systems',
+          isActive: true,
+        },
+        {
+          code: 'CLOUD_ENGINEERING',
+          name: 'Cloud Engineering',
+          description: 'Build infra',
+          isActive: true,
+        },
+        {
+          code: 'AI_ENGINEERING',
+          name: 'AI Engineering',
+          description: 'Train models',
+          isActive: true,
+        },
+      ],
+    });
+    vi.spyOn(onboardingApi, 'getSkills').mockResolvedValue({
+      skills: [
+        { name: 'TypeScript', domainCode: 'SOFTWARE_ENGINEERING' },
+        { name: 'Node.js', domainCode: 'SOFTWARE_ENGINEERING' },
+        { name: 'PostgreSQL', domainCode: 'SOFTWARE_ENGINEERING' },
+      ],
+    });
+    vi.spyOn(onboardingApi, 'updateStep').mockResolvedValue({
+      user: { onboardingStep: 'NAME' },
+    });
   });
 
   const unonboardedUser = {
@@ -16,7 +49,7 @@ describe('ProfileSetupPage Wizard Suite', () => {
     onboardingStep: 'EMAIL_VERIFIED',
   };
 
-  it('renders Step 1 with all 3 career domains', () => {
+  it('renders Step 1 with Display Name input', () => {
     render(
       <MemoryRouter>
         <AuthProvider initialUser={unonboardedUser}>
@@ -26,13 +59,12 @@ describe('ProfileSetupPage Wizard Suite', () => {
     );
 
     expect(screen.getByRole('heading', { name: /profile setup wizard/i })).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Software Engineering' })).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Cloud Engineering' })).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'AI Engineering' })).toBeDefined();
-    expect(screen.getByRole('button', { name: /continue to profile details/i })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /step 1: candidate display name/i })).toBeDefined();
+    expect(screen.getByLabelText(/display name/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /continue to domain selection/i })).toBeDefined();
   });
 
-  it('selects domain and progresses to Step 2', () => {
+  it('validates display name and progresses to Step 2 (Domain Selection)', async () => {
     render(
       <MemoryRouter>
         <AuthProvider initialUser={unonboardedUser}>
@@ -41,19 +73,58 @@ describe('ProfileSetupPage Wizard Suite', () => {
       </MemoryRouter>
     );
 
-    // Click on Cloud Engineering card
+    const nameInput = screen.getByLabelText(/display name/i);
+    fireEvent.change(nameInput, { target: { value: 'Elena Rostova' } });
+
+    const continueBtn = screen.getByRole('button', {
+      name: /continue to domain selection/i,
+    });
+    fireEvent.click(continueBtn);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /step 2: choose your career domain/i })
+      ).toBeDefined();
+      expect(screen.getAllByText('Software Engineering').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Cloud Engineering').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('AI Engineering').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('selects domain and progresses to Step 3 (Technical Skills)', async () => {
+    render(
+      <MemoryRouter>
+        <AuthProvider initialUser={unonboardedUser}>
+          <ProfileSetupPage />
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    // Step 1 -> Step 2
+    const nameInput = screen.getByLabelText(/display name/i);
+    fireEvent.change(nameInput, { target: { value: 'Elena Rostova' } });
+    fireEvent.click(screen.getByRole('button', { name: /continue to domain selection/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Cloud Engineering')).toBeDefined();
+    });
+
+    // Select Cloud Engineering
     const cloudCard = screen.getByText('Cloud Engineering').closest('[role="button"]')!;
     fireEvent.click(cloudCard);
 
-    // Click continue
-    fireEvent.click(screen.getByRole('button', { name: /continue to profile details/i }));
+    // Click Continue to Skills
+    const toSkillsBtn = screen.getByRole('button', { name: /continue to skills/i });
+    fireEvent.click(toSkillsBtn);
 
-    // Verify step 2 credentials card is rendered
-    expect(screen.getByRole('heading', { name: /step 2: candidate credentials/i })).toBeDefined();
-    expect(screen.getByLabelText(/display name/i)).toBeDefined();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /step 3: technical competencies/i })
+      ).toBeDefined();
+    });
   });
 
-  it('allows adding and removing skills dynamically', () => {
+  it('allows adding and removing skills dynamically', async () => {
     render(
       <MemoryRouter>
         <AuthProvider initialUser={unonboardedUser}>
@@ -62,8 +133,20 @@ describe('ProfileSetupPage Wizard Suite', () => {
       </MemoryRouter>
     );
 
-    // Proceed to Step 2
-    fireEvent.click(screen.getByRole('button', { name: /continue to profile details/i }));
+    // Advance to Step 3
+    fireEvent.change(screen.getByLabelText(/display name/i), {
+      target: { value: 'Elena Rostova' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue to domain selection/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /continue to skills/i })).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /continue to skills/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/type a skill and press enter/i)).toBeDefined();
+    });
 
     const skillInput = screen.getByPlaceholderText(/type a skill and press enter/i);
     const addSkillBtn = screen.getByRole('button', { name: /add skill/i });
@@ -81,9 +164,10 @@ describe('ProfileSetupPage Wizard Suite', () => {
     expect(screen.queryByText('Rust')).toBeNull();
   });
 
-  it('submits profile and reaches Step 3 celebratory view', async () => {
-    vi.spyOn(apiClient, 'post').mockResolvedValueOnce({
+  it('submits complete profile and reaches Step 7 celebratory view', async () => {
+    vi.spyOn(onboardingApi, 'completeOnboarding').mockResolvedValueOnce({
       profile: {
+        userId: 'usr_mock_123',
         displayName: 'Elena Rostova',
         domain: 'SOFTWARE_ENGINEERING',
         skills: ['TypeScript', 'Node.js'],
@@ -93,41 +177,41 @@ describe('ProfileSetupPage Wizard Suite', () => {
         email: 'alex.chen@corpverse.dev',
         careerRole: 'JOB_SEEKER',
         platformRole: 'NONE',
-        onboardingStep: 'PROFILE_COMPLETED',
-        totalExp: 0,
-        corpCoinBalance: 0,
+        onboardingStep: 'COMPLETE',
       },
     });
 
     render(
       <MemoryRouter>
-        <AuthProvider initialUser={unonboardedUser}>
+        <AuthProvider initialUser={{ ...unonboardedUser, onboardingStep: 'REVIEW' }}>
           <ProfileSetupPage />
         </AuthProvider>
       </MemoryRouter>
     );
 
-    // Step 1 -> Step 2
-    fireEvent.click(screen.getByRole('button', { name: /continue to profile details/i }));
+    // When onboardingStep is REVIEW, should render Step 6
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          name: /step 6: profile & resume verification review/i,
+        })
+      ).toBeDefined();
+    });
 
-    // Fill Display Name
-    const nameInput = screen.getByLabelText(/display name/i);
-    fireEvent.change(nameInput, { target: { value: 'Elena Rostova' } });
-
-    // Submit form
-    const submitBtn = screen.getByRole('button', { name: /complete profile setup/i });
+    const submitBtn = screen.getByRole('button', {
+      name: /create profile & activate role/i,
+    });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText('Career Role Activated!')).toBeDefined();
-      expect(screen.getByText('Congratulations, Elena Rostova!')).toBeDefined();
       expect(screen.getByRole('button', { name: /enter career hub now/i })).toBeDefined();
     });
   });
 
-  it('displays error banner if backend profile setup fails', async () => {
-    vi.spyOn(apiClient, 'post').mockRejectedValueOnce(
-      new Error('Profile has already been configured for this account')
+  it('displays error banner if backend display name save fails', async () => {
+    vi.spyOn(onboardingApi, 'updateStep').mockRejectedValueOnce(
+      new Error("Display name 'Elena Rostova' is already taken")
     );
 
     render(
@@ -138,18 +222,13 @@ describe('ProfileSetupPage Wizard Suite', () => {
       </MemoryRouter>
     );
 
-    // Step 1 -> Step 2
-    fireEvent.click(screen.getByRole('button', { name: /continue to profile details/i }));
-
     const nameInput = screen.getByLabelText(/display name/i);
     fireEvent.change(nameInput, { target: { value: 'Elena Rostova' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /complete profile setup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue to domain selection/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText('Profile has already been configured for this account')
-      ).toBeDefined();
+      expect(screen.getByText("Display name 'Elena Rostova' is already taken")).toBeDefined();
     });
   });
 });
