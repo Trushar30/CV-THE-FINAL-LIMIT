@@ -51,6 +51,30 @@ export const CAREER_DOMAINS: readonly CareerDomain[] = [
   'AI_ENGINEERING',
 ] as const;
 
+// Company Types and Statuses (Spec Section 6 & 26.7)
+export type CompanyType = 'PLATFORM' | 'FOUNDER';
+export const COMPANY_TYPES: readonly CompanyType[] = ['PLATFORM', 'FOUNDER'] as const;
+
+export type CompanyStatus = 'ACTIVE' | 'BANKRUPT' | 'SUSPENDED';
+export const COMPANY_STATUSES: readonly CompanyStatus[] = [
+  'ACTIVE',
+  'BANKRUPT',
+  'SUSPENDED',
+] as const;
+
+// Job Posting Status (Spec Section 6.3 & 26.10)
+export type JobStatus = 'OPEN' | 'CLOSED';
+export const JOB_STATUSES: readonly JobStatus[] = ['OPEN', 'CLOSED'] as const;
+
+// Company Employee Statuses (Spec Section 6.2 & 26.8)
+export type CompanyEmployeeStatus = 'ACTIVE' | 'TERMINATED' | 'DEMOTED' | 'UNDER_REVIEW';
+export const COMPANY_EMPLOYEE_STATUSES: readonly CompanyEmployeeStatus[] = [
+  'ACTIVE',
+  'TERMINATED',
+  'DEMOTED',
+  'UNDER_REVIEW',
+] as const;
+
 // Task difficulty tiers and types
 export type TaskDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export const TASK_DIFFICULTIES: readonly TaskDifficulty[] = ['EASY', 'MEDIUM', 'HARD'] as const;

@@ -14,6 +14,7 @@ import { skillRouter } from './routes/skill.routes.js';
 import { aiManagerRouter, createAIManagerRoutes } from './routes/aiManager.routes.js';
 import type { AIManagerController } from './controllers/aiManager.controller.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { companyRouter, jobRouter } from './routes/company.routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
@@ -76,6 +77,10 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use('/api/v1/domains', domainRouter);
   app.use('/api/skills', skillRouter);
   app.use('/api/v1/skills', skillRouter);
+  app.use('/api/companies', companyRouter);
+  app.use('/api/v1/companies', companyRouter);
+  app.use('/api/jobs', jobRouter);
+  app.use('/api/v1/jobs', jobRouter);
 
   const activeAiManagerRouter = options?.aiManagerController
     ? createAIManagerRoutes(options.aiManagerController)

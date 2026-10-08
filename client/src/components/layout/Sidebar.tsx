@@ -70,6 +70,26 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               </span>
               <span>Global Leaderboards</span>
             </NavLink>
+            <NavLink
+              to="/jobs"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+              onClick={onCloseMobile}
+            >
+              <span className={styles.navIcon}>
+                <BriefcaseIcon size={18} />
+              </span>
+              <span>Explore Jobs</span>
+            </NavLink>
+            <NavLink
+              to="/companies"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+              onClick={onCloseMobile}
+            >
+              <span className={styles.navIcon}>
+                <BuildingIcon size={18} />
+              </span>
+              <span>Enterprise Directory</span>
+            </NavLink>
           </div>
 
           {/* Candidate Onboarding Navigation */}

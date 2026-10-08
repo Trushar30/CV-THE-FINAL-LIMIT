@@ -853,3 +853,57 @@ All internal AI interactions are isolated from vendor-specific payloads through 
   - Client methods wrapping all `/api/ai-manager/*` routes with normalized `ApiClientError` error handling.
 - **Backend Queue Stats Telemetry:**
   - `GET /api/ai-manager/health-usage` enriched with `queueStats` aggregated from `AIJobModel` counting `depth`, `pending`, `processing`, `waitingForProvider`, `completed`, `failed`, and `total`.
+
+---
+
+## 19. Companies, Job Postings & Employee Roster Architecture (TASK P5.1)
+
+### 19.1 Data Models & Schemas
+
+- **Company Model (`CompanyModel` in `companies` collection):**
+  - Schema: `type` (`PLATFORM` | `FOUNDER`), `isPlatformCompany` (boolean synchronized pre-save), `ownerId` (nullable, null for PLATFORM, ObjectId for FOUNDER), `name` (unique index), `domainsHired` (array of `CareerDomain`), `status` (`ACTIVE` | `BANKRUPT` | `SUSPENDED`), `ratings` (`overall`, `culture`, `workLife`, `technicalExcellence`, `reviewCount`), `companyRating` (mirrored bidirectionally with `ratings.overall`), `employeeCount` (defaults to 0), `maxEmployees` (seeded from `PlatformConfig.company.maxEmployees`), `financialHealth` (default 0 for platform companies), `aiProviderPool: 'PIPELINE'`.
+- **Company Job Model (`CompanyJobModel` in `companyJobs` collection):**
+  - Schema: `companyId` (ref `Company`), `domain` (`CareerDomain`), level range (`minLevel`, `maxLevel` clamped 1-10), `title`, `description`, `requiredSkills` (array of string), `openings` (integer $\ge 0$), `status` (`OPEN` | `CLOSED`), `isOpen` (boolean synchronized pre-save).
+  - Indexes: `(companyId, status)`, `(domain, status)`, `(minLevel, maxLevel)`.
+- **Company Employee Model (`CompanyEmployeeModel` in `companyEmployees` collection):**
+  - Schema: `userId` (ref `User`), `companyId` (ref `Company`), `domain` (`CareerDomain`), `level` (1-10), `positionTitle` (synchronized with canonical career level title on level changes), `status` (`ACTIVE` | `TERMINATED` | `DEMOTED` | `UNDER_REVIEW`), `history` array recording state transitions (`previousStatus`, `newStatus`, `reason`, `changedAt`), `startedAt`, `endedAt`.
+  - Indexes: `(companyId, status)`, `(userId, status)`.
+
+### 19.2 Startup Seeding (Decision D13 Baseline)
+
+- **Idempotent Seeding (`CompanyService.seedPlatformCompanies`):**
+  - Integrated into server boot sequence (`server.ts`) before listening for HTTP traffic.
+  - Seeds exactly 3 PLATFORM companies using the `PIPELINE` pool:
+    1. `Nexus Enterprise Systems`: High-throughput enterprise backends, cloud workflows, and automated reasoning pipelines (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
+    2. `CloudScale Infrastructure`: Distributed multi-cloud orchestration, site reliability engineering, and MLOps platforms (`CLOUD_ENGINEERING`, `SOFTWARE_ENGINEERING`, `AI_ENGINEERING`).
+    3. `Synthetix AI Labs`: Next-generation generative agents, deep learning pipelines, and autonomous tooling (`AI_ENGINEERING`, `SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`).
+  - Automatically provisions at least 1 open job posting for every domain hired by each platform company, with required skills and opening counts.
+  - Idempotent execution: Checks for existing companies by name and existing jobs by title/companyId to avoid duplicate inserts on successive server restarts.
+
+### 19.3 Public Query and Search APIs
+
+- `GET /api/companies` (and `/api/v1/companies`): Lists active companies with optional filters (`type`, `domain`, `status`). Aggregates real-time `openJobCount` from `CompanyJobModel`.
+- `GET /api/companies/:id`: Retrieves full company profile with ratings breakdown and open job postings.
+- `GET /api/jobs` (and `/api/v1/jobs`): Search and filter open job postings by `domain`, `minLevel`, `maxLevel`, and keyword `search` (matching title, description, or required skills). Populates associated company details (`_id`, `name`, `type`, `companyRating`, `ratings`).
+- `GET /api/jobs/:id`: Fetches detailed job posting and associated company profile.
+
+### 19.4 Admin Management & Audit Trails
+
+- **Endpoints:**
+  - `POST /api/admin/companies`: Create platform or managed company.
+  - `PATCH /api/admin/companies/:id`: Update company details, domains, status, ratings.
+  - `POST /api/admin/jobs`: Create job posting for any company.
+  - `PATCH /api/admin/jobs/:id`: Update job requirements, openings, status.
+  - `DELETE /api/admin/jobs/:id`: Soft-close job posting (`status: 'CLOSED'`).
+- **Authorization & Audit Logging:**
+  - Guarded strictly by `authenticateJwt` and `requirePlatformRole('ADMIN')`.
+  - Every admin mutation requires an explicit `reason` string ($\ge 10$ characters) validated by Zod.
+  - All admin actions write immutable append-only records to `AuditLogModel` under action `ADMIN_MUTATION` capturing actor, target, diffs, and justification.
+
+### 19.5 Frontend Company & Job Exploration Architecture (TASK P5.2)
+
+- **Client API Layer (`client/src/api/career.ts`):** Strongly typed consumer wrappers around `/api/companies` and `/api/jobs` supporting parameter serialization (`domain`, `type`, `status`, `minLevel`, `maxLevel`, `search`).
+- **Enterprise Directory (`/companies`):** Search input, track domain filter chips, organization type selector (`PLATFORM` vs `FOUNDER`), and enterprise cards displaying overall rating, employee capacity (`employeeCount / maxEmployees`), and open position badges.
+- **Enterprise Profile Detail (`/companies/:id`):** Executive overview banner, multi-dimensional rating breakdown (Overall, Culture, Work-Life, Technical Excellence), team capacity bar, and live open requisitions card list linking directly to job details.
+- **Job Board & Filter Controls (`/jobs`):** Keyword search box, engineering domain chips (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), and seniority level presets (Junior L1-L3, Mid L4-L6, Senior & Lead L7-L10).
+- **Position Detail & Application Quota UX (`/jobs/:id`):** Role responsibilities, required skills chips, employer card, active application quota indicator (`0 / 5 Active Applications` matching `PlatformConfig.applications.maxActive`), and disabled Apply CTA button with Phase 6.1 unlocking note.

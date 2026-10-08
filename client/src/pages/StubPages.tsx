@@ -6,12 +6,21 @@ import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export function CareerHubPage(): ReactElement {
+  const navigate = useNavigate();
+
   return (
     <Card title="Job Seeker Career Hub" subtitle="Explore platform companies & track applications">
       <p style={{ color: 'var(--cv-text-secondary)', marginBottom: '1rem' }}>
-        This view is restricted to users with <code>careerRole: JOB_SEEKER</code>.
+        Discover enterprise organizations and open simulation requisitions matching your track.
       </p>
-      <Badge variant="primary">Access Granted</Badge>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+        <Button variant="primary" size="md" onClick={() => navigate('/jobs')}>
+          Browse Open Positions
+        </Button>
+        <Button variant="secondary" size="md" onClick={() => navigate('/companies')}>
+          View Enterprises
+        </Button>
+      </div>
     </Card>
   );
 }

@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { connectDatabase, registerGracefulShutdown } from './config/database.js';
 import { domainService } from './services/domain/domain.service.js';
 import { configService } from './services/config/config.service.js';
+import { companyService } from './services/company/company.service.js';
 import { defaultAIWorker } from './ai/index.js';
 import { defaultAIManagerService } from './routes/aiManager.routes.js';
 import './services/resume/resumeAnalysis.service.js';
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
       await domainService.seedDefaultSkills();
       await configService.seedDefaultsIfMissing();
       await defaultAIManagerService.seedDemoPoolFromEnv();
+      await companyService.seedPlatformCompanies();
       defaultAIWorker.start();
     } catch (dbErr) {
       logger.warn(

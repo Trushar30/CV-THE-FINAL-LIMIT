@@ -7,6 +7,10 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { RoleRoute } from './components/guards/RoleRoute';
 import { ShowcasePage } from './pages/ShowcasePage';
+import { CompaniesPage } from './pages/CompaniesPage';
+import { CompanyDetailPage } from './pages/CompanyDetailPage';
+import { JobsPage } from './pages/JobsPage';
+import { JobDetailPage } from './pages/JobDetailPage';
 import {
   CareerHubPage,
   WorkplacePage,
@@ -36,6 +40,12 @@ export function App(): ReactElement {
                   <Route path="/" element={<ShowcasePage />} />
                   <Route path="/showcase" element={<ShowcasePage />} />
                   <Route path="/leaderboards" element={<ShowcasePage />} />
+
+                  {/* Company & Job Browsing Routes */}
+                  <Route path="/companies" element={<CompaniesPage />} />
+                  <Route path="/companies/:id" element={<CompanyDetailPage />} />
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/jobs/:id" element={<JobDetailPage />} />
 
                   {/* Job Seeker Guarded Routes */}
                   <Route

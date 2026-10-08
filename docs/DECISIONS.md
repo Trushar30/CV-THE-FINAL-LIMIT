@@ -47,6 +47,8 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-040: Resume Binary Storage in MongoDB GridFS, Magic-Byte Integrity Verification, and Archive & Preserve Lifecycle Policy](#adr-040-resume-binary-storage-in-mongodb-gridfs-magic-byte-integrity-verification-and-archive--preserve-lifecycle-policy)
 - [ADR-041: Server-Side Text Extraction, AI Resume Parsing Pipeline, Zero-Fabrication Guardrails & Output Validation](#adr-041-server-side-text-extraction-ai-resume-parsing-pipeline-zero-fabrication-guardrails--output-validation)
 - [ADR-042: Guided Candidate Profile Setup Flow, Resume Dropzone Ingestion, Polling Telemetry & Side-by-Side Review Screen](#adr-042-guided-candidate-profile-setup-flow-resume-dropzone-ingestion-polling-telemetry--side-by-side-review-screen)
+- [ADR-043: Companies, Job Postings and Employee Roster Data Models, Startup Seeding and REST Operations](#adr-043-companies-job-postings-and-employee-roster-data-models-startup-seeding-and-rest-operations)
+- [ADR-044: Enterprise Directory and Job Board Presentation Architecture, Domain & Seniority Filters, and Apply Quota UX](#adr-044-enterprise-directory-and-job-board-presentation-architecture-domain--seniority-filters-and-apply-quota-ux)
 
 ---
 
@@ -430,3 +432,39 @@ This document tracks all foundational architectural and technical decisions made
   - **Asynchronous Analysis Polling & Queue State Handling:** While on Step 5, the client polls `GET /api/profile/resume/analysis` at a 2-second interval. It handles all states: `WAITING_FOR_PROVIDER` (informational queue banner), `SCANNED_UNREADABLE` (advisory warning with manual progression option), `FAILED` (retry or re-upload options), and `COMPLETED` (automatic progression to Review).
   - **Side-by-Side Review Comparison:** Rendered a two-column responsive grid contrasting candidate-entered profile data (left) with AI-extracted entities from `ResumeAnalysis` (right), including contact details, domain classification, experience years, skills, education, and work history. All optional fields (bio, GitHub, LinkedIn, portfolio) are explicitly marked with `(Optional)` tags.
   - **Authoritative Activation:** Clicking "Create Profile & Activate Role" calls `onboardingApi.updateStep({ step: 'REVIEW', ... })` followed by `onboardingApi.completeOnboarding()`, which authoritatively sets `careerRole: 'JOB_SEEKER'` and `onboardingStep: 'COMPLETE'`, followed by session refresh and celebratory activation view.
+
+### ADR-043: Companies, Job Postings and Employee Roster Data Models, Startup Seeding and REST Operations
+
+- **Status:** ACCEPTED
+- **Context:** Spec Section 6 and Decision D13 require modelling `Company`, `CompanyJob`, and `CompanyEmployee` entities, startup seeding of 3 PLATFORM companies using the PIPELINE AI provider pool, public querying and filtering of companies and open jobs, and admin-only mutation endpoints with append-only audit logging. Applications and founder company lifecycles remain strictly out of scope for P5.1.
+- **Decision:**
+  - **Data Models:**
+    - `Company` (`companies` collection): `type` ('PLATFORM' | 'FOUNDER'), `isPlatformCompany` (boolean synchronized pre-save), `ownerId` (nullable, null for PLATFORM, ObjectId for FOUNDER), `name` (unique index), `domainsHired` (array of `CareerDomain`), `status` ('ACTIVE' | 'BANKRUPT' | 'SUSPENDED'), `ratings` (`overall`, `culture`, `workLife`, `technicalExcellence`, `reviewCount`), `companyRating` (mirrored bidirectionally with `ratings.overall`), `employeeCount`, `maxEmployees` (seeded from `PlatformConfig.company.maxEmployees`), `financialHealth` (default 0 for platform companies), `aiProviderPool: 'PIPELINE'`.
+    - `CompanyJob` (`companyJobs` collection): `companyId`, `domain` (`CareerDomain`), level range (`minLevel`, `maxLevel` clamped 1-10), `title`, `description`, `requiredSkills`, `openings`, `status` ('OPEN' | 'CLOSED'), `isOpen` (boolean synchronized pre-save). Compound indexes on `(companyId, status)`, `(domain, status)`, and `(minLevel, maxLevel)`.
+    - `CompanyEmployee` (`companyEmployees` collection): `userId`, `companyId`, `domain`, `level`, `positionTitle` (synchronized with canonical career level title), `status` ('ACTIVE' | 'TERMINATED' | 'DEMOTED' | 'UNDER_REVIEW'), `history` array recording timestamps, previous/new status, and reason, `startedAt`, `endedAt`. Compound index on `(companyId, status)` and `(userId, status)`.
+  - **Startup Seeding (D13 Approved Baseline):**
+    - Idempotently configured and seeded 3 PLATFORM companies on server bootstrap via `CompanyService.seedPlatformCompanies()`:
+      1. `Nexus Enterprise Systems`: High-throughput enterprise backends, cloud workflows, and automated reasoning pipelines (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
+      2. `CloudScale Infrastructure`: Distributed multi-cloud orchestration, site reliability engineering, and MLOps platforms (`CLOUD_ENGINEERING`, `SOFTWARE_ENGINEERING`, `AI_ENGINEERING`).
+      3. `Synthetix AI Labs`: Next-generation generative agents, deep learning pipelines, and autonomous tooling (`AI_ENGINEERING`, `SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`).
+    - Seeded at least 1 active job per hired domain for each platform company with level range, required skills, and openings.
+    - Seeding is strictly idempotent: existing records are checked by company name and job title before insert.
+  - **Public & Admin REST APIs:**
+    - Public: `GET /api/companies`, `GET /api/companies/:id`, `GET /api/jobs` (with domain, minLevel, maxLevel, keyword search filters), `GET /api/jobs/:id`.
+    - Admin mutations: `POST /api/admin/companies`, `PATCH /api/admin/companies/:id`, `POST /api/admin/jobs`, `PATCH /api/admin/jobs/:id`, `DELETE /api/admin/jobs/:id`.
+    - Protected by `authenticateJwt` and `requirePlatformRole('ADMIN')`.
+    - Every admin mutation requires an explicit `reason` string (min 10 characters) and creates an immutable audit record via `AuditService.record()` with action `ADMIN_MUTATION`.
+
+### ADR-044: Enterprise Directory and Job Board Presentation Architecture, Domain & Seniority Filters, and Apply Quota UX
+
+- **Status:** ACCEPTED
+- **Context:** Following the implementation of backend company and job models and REST APIs in TASK P5.1, the frontend presentation layer requires polished, responsive views allowing candidates to explore enterprise organizations, review company profiles and culture ratings, filter job openings by engineering track and seniority level, inspect detailed position requirements, and view application quota states ahead of the full application engine in Phase 6.1.
+- **Decision:**
+  - **Client API Layer (`client/src/api/career.ts`):** Implemented strongly typed API client methods (`careerApi.getCompanies`, `careerApi.getCompany`, `careerApi.getJobs`, `careerApi.getJob`) wrapping public backend endpoints with query parameter serializations for search keywords, domain chips, and level ranges.
+  - **Enterprise Directory (`/companies`):** Built `CompaniesPage.tsx` displaying cards with enterprise name, type badge (`Platform Enterprise` vs `Founder Startup`), domain tags (`Software`, `Cloud`, `AI & ML`), employee capacity (`employeeCount / maxEmployees`), overall rating (`★ 4.8 / 5.0`), and open positions badge. Includes responsive search and domain filter chips.
+  - **Enterprise Profile Detail (`/companies/:id`):** Built `CompanyDetailPage.tsx` featuring an executive overview banner, multi-dimensional rating breakdown (Overall, Culture, Work-Life, Technical Excellence), employee count, and live list of open job requisitions linking directly to job details.
+  - **Job Board & Filter Controls (`/jobs`):** Built `JobsPage.tsx` with keyword search, career domain filter chips, seniority level range dropdown (Junior L1-L3, Mid L4-L6, Senior & Lead L7-L10), and position cards displaying role title, employer name, level badge, openings count, and required skills chips.
+  - **Position Detail & Application Quota UX (`/jobs/:id`):** Built `JobDetailPage.tsx` providing full role description, required technical competencies, progression and rewards summary, company profile card, and an **Apply Section**:
+    - Displays active application quota indicator (`0 / 5 Active Applications`, conforming to `PlatformConfig.applications.maxActive`).
+    - Prominent `Apply for Position` button explicitly set to `disabled={true}` with informational note stating application submission unlocks in Phase 6.1.
+  - **Design System Polish & Responsive Behavior:** Utilized Gamified Learning design tokens, Apple squircle borders, native SVG icons (`SearchIcon`, `StarIcon`, `UsersIcon`, `ChevronRightIcon`), and responsive grid layouts tested across mobile, tablet, and desktop viewports.

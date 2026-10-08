@@ -1,0 +1,472 @@
+/* Career & Company Exploration Styles — CorpVerse Design System */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-6);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--cv-spacing-2) 0;
+  animation: cv-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cv-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header & Hero */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-2);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cv-spacing-4);
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--cv-font-display);
+  font-size: var(--cv-text-3xl);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: var(--cv-text-base);
+  color: var(--cv-text-secondary);
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.5;
+}
+
+/* Filter Bar */
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-3);
+  padding: var(--cv-spacing-4);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.filterControls {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-spacing-3);
+  flex-wrap: wrap;
+}
+
+.searchInputWrapper {
+  flex: 1 1 280px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--cv-spacing-2) var(--cv-spacing-3) var(--cv-spacing-2) 36px;
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-strong);
+  border-radius: var(--cv-radius-md);
+  color: var(--cv-text-primary);
+  font-size: var(--cv-text-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--cv-brand-primary-500);
+  box-shadow: 0 0 0 3px rgba(39, 62, 65, 0.15);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  color: var(--cv-text-muted);
+  pointer-events: none;
+}
+
+.selectInput {
+  padding: var(--cv-spacing-2) var(--cv-spacing-3);
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-strong);
+  border-radius: var(--cv-radius-md);
+  color: var(--cv-text-primary);
+  font-size: var(--cv-text-sm);
+  cursor: pointer;
+  min-width: 140px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: var(--cv-brand-primary-500);
+  box-shadow: 0 0 0 3px rgba(39, 62, 65, 0.15);
+}
+
+.chipGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-spacing-2);
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 4px 12px;
+  font-size: var(--cv-text-xs);
+  font-weight: 500;
+  border-radius: var(--cv-radius-full);
+  border: 1px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface);
+  color: var(--cv-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  background: var(--cv-bg-surface-hover);
+  color: var(--cv-text-primary);
+  border-color: var(--cv-border-strong);
+}
+
+.chipActive {
+  background: var(--cv-brand-primary-500);
+  color: #ffffff;
+  border-color: var(--cv-brand-primary-600);
+}
+
+.chipActive:hover {
+  background: var(--cv-brand-primary-600);
+  color: #ffffff;
+}
+
+/* Card Grids */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--cv-spacing-4);
+  width: 100%;
+}
+
+.cardItem {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--cv-spacing-3);
+  padding: var(--cv-spacing-5);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  box-shadow: var(--cv-shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cardItem:hover {
+  transform: translateY(-2px);
+  border-color: var(--cv-brand-primary-400);
+  box-shadow: var(--cv-shadow-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cv-spacing-2);
+}
+
+.companyTitle {
+  font-size: var(--cv-text-lg);
+  font-weight: 600;
+  color: var(--cv-text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cardDescription {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.domainTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.domainTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--cv-text-xs);
+  padding: 2px 8px;
+  border-radius: var(--cv-radius-sm);
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  color: var(--cv-text-secondary);
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cv-spacing-2);
+  padding-top: var(--cv-spacing-3);
+  border-top: 1px solid var(--cv-border-subtle);
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-secondary);
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statHighlight {
+  font-weight: 600;
+  color: var(--cv-text-primary);
+}
+
+/* Detail Views */
+.backNav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cv-spacing-2);
+  color: var(--cv-text-secondary);
+  font-size: var(--cv-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  margin-bottom: var(--cv-spacing-2);
+}
+
+.backNav:hover {
+  color: var(--cv-brand-primary-500);
+}
+
+.detailBanner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-4);
+  padding: var(--cv-spacing-6);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  box-shadow: var(--cv-shadow-sm);
+  position: relative;
+}
+
+.bannerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cv-spacing-4);
+  flex-wrap: wrap;
+}
+
+.bannerTitle {
+  font-family: var(--cv-font-display);
+  font-size: var(--cv-text-2xl);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+  margin: 0 0 var(--cv-spacing-1) 0;
+}
+
+.bannerSubhead {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+}
+
+.ratingBreakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--cv-spacing-3);
+  margin-top: var(--cv-spacing-2);
+}
+
+.ratingCard {
+  padding: var(--cv-spacing-3) var(--cv-spacing-4);
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ratingLabel {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ratingScore {
+  font-size: var(--cv-text-xl);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Job Detail Sections */
+.jobDetailLayout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--cv-spacing-6);
+}
+
+@media (max-width: 900px) {
+  .jobDetailLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-5);
+}
+
+.sideSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-4);
+}
+
+.sectionBlock {
+  padding: var(--cv-spacing-5);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  box-shadow: var(--cv-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-3);
+}
+
+.sectionTitle {
+  font-size: var(--cv-text-base);
+  font-weight: 600;
+  color: var(--cv-text-primary);
+  margin: 0;
+}
+
+.skillsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cv-spacing-2);
+}
+
+.skillChip {
+  padding: 4px 10px;
+  background: var(--cv-brand-primary-50);
+  border: 1px solid var(--cv-brand-primary-200);
+  border-radius: var(--cv-radius-md);
+  font-size: var(--cv-text-xs);
+  font-weight: 500;
+  color: var(--cv-brand-primary-800);
+}
+
+/* Apply CTA Card */
+.applyCtaCard {
+  padding: var(--cv-spacing-5);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  box-shadow: var(--cv-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-spacing-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.applyCtaCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cv-brand-primary-400), var(--cv-palette-winter-garden));
+}
+
+.quotaCounter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--cv-spacing-3);
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-md);
+}
+
+.quotaLabel {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-secondary);
+  font-weight: 500;
+}
+
+.quotaValue {
+  font-size: var(--cv-text-sm);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+}
+
+.applyDisabledNotice {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-muted);
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Loading & Center States */
+.centerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: var(--cv-spacing-3);
+  color: var(--cv-text-secondary);
+}
+
+.resultsMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-muted);
+  padding: 0 var(--cv-spacing-1);
+}
