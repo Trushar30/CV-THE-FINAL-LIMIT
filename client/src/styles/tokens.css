@@ -107,6 +107,18 @@
   --cv-space-12: 3rem; /* 48px */
   --cv-space-16: 4rem; /* 64px */
 
+  /* Spacing Scale Aliases */
+  --cv-spacing-1: var(--cv-space-1);
+  --cv-spacing-2: var(--cv-space-2);
+  --cv-spacing-3: var(--cv-space-3);
+  --cv-spacing-4: var(--cv-space-4);
+  --cv-spacing-5: var(--cv-space-5);
+  --cv-spacing-6: var(--cv-space-6);
+  --cv-spacing-8: var(--cv-space-8);
+  --cv-spacing-10: var(--cv-space-10);
+  --cv-spacing-12: var(--cv-space-12);
+  --cv-spacing-16: var(--cv-space-16);
+
   /* Apple Squircle Radius Scale */
   --cv-radius-xs: 4px;
   --cv-radius-sm: 6px;

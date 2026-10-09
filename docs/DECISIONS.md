@@ -49,6 +49,12 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-042: Guided Candidate Profile Setup Flow, Resume Dropzone Ingestion, Polling Telemetry & Side-by-Side Review Screen](#adr-042-guided-candidate-profile-setup-flow-resume-dropzone-ingestion-polling-telemetry--side-by-side-review-screen)
 - [ADR-043: Companies, Job Postings and Employee Roster Data Models, Startup Seeding and REST Operations](#adr-043-companies-job-postings-and-employee-roster-data-models-startup-seeding-and-rest-operations)
 - [ADR-044: Enterprise Directory and Job Board Presentation Architecture, Domain & Seniority Filters, and Apply Quota UX](#adr-044-enterprise-directory-and-job-board-presentation-architecture-domain--seniority-filters-and-apply-quota-ux)
+- [ADR-045: Job Application Data Model, Authoritative 8-Stage Pipeline State Machine, and Lifecycle REST APIs](#adr-045-job-application-data-model-authoritative-8-stage-pipeline-state-machine-and-lifecycle-rest-apis)
+- [ADR-046: ATS Screening Evaluation Engine, Output Schema Enforcement & Authoritative Backend Decisions](#adr-046-ats-screening-evaluation-engine-output-schema-enforcement--authoritative-backend-decisions)
+- [ADR-047: Dedicated Groq Resume Parsing Pipeline, Task-Specific Quota Isolation & Strict Schema Compliance](#adr-047-dedicated-groq-resume-parsing-pipeline-task-specific-quota-isolation--strict-schema-compliance)
+- [ADR-048: Reusable Multi-Stage Chat Engine (SCREENING, ASSESSMENT, INTERVIEW)](#adr-048-reusable-multi-stage-chat-engine-screening-assessment-interview)
+- [ADR-049: Final Review Multi-Stage Synthesis, Offer Negotiation Chat with Authoritative Clamping, and Atomic Acceptance Lifecycle](#adr-049-final-review-multi-stage-synthesis-offer-negotiation-chat-with-authoritative-clamping-and-atomic-acceptance-lifecycle)
+- [ADR-050: Design Token Canonical Spacing Scale and CSS Variable Backward-Compatibility Aliasing](#adr-050-design-token-canonical-spacing-scale-and-css-variable-backward-compatibility-aliasing)
 
 ---
 
@@ -468,3 +474,240 @@ This document tracks all foundational architectural and technical decisions made
     - Displays active application quota indicator (`0 / 5 Active Applications`, conforming to `PlatformConfig.applications.maxActive`).
     - Prominent `Apply for Position` button explicitly set to `disabled={true}` with informational note stating application submission unlocks in Phase 6.1.
   - **Design System Polish & Responsive Behavior:** Utilized Gamified Learning design tokens, Apple squircle borders, native SVG icons (`SearchIcon`, `StarIcon`, `UsersIcon`, `ChevronRightIcon`), and responsive grid layouts tested across mobile, tablet, and desktop viewports.
+
+### ADR-045: Job Applications Data Model, Single Authoritative State Machine & Lifecycle Endpoints
+
+- **Status:** ACCEPTED
+- **Context:** Spec Section 7, 26 Collection 11, and 27.4 define the 8-stage hiring pipeline, max 5 active applications per candidate, and terminal states. An authoritative state machine module was needed to ensure all transitions follow strict linear progression, forbid illegal state jumps, maintain immutable stage history records, and enforce mode-agnostic (`PRODUCTION` vs `DEMO`) and company-agnostic operations without separate code paths.
+- **Decision:**
+  - **Data Model (`ApplicationModel` in `applications` collection):**
+    - Fields: `userId`, `jobId`, `companyId`, `mode` (`'PRODUCTION' | 'DEMO'`, default `'PRODUCTION'`), `currentStage` (`ApplicationStage`, default `'APPLIED'`), `status` (`ApplicationStatus`, default `'ACTIVE'`), `resumeAnalysisId`, `resumeAnalysisSnapshot` (immutable copy of skills, domain, education, projects, certifications at application time), `stageHistory` array (`stage`, `enteredAt`, `exitedAt`, `result`), `atsScore`, `atsBreakdown`, `atsFeedback`, `interviewScore`, `rejectionReason`, `withdrawalReason`, `expiryReason`, timestamps.
+    - Compound indexes: `{ userId: 1, status: 1 }` (for fast quota counting), `{ userId: 1, jobId: 1, status: 1 }` (for uniqueness on active applications), `{ companyId: 1, currentStage: 1 }`, `{ jobId: 1, status: 1 }`.
+  - **Single Authoritative State Machine (`ApplicationStateMachine`):**
+    - Implemented `server/src/services/career/applicationStateMachine.ts` through which all stage and status changes must execute.
+    - Allowed linear forward transitions: `APPLIED` -> `ATS_SCREENING` -> `SCREENING` -> `ASSESSMENT` -> `INTERVIEW` -> `FINAL_REVIEW` -> `OFFER` -> `ACCEPTED`.
+    - Allowed terminal transitions:
+      - `REJECTED`: permitted from any non-terminal stage.
+      - `WITHDRAWN`: permitted from any non-terminal stage upon candidate action.
+      - `EXPIRED`: permitted from any non-terminal stage upon staleness.
+      - `ACCEPTED`: only permitted from `OFFER` stage upon candidate acceptance.
+    - Strictly throws on: any transition from terminal status (`REJECTED`, `WITHDRAWN`, `EXPIRED`, `ACCEPTED`), stage skipping (e.g. `APPLIED` -> `SCREENING`), backward transitions, self-transitions without status change, and invalid stage/status inputs.
+    - Authoritatively maintains `stageHistory`, timestamping `exitedAt` on preceding open entries and recording transition outcomes.
+  - **Service & REST APIs:**
+    - `POST /api/applications`: Requires `careerRole === 'JOB_SEEKER'`, completed profile, completed `ResumeAnalysis`, checks active applications $< 5$ (`PlatformConfig.applications.maxActive`), rejects duplicate active application for same job (409 Conflict), checks job is `OPEN` and company is `ACTIVE`.
+    - `POST /api/applications/:id/withdraw`: Transitions active application to `WITHDRAWN`, releasing the candidate's active application quota.
+    - `GET /api/applications` and `GET /api/applications/:id`: Query and retrieve application details with populated company and job references.
+    - `runApplicationExpiryJob` / `expireStaleApplications(staleDays)`: Background job discovering stale active applications older than cutoff date and marking them `EXPIRED`.
+
+### ADR-046: ATS Screening Evaluation Engine, Output Schema Enforcement & Authoritative Backend Decisions
+
+- **Status:** ACCEPTED
+- **Context:** Spec Sections 7, 8, 26 (Collections 15 & 16), and 27.4 mandate the ATS Screening stage. A dedicated AI job (`ATS_SCREEN` / `ATS_EVALUATION`) must be submitted with contextual grounding referencing the candidate's verified resume and profile. Crucially, per Architecture Principles, AI only recommends (PASS/FAIL) while backend authoritatively decides progression using `PlatformConfig.ats.passingScore` (default 70). Rejections must store actionable, grounded feedback in `feedbacks`, and all evaluations must be recorded in `evaluations`.
+- **Decision:**
+  - **AI Task Type & Strict Schema:** Added `ATS_SCREEN` to `AITaskType` and `AI_TASK_TYPES` in `server/src/ai/types.ts`. Created `atsScreeningOutputSchema` and `atsScreeningJsonSchema` enforcing strict fields: `matchScore` (0-100), `matchedSkills`, `missingSkills`, `strengths` (min 1, grounded in resume), `weaknesses`, `improvementSuggestions` (min 1), and `recommendation` (`PASS` | `FAIL`).
+  - **Models (`evaluations` & `feedbacks`):**
+    - `EvaluationModel` (`evaluations` collection per Spec 26.15): `applicationId`, `stage: 'ATS_SCREENING'`, `score` (0-100), `scoreBreakdown`, `summary`, indexed on `{ applicationId: 1, stage: 1 }`.
+    - `FeedbackModel` (`feedbacks` collection per Spec 26.16): `applicationId`, `userId`, `rejectionStage: 'ATS_SCREENING'`, `strengths`, `weaknesses`, `actionableSuggestions`, indexed on `{ applicationId: 1 }`, `{ userId: 1 }`.
+    - `ApplicationModel`: Added `aiJobId` reference to track the associated AIJob.
+  - **Authoritative Backend Decision:**
+    - Loads `passingScore` from `configService.getAtsConfig()` (default 70).
+    - Clamps `matchScore` to `0..100`.
+    - `isPassing = clampedScore >= passingScore`. The backend decision overrides the AI's `recommendation`.
+    - If `isPassing`: advances stage to `SCREENING` via `ApplicationStateMachine.advanceStage`, sets `application.atsScore`, persists `Evaluation` record.
+    - If `!isPassing`: transitions to `REJECTED` via `ApplicationStateMachine.reject`, sets `application.atsScore`, formats detailed feedback string in `application.atsFeedback`, persists `Evaluation` record, and creates `Feedback` record.
+  - **Worker Hooks & Queue Resilience:**
+    - Registered strict Zod validator on `AIWorker` for `ATS_SCREEN` and `ATS_EVALUATION`.
+    - Registered completion handler on `AIWorker` triggering authoritative evaluation upon AI job success.
+    - Registered state change handler: when jobs enter `WAITING_FOR_PROVIDER` during provider downtime, the application remains in `ATS_SCREENING` stage, status `ACTIVE`, waiting safely in queue without failing or rejecting.
+  - **API Endpoints:**
+### ADR-047: Dedicated Groq Resume Parsing Pipeline, Task-Specific Quota Isolation & Strict Schema Compliance
+
+- **Status:** ACCEPTED
+- **Context:** Resume parsing is a foundational onboarding utility that should not consume or risk exhausting the platform's primary AI tokens (reserved for multi-turn interview simulations, daily engineering tasks, and company simulation). A user can provide a dedicated `GROQ_RESUME_API_KEY` specifically for resume parsing to ensure zero quota depletion on primary keys, fast extraction (< 3s), and high accuracy.
+- **Decision:**
+  - **Environment & Key Isolation:** Added `GROQ_RESUME_API_KEY` to `server/src/config/env.ts` and `server/.env.example`. When present, `GroqAdapter` specifically uses `GROQ_RESUME_API_KEY` for `taskType === 'RESUME_ANALYSIS'`. All other platform tasks continue using primary provider keys.
+  - **Gateway Preference Routing:** Added `preferredProvider?: AIProvider` to `AIGatewayExecuteOptions`, `AIGatewaySubmitOptions`, and `AIJobModel`. `ResumeAnalysisService` requests `preferredProvider: 'groq'` whenever `GROQ_RESUME_API_KEY` is configured.
+  - **Startup Seeding in Both Pools:** Updated `seedDemoPoolFromEnv` in `aiManager.service.ts` to idempotently seed both `DEMO` and `PIPELINE` pools from environment variables at server bootstrap, ensuring pipeline jobs immediately find active adapters.
+  - **Strict JSON Schema Compliance:** Updated `resumeAnalysisJsonSchema` in `resumeAnalysis.schema.ts` to strictly require `additionalProperties: false` across all objects, explicit `required` lists, and nullable types (`type: ['string', 'null']`) for optional properties, fulfilling strict OpenAI/Groq structured output constraints.
+  - **Live Verification:** Verified with live Groq execution on model `openai/gpt-oss-120b` and `openai/gpt-oss-20b`, achieving full entity extraction and Zod schema compliance in ~2.5s.
+
+### ADR-048: Reusable Multi-Stage Chat Engine (SCREENING, ASSESSMENT, INTERVIEW)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Sections 7, 8, 26 (Collections 12-14), 27.5, and Decision D12 context dictate three multi-turn conversational stages: `SCREENING`, `ASSESSMENT`, and `INTERVIEW`. Rather than creating three disjointed systems, the platform requires one unified, reusable `StageEngine` configured per stage and per application mode (`PRODUCTION` vs `DEMO`), backed by authoritative backend scoring and AI-powered question synthesis, turn evaluation, and diagnostic feedback on rejection.
+- **Decision:**
+  - **PlatformConfig Extension:** Added `stageSettingsSchema` and `stagesConfigSchema` (`PlatformConfig.stages`) configuring `questionCount`, `difficulty` (`EASY` | `MEDIUM` | `HARD`), `passingScore` (0-100), `demoQuestionCount`, and `demoDifficulty` for each chat stage (`screening`: 3 Qs / MEDIUM / 70; `assessment`: 3 Qs / HARD / 70; `interview`: 5 Qs / HARD / 75; demo defaults: 1 Q / EASY).
+  - **Mongoose Data Models:**
+    - `InterviewModel` (`interviews` collection per Spec 26.12): tracks session metadata, stage, current question index, total questions, difficulty, passing score, status (`IN_PROGRESS`, `WAITING_AI`, `COMPLETED`, `ABANDONED`), and final overall score. Unique index on `{ applicationId: 1, stage: 1 }`.
+    - `QuestionModel` (`questions` collection per Spec 26.13): records each dynamically synthesized question, sequence number, expected key points, and difficulty. Unique index on `{ interviewId: 1, sequenceNumber: 1 }`.
+    - `AnswerModel` (`answers` collection per Spec 26.14): stores candidate responses alongside AI evaluations (clamped score 0-100, strengths, weaknesses, notes). Unique index on `{ questionId: 1 }`.
+  - **AI Task Types & Strict Schemas (`stageChat.schema.ts`):**
+    - `INTERVIEW_QUESTION`: forced output schema `{ question, type, difficulty, expectedPoints }`.
+    - `INTERVIEW_EVALUATION`: forced output schema `{ score: number (0-100), strengths: string[], weaknesses: string[], notes: string }`.
+    - `STAGE_FEEDBACK`: forced output schema `{ whatToImprove: string[], whatToAdd: string[], skillsToWorkOn: string[], summary: string }`.
+  - **Contextual Grounding & Conversation Trimming:**
+    - Questions are dynamically synthesized using candidate profile skills, resume summary, job title, and verified prior QA history.
+    - History is trimmed to a strict token/character budget (`MAX_HISTORY_CHAR_BUDGET = 8000`), preserving the most recent Q&A turns to stay within provider context limits.
+  - **Authoritative Backend Scoring & Progression:**
+    - AI only provides recommendations (turn scores and critique).
+    - Upon answering the final question, the backend calculates the arithmetic average of all stored turn scores.
+    - If `averageScore >= stageSettings.passingScore`: advances stage via `ApplicationStateMachine.advanceStage` (`SCREENING` $\rightarrow$ `ASSESSMENT` $\rightarrow$ `INTERVIEW` $\rightarrow$ `FINAL_REVIEW`), records `Evaluation` document, and marks interview `COMPLETED`.
+    - If `averageScore < stageSettings.passingScore`: transitions application to `REJECTED` via `ApplicationStateMachine.reject`, invokes AI for structured diagnostic feedback, persists `Feedback` and `Evaluation` documents, and marks interview `COMPLETED`.
+  - **Sequence & Concurrency Guards:**
+    - Strictly prevents duplicate answers for the same question (`409 Conflict`).
+    - Strictly prevents out-of-order submissions or question skipping (`400 Business Rule Violation`).
+    - Prevents answers on completed sessions or when an AI evaluation is currently processing (`WAITING_AI`).
+  - **Chat-Shaped REST APIs:**
+    - `GET /api/applications/:id/stage` (and alias `GET /api/applications/:id/interview`): returns current stage state, active question, and history.
+    - `POST /api/applications/:id/stage/messages` (and alias `POST /api/applications/:id/interview/messages`): accepts `{ candidateResponse, questionSequence? }`, evaluates turn, and returns either `{ evaluation, nextQuestion }` or final completion outcome `{ evaluation, isCompleted: true, passed, overallScore, nextStage?, feedback? }`.
+
+### ADR-049: Final Review Multi-Stage Synthesis, Offer Negotiation Chat with Authoritative Clamping, and Atomic Acceptance Lifecycle
+
+- **Status:** ACCEPTED
+- **Context:** Spec Section 7, Decision D12, and verified platform rules dictate the final hiring progression stages: `FINAL_REVIEW`, `OFFER`, and `ACCEPTED`. After completing chat stages, the pipeline must:
+  1. Aggregate stage scores (`ATS_SCREENING`, `SCREENING`, `ASSESSMENT`, `INTERVIEW`) into an authoritative weighted final score using `PlatformConfig` weights, with advisory AI executive summary synthesis.
+  2. Generate a formal employment offer using simulated salary bands for the job's level from `PlatformConfig.career.salaryBands`.
+  3. Support a conversational negotiation chat where candidate requests adjustments, advisory AI responds, backend authoritatively clamps final salary to the level band, and limits rounds per config (`maxNegotiationRounds: 3`, demo: 1). EXP is non-negotiable.
+  4. Perform atomic acceptance: checks company capacity (`< maxEmployees`), creates `CompanyEmployee` document, updates candidate `User.careerRole = 'EMPLOYEE'`, increments `Company.employeeCount`, sets application to `ACCEPTED`, and automatically withdraws competing active applications.
+- **Decision:**
+  - **PlatformConfig Extensions:**
+    - `salaryBands` in `PlatformConfig.career`: array of 10 level bands (L1 $45k–$60k through L10 $340k–$420k).
+    - `finalReview` in `PlatformConfig.stages`: `atsWeight: 15`, `screeningWeight: 20`, `assessmentWeight: 30`, `interviewWeight: 35`, `passingScore: 70`.
+    - `offer` in `PlatformConfig.stages`: `maxNegotiationRounds: 3`, `demoMaxNegotiationRounds: 1`, `declineStatus: 'WITHDRAWN'`.
+    - Typed getters added to `configService`: `getSalaryBands()`, `getSalaryBandForLevel(level)`, `getFinalReviewSettings()`, `getOfferSettings()`.
+  - **AI Task Types & Schemas (`offer.schema.ts`):**
+    - `FINAL_REVIEW_SUMMARY`: forced output schema `{ summary: string (min 10), recommendations: string[] }`.
+    - `OFFER_NEGOTIATION`: forced output schema `{ aiResponse: string, counterOfferSalary?: number }`.
+    - Endpoint request schemas: `negotiateOfferBodySchema` (`{ message, requestedSalary? }`) and `declineOfferBodySchema` (`{ reason? }`).
+  - **Application Model Extensions (`Application.ts`):**
+    - `finalReview` subdocument: stores stage scores, weights, finalScore, passingScore, isPassing, summary, recommendations, evaluatedAt.
+    - `offer` subdocument: stores positionTitle, level, salarySimulated, salaryMin, salaryMax, negotiationRoundsLeft, maxNegotiationRounds, negotiationHistory (`[{ round, candidateMessage, requestedSalary?, aiResponse, counterOfferSalary?, timestamp }]`), status (`OFFERED`, `ACCEPTED`, `DECLINED`, `EXPIRED`), offeredAt, acceptedAt, declinedAt, declineReason.
+  - **Authoritative Service (`FinalReviewOfferService`):**
+    - `executeFinalReview`: aggregates stage scores from `EvaluationModel` / `InterviewModel` / `Application` via formula: `finalScore = round((ats*15 + scr*20 + ass*30 + int*35) / 100)`. Invokes AI for summary. If `finalScore >= 70`: advances stage to `OFFER`, generates initial offer at midpoint of salary band, initializes negotiation rounds from config. If `< 70`: rejects application (`REJECTED`) with diagnostic feedback stored in `feedbacks` and `evaluations`.
+    - `getOffer`: returns active offer terms and remaining negotiation rounds.
+    - `negotiateOffer`: checks rounds left $> 0$, executes AI turn, calculates counter-offer, strictly clamps to `[salaryMin, salaryMax]`, records round in negotiation history, decrements rounds remaining. EXP remains non-negotiable.
+    - `acceptOffer`: runs within MongoDB session/transaction when replica sets are enabled (graceful fallback in test environments); checks company capacity (`employeeCount < maxEmployees`), fails with clear error `Company has reached its maximum employee capacity (20 employees)` if full; prevents double acceptance; creates `CompanyEmployee` with status `ACTIVE`; updates user `careerRole = 'EMPLOYEE'`; increments `company.employeeCount`; transitions application to `ACCEPTED`; and withdraws competing active applications with `WITHDRAWN_ACCEPTED_OTHER_OFFER`.
+    - `declineOffer`: transitions application to `WITHDRAWN` (or `REJECTED` per config), freeing active application quota.
+  - **REST API Endpoints:**
+    - `POST /api/applications/:id/final-review`
+    - `GET /api/applications/:id/offer`
+    - `POST /api/applications/:id/offer/negotiate`
+    - `POST /api/applications/:id/offer/accept`
+    - `POST /api/applications/:id/offer/decline`
+
+### ADR-050: Design Token Canonical Spacing Scale and CSS Variable Backward-Compatibility Aliasing
+
+- **Status:** ACCEPTED
+- **Context:** In `JobsPage` and `CompaniesPage`, filter controls and search inputs displayed overlapping content and collapsed padding. Investigation revealed that `Career.module.css` referenced `var(--cv-spacing-*)` while `tokens.css` defined the 4px-base spacing scale as `var(--cv-space-*)`. Under CSS specification rules for custom properties, declarations referencing undefined CSS variables are invalid at computed-value time and revert to initial values (`0`), which collapsed padding and gaps.
+- **Decision:**
+  - Enforce `--cv-space-*` as the canonical design token convention across all client CSS modules.
+  - Corrected all 36 occurrences of `var(--cv-spacing-*)` in `Career.module.css` and `CompanyDetailPage.tsx` to `var(--cv-space-*)`.
+  - Added backward-compatible CSS alias variables in `tokens.css` (`--cv-spacing-1: var(--cv-space-1);` through `--cv-spacing-16: var(--cv-space-16);`) to safeguard against naming drift and prevent regressions.
+  - Enforced `min-height: 40px` and structured flex alignment on `.searchInput` and `.selectInput` in `Career.module.css` matching design system form standards.
+
+### ADR-051: In-App Notification Foundation and Hiring Lifecycle Event Dispatch
+
+- **Status:** ACCEPTED
+- **Context:** Spec Section 24 and Section 26.36 dictate that in-app notification records are generated in `notifications` to alert users to critical game events across hiring updates, employee lifecycle, founder alerts, and system announcements. TASK P6.5 requires establishing the notification foundation model, service, and endpoints (`GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`), and wiring automated event notifications for the 5 hiring events:
+  1. `STAGE_ADVANCED`: emitted when application passes ATS screening or chat-based interview stages.
+  2. `APPLICATION_REJECTED`: emitted when an application fails ATS, interview, or final review stages, containing a direct link to `/applications/:id/feedback`.
+  3. `OFFER_RECEIVED`: emitted when an application passes final review and advances to the `OFFER` stage, containing a direct link to `/applications/:id/offer`.
+  4. `HIRED`: emitted when a candidate accepts an employment offer and is created as a `CompanyEmployee`.
+  5. `APPLICATION_EXPIRED`: emitted when stale inactive applications are swept by the background expiry job.
+  Additionally, an owner-restricted feedback detail endpoint (`GET /api/applications/:id/feedback`) must return stored feedback for rejected applications.
+- **Decision:**
+  - **Data Model (`notifications` collection):**
+    - Conforms to Spec Section 26.36: `_id`, `userId` (indexed), `type` (enum `NOTIFICATION_TYPES`), `title`, `message`, `isRead` (default `false`), `link` (optional route), `createdAt` (default `Date.now`).
+    - Compound indexes: `{ userId: 1, isRead: 1 }` and `{ userId: 1, createdAt: -1 }`.
+  - **Service Architecture (`NotificationService`):**
+    - `create(params)`: creates notification and logs structured metadata.
+    - `list(userId, options)`: paginated listing sorted by `{ createdAt: -1, _id: -1 }`, returning `notifications`, `total`, and `unreadCount`.
+    - `markRead(notificationId, userId)`: strictly enforces owner authorization (`403` / `404`) and sets `isRead = true`.
+    - `markAllRead(userId)`: atomically marks all unread notifications for a user as read.
+  - **REST Endpoints:**
+    - `GET /api/notifications` (and `/api/v1/notifications`): paginated notifications list for authenticated user.
+    - `PATCH /api/notifications/:id/read` (and `/api/v1/notifications/:id/read`): marks single notification as read (owner-only).
+    - `PATCH /api/notifications/read-all` (and `/api/v1/notifications/read-all`): marks all unread as read.
+    - `GET /api/applications/:id/feedback`: strictly returns stored feedback for `REJECTED` applications belonging to the requesting user (`403` for non-owners, `400` if not rejected, `404` if not found).
+  - **Lifecycle Hook Points:**
+    - `AtsScreeningService.applyAtsEvaluation`: dispatches `STAGE_ADVANCED` (pass) or `APPLICATION_REJECTED` with link `/applications/:id/feedback` (fail).
+    - `StageEngineService.evaluateStageCompletion`: dispatches `STAGE_ADVANCED` (pass) or `APPLICATION_REJECTED` with link `/applications/:id/feedback` (fail).
+    - `FinalReviewOfferService.executeFinalReview`: dispatches `OFFER_RECEIVED` with link `/applications/:id/offer` (pass) or `APPLICATION_REJECTED` with link `/applications/:id/feedback` (fail).
+    - `FinalReviewOfferService.acceptOffer`: dispatches `HIRED` with link `/employee`.
+    - `ApplicationService.expireStaleApplications`: dispatches `APPLICATION_EXPIRED` with link `/applications/:id`.
+
+### ADR-052: Unified Hiring Engine Admin Demo Mode and Production Isolation
+
+- **Status:** ACCEPTED
+- **Context:** Spec Sections 23, 27.10, and 42 dictate that Admin Demo Mode must run on the exact same underlying Hiring Engine as production (`AtsScreeningService`, `StageEngineService`, `FinalReviewOfferService`). No separate mock hiring engine is permitted. Demo applications must execute with `mode: 'DEMO'`, route through the isolated `DEMO` provider pool, run against a designated demo company, produce standard structured feedback, and NEVER create real employees, alter user career roles, mutate EXP or CorpCoin ledgers, or contaminate platform rankings. Administrators must be able to parameterize sessions (domain, question count, difficulty, interview type), inspect all stage evaluations and AI telemetry, interact with or simulate the interview lifecycle, and clean up demo records via audited admin operations.
+- **Decision:**
+  - **Data Model (`DemoSessionModel` in `demoSessions` collection):**
+    - Tracks `createdBy`, `applicationId`, `companyId`, `jobId`, `candidateUserId`, `domain`, `difficulty` (`EASY` | `MEDIUM` | `HARD`), `questionsCount` (1–10), `interviewType`, `currentStage`, and `status` (`INITIALIZED` | `IN_PROGRESS` | `COMPLETED` | `FAILED` | `CLEANED_UP`).
+    - Compound indexes on `{ createdBy: 1, createdAt: -1 }` and `{ applicationId: 1, status: 1 }`.
+  - **Zero Production Contamination Invariants:**
+    - Dedicated demo company (`CorpVerse Demo Corporation`) configured with `aiProviderPool: 'DEMO'` and `isPlatformCompany: true`.
+    - `ApplicationModel` instantiated with `mode: 'DEMO'`, automatically directing all AI tasks to `pool: 'DEMO'`.
+    - In `FinalReviewOfferService.acceptOffer`: if `application.mode === 'DEMO'`, transitions application status to `ACCEPTED` but strictly skips `CompanyEmployee` creation, user `careerRole` changes, company `employeeCount` mutation, and economy ledger calls.
+    - Production ranking and leaderboard queries filter by `mode: 'PRODUCTION'` and exclude demo companies.
+  - **Admin REST API Endpoints:**
+    - `POST /api/admin/demo/hiring`: creates parameterized session with domain, questionsCount, difficulty, and interviewType.
+    - `GET /api/admin/demo/hiring/:sessionId`: aggregates all stage results (ATS evaluation/feedback, chat questions/answers, final review, offer) and AI request logs (`AIJob`, latency, tokens).
+    - `POST /api/admin/demo/hiring/:sessionId/step`: advances one stage action using authoritative services.
+    - `POST /api/admin/demo/hiring/:sessionId/answer`: submits an answer to the active chat question on behalf of candidate.
+    - `POST /api/admin/demo/hiring/:sessionId/simulate`: executes full end-to-end automated demo simulation.
+    - `DELETE /api/admin/demo/hiring/:sessionId`: deletes demo artifacts for session and records immutable audit log (`DEMO_DATA_CLEANUP`).
+    - `DELETE /api/admin/demo/hiring`: purges all demo applications and sessions system-wide, recording audit log (`BULK_DEMO_DATA_PURGE`).
+
+### ADR-053: Hiring Journey Candidate Experience & Chat Interface Architecture
+
+- **Status:** ACCEPTED
+- **Context:** Spec Sections 7, 8, 24, 27.4, 28, and 41 require candidate frontend views for navigating the end-to-end recruitment lifecycle:
+  1. Application status tracking with quota monitoring (max 5 active applications).
+  2. Multi-turn conversational interview simulation for `SCREENING`, `ASSESSMENT`, and `INTERVIEW` stages with real-time AI evaluation.
+  3. Structured diagnostic feedback inspection for rejected applications.
+  4. Formal employment offer review, interactive compensation negotiation within level bands, and atomic acceptance.
+  5. Topbar notifications bell alerting candidates to stage progressions, offers, and hiring events.
+- **Decision:**
+  - **Authoritative Presentation Layer:** Frontend maintains zero business logic, never calculates passing thresholds or salary bounds, and strictly queries `/api/applications`, `/api/applications/:id/stage`, `/api/applications/:id/offer`, and `/api/notifications`.
+  - **Applications Tracker Page (`/applications`):**
+    - Active applications quota counter (`x/5`) with visual meter bar reflecting `PlatformConfig.applications.maxActive`.
+    - 8-stage visual pipeline stepper (`APPLIED` through `ACCEPTED`) per application card with stage checkmarks, pulse indicators for active stages, and failure indicators for rejected stages.
+    - Status badges (`ACTIVE`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `EXPIRED`).
+    - Voluntary withdrawal action with modal confirmation dialog and optional reason.
+  - **Stage Chat Interface (`/applications/:id/stage`):**
+    - Conversational bubble dialogue between AI Interviewer Bot and candidate.
+    - Question sequence progress meter (`Question X of Y`).
+    - Turn evaluation cards attached to candidate responses displaying score pills, strengths, weaknesses, and notes.
+    - Pulsing 3-dot typing / waiting indicator during AI turn generation.
+    - Strict anti-duplicate submission lock: input and submit button disabled when awaiting AI or during network transit.
+  - **Feedback Viewer Modal (`FeedbackModal`):**
+    - Consumes `GET /api/applications/:id/feedback` (owner-restricted).
+    - Visual tag cloud for missing requisition competencies.
+    - Categorized diagnostic lists for demonstrated strengths, improvement areas, and actionable recommendations.
+  - **Offer Review & Negotiation Page (`/applications/:id/offer`):**
+    - Displays position title, level, simulated annual salary, and visual level salary band indicator.
+    - Interactive negotiation chat with round limit counter (`X of Y rounds remaining`).
+    - Atomic offer acceptance modal triggering promotion to Employee and withdrawal of competing active applications, followed by workplace transition celebration screen.
+    - Offer decline modal transitioning application to Withdrawn.
+  - **Topbar Notification Bell (`NotificationBell`):**
+    - Real-time unread badge counter in Topbar.
+    - Dropdown popover with categorized icon badges (`STAGE_ADVANCED`, `APPLICATION_REJECTED`, `OFFER_RECEIVED`, `HIRED`, `APPLICATION_EXPIRED`), relative timestamps, click-to-read navigation, and "Mark all read" action.
+
+### ADR-054: Admin Demo Hiring Console Architecture
+
+- **Status:** ACCEPTED
+- **Context:** Spec Sections 23, 27.10, and 42 require an administrative console enabling platform administrators to run, inspect, and evaluate hiring simulations across all three engineering career domains without contaminating production data, modifying real user roles or balances, or impacting leaderboards.
+- **Decision:**
+  - **Single Surface Admin Console (`/admin/demo`):**
+    - Mount `/admin/demo` in `App.tsx` guarded strictly under `RoleRoute` with `allowedPlatformRoles={['ADMIN']}`.
+    - Add navigation entry `Hiring Demo Simulator` in `Sidebar.tsx` under Platform Administration.
+  - **Five Core Functional Modules:**
+    1. **Parameter Configuration Form:** Allows selection of career domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), question count (1–10), difficulty tier (`EASY`, `MEDIUM`, `HARD`), and interview type (`CONCEPTUAL`, `CODING`, `ARCHITECTURE`, `BEHAVIORAL`). Initialized with one-click POST to `/api/admin/demo/hiring`.
+    2. **Interactive Candidate Runner:** Implements turn-by-turn chat interface against AI Interviewer Bot questions with candidate answer input (`POST /api/admin/demo/hiring/:sessionId/answer`), stage stepping (`POST /api/admin/demo/hiring/:sessionId/step`), and one-click end-to-end simulation (`POST /api/admin/demo/hiring/:sessionId/simulate`).
+    3. **Results Synthesis Dashboard:** Displays stage scores (ATS score, interview turn evaluations, weighted final review calculation, and formal offer compensation terms).
+    4. **AI Telemetry & Execution Inspector:** Displays live per-call telemetry including task type, AI provider (`GEMINI`, `OPENAI`, `GROQ`), model ID, latency in milliseconds, token counts (prompt and completion), and execution status.
+    5. **Session Management & Audited Cleanup:** Displays past and active demo sessions, single session deletion (`DELETE /api/admin/demo/hiring/:sessionId`), and system-wide bulk purge modal (`DELETE /api/admin/demo/hiring`) requiring mandatory audit justification reasons recorded in the append-only `auditLogs` collection.
+  - **Zero Production Mutation Guarantee:** Enforced at backend service level; all demo runs target dedicated demo company (`Nexus Demo Systems`), demo users, and `aiProviderPool: 'DEMO'`.
+
+
+

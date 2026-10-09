@@ -1,0 +1,324 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-6);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.executiveBanner {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.bannerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cv-space-4);
+  flex-wrap: wrap;
+}
+
+.titleGroup h1 {
+  font-size: var(--cv-text-2xl);
+  font-weight: 800;
+  color: var(--cv-text-primary);
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--cv-space-1) 0;
+}
+
+.subtitle {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+  margin: 0;
+}
+
+/* Offer Terms Summary Cards */
+.termsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--cv-space-4);
+}
+
+.termCard {
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  padding: var(--cv-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-1);
+}
+
+.termLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cv-text-muted);
+}
+
+.termValue {
+  font-size: var(--cv-text-xl);
+  font-weight: 800;
+  color: var(--cv-text-primary);
+}
+
+.termValueHighlight {
+  color: var(--cv-brand-primary-500);
+}
+
+.salaryBandMeter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-2);
+  margin-top: var(--cv-space-2);
+}
+
+.meterBar {
+  position: relative;
+  height: 8px;
+  border-radius: var(--cv-radius-full);
+  background: var(--cv-border-subtle);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: var(--cv-radius-full);
+  background: linear-gradient(90deg, var(--cv-palette-winter-garden), var(--cv-brand-primary-500));
+}
+
+.meterLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--cv-text-muted);
+}
+
+/* Negotiation Chat Section */
+.negotiationSection {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.sectionHeader {
+  padding: var(--cv-space-4) var(--cv-space-5);
+  background: var(--cv-bg-surface);
+  border-bottom: 1px solid var(--cv-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--cv-space-3);
+}
+
+.roundsPill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--cv-radius-full);
+  background: var(--cv-brand-primary-100);
+  color: var(--cv-brand-primary-600);
+}
+
+:global([data-theme='dark']) .roundsPill {
+  background: rgba(39, 62, 65, 0.4);
+  color: var(--cv-palette-winter-garden);
+}
+
+.chatHistory {
+  padding: var(--cv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--cv-bg-surface);
+}
+
+.negotiationTurn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-3);
+  padding: var(--cv-space-4);
+  border-radius: var(--cv-radius-lg);
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+}
+
+.turnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cv-text-muted);
+}
+
+.candidateTurnBubble {
+  background: var(--cv-bg-surface);
+  padding: var(--cv-space-3);
+  border-radius: var(--cv-radius-md);
+  border-left: 3px solid var(--cv-brand-primary-500);
+  font-size: var(--cv-text-xs);
+  line-height: 1.5;
+}
+
+.aiCounterBubble {
+  background: var(--cv-bg-surface);
+  padding: var(--cv-space-3);
+  border-radius: var(--cv-radius-md);
+  border-left: 3px solid var(--cv-palette-winter-garden);
+  font-size: var(--cv-text-xs);
+  line-height: 1.5;
+}
+
+.emptyNegotiation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cv-space-8) var(--cv-space-4);
+  text-align: center;
+  gap: var(--cv-space-2);
+  color: var(--cv-text-secondary);
+}
+
+/* Negotiation Input Composer */
+.negotiationComposer {
+  padding: var(--cv-space-4) var(--cv-space-5);
+  background: var(--cv-bg-surface);
+  border-top: 1px solid var(--cv-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-3);
+}
+
+.composerInputs {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: var(--cv-space-3);
+}
+
+.negotiateTextarea {
+  padding: var(--cv-space-3);
+  border-radius: var(--cv-radius-md);
+  border: 1px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface-elevated);
+  color: var(--cv-text-primary);
+  font-family: inherit;
+  font-size: var(--cv-text-xs);
+  min-height: 60px;
+  resize: vertical;
+}
+
+.salaryInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-1);
+}
+
+.salaryInputGroup label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cv-text-secondary);
+}
+
+.salaryInput {
+  padding: var(--cv-space-3);
+  border-radius: var(--cv-radius-md);
+  border: 1px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface-elevated);
+  color: var(--cv-text-primary);
+  font-family: inherit;
+  font-size: var(--cv-text-xs);
+}
+
+/* Decision Bottom Bar */
+.decisionBar {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cv-space-4);
+  flex-wrap: wrap;
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.decisionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.decisionInfo h4 {
+  font-size: var(--cv-text-base);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+  margin: 0;
+}
+
+.decisionInfo p {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-secondary);
+  margin: 0;
+}
+
+.decisionButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-3);
+}
+
+/* Celebration State */
+.celebrationCard {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--cv-space-4);
+  box-shadow: var(--cv-shadow-lg);
+}
+
+.celebrationCard h2 {
+  font-size: var(--cv-text-2xl);
+  font-weight: 800;
+  color: var(--cv-text-primary);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .composerInputs {
+    grid-template-columns: 1fr;
+  }
+  .decisionBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .decisionButtons {
+    flex-direction: column;
+  }
+  .decisionButtons > * {
+    width: 100%;
+  }
+}

@@ -18,6 +18,7 @@ export interface IAIJobDocument extends Document {
   maxAttempts: number;
   attemptsPerProvider: Map<string, number>;
   currentProvider?: AIProvider | null;
+  preferredProvider?: AIProvider | null;
   payload: AIRequest;
   result?: AIResponse | null;
   error?: IAIJobError | null;
@@ -43,6 +44,11 @@ export const aiJobSchema = new Schema<IAIJobDocument>(
       required: true,
       default: 'PIPELINE',
       index: true,
+    },
+    preferredProvider: {
+      type: String,
+      enum: AI_PROVIDERS,
+      required: false,
     },
     status: {
       type: String,

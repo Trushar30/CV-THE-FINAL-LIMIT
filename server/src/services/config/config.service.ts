@@ -10,6 +10,11 @@ import {
   CompanyConfig,
   BotsConfig,
   AtsConfig,
+  StagesConfig,
+  StageSettingsConfig,
+  SalaryBandConfig,
+  FinalReviewWeightsConfig,
+  OfferSettingsConfig,
   AiConfig,
   SecurityConfig,
 } from '../../config/platformConfig.schema.js';
@@ -182,6 +187,43 @@ export class ConfigService {
     return (await this.getConfig()).ats;
   }
 
+  async getStagesConfig(): Promise<StagesConfig> {
+    return (await this.getConfig()).stages;
+  }
+
+  async getStageSettings(
+    stage: 'SCREENING' | 'ASSESSMENT' | 'INTERVIEW'
+  ): Promise<StageSettingsConfig> {
+    const stages = await this.getStagesConfig();
+    switch (stage) {
+      case 'SCREENING':
+        return stages.screening;
+      case 'ASSESSMENT':
+        return stages.assessment;
+      case 'INTERVIEW':
+        return stages.interview;
+      default:
+        return stages.screening;
+    }
+  }
+
+  async getSalaryBands(): Promise<SalaryBandConfig[]> {
+    return (await this.getCareerConfig()).salaryBands;
+  }
+
+  async getSalaryBandForLevel(level: number): Promise<SalaryBandConfig | undefined> {
+    const bands = await this.getSalaryBands();
+    return bands.find((b) => b.level === level);
+  }
+
+  async getFinalReviewSettings(): Promise<FinalReviewWeightsConfig> {
+    return (await this.getStagesConfig()).finalReview;
+  }
+
+  async getOfferSettings(): Promise<OfferSettingsConfig> {
+    return (await this.getStagesConfig()).offer;
+  }
+
   async getAiConfig(): Promise<AiConfig> {
     return (await this.getConfig()).ai;
   }
@@ -232,7 +274,7 @@ export class ConfigService {
 
     if (currentDoc) {
       currentDoc.isActive = false;
-      await currentDoc.save();
+      await PlatformConfigModel.updateOne({ _id: currentDoc._id }, { isActive: false });
     }
 
     const newDoc = new PlatformConfigModel({

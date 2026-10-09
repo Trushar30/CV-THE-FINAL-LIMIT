@@ -12,19 +12,22 @@ import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { JobsPage } from './pages/JobsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import {
-  CareerHubPage,
   WorkplacePage,
   FounderHqPage,
   AdminConsolePage,
   UnauthorizedPage,
   NotFoundPage,
 } from './pages/StubPages';
+import { ApplicationsTrackerPage } from './pages/career/ApplicationsTrackerPage';
+import { StageChatPage } from './pages/career/StageChatPage';
+import { OfferPage } from './pages/career/OfferPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { ProfileSetupPage } from './pages/ProfileSetupPage';
 import { AiManagerPage } from './pages/AiManagerPage';
 import { AdminAiHealthPage } from './pages/AdminAiHealthPage';
+import { AdminDemoPage } from './pages/admin/AdminDemoPage';
 
 export function App(): ReactElement {
   return (
@@ -51,16 +54,40 @@ export function App(): ReactElement {
                   <Route
                     path="/career"
                     element={
-                      <RoleRoute allowedCareerRoles={['JOB_SEEKER']}>
-                        <CareerHubPage />
+                      <RoleRoute allowedCareerRoles={['JOB_SEEKER', 'EMPLOYEE']}>
+                        <ApplicationsTrackerPage />
                       </RoleRoute>
                     }
                   />
                   <Route
                     path="/applications"
                     element={
-                      <RoleRoute allowedCareerRoles={['JOB_SEEKER']}>
-                        <CareerHubPage />
+                      <RoleRoute allowedCareerRoles={['JOB_SEEKER', 'EMPLOYEE']}>
+                        <ApplicationsTrackerPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/:id"
+                    element={
+                      <RoleRoute allowedCareerRoles={['JOB_SEEKER', 'EMPLOYEE']}>
+                        <StageChatPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/:id/stage"
+                    element={
+                      <RoleRoute allowedCareerRoles={['JOB_SEEKER', 'EMPLOYEE']}>
+                        <StageChatPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/:id/offer"
+                    element={
+                      <RoleRoute allowedCareerRoles={['JOB_SEEKER', 'EMPLOYEE']}>
+                        <OfferPage />
                       </RoleRoute>
                     }
                   />
@@ -123,6 +150,14 @@ export function App(): ReactElement {
                     element={
                       <RoleRoute allowedPlatformRoles={['ADMIN']}>
                         <AdminAiHealthPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/demo"
+                    element={
+                      <RoleRoute allowedPlatformRoles={['ADMIN']}>
+                        <AdminDemoPage />
                       </RoleRoute>
                     }
                   />

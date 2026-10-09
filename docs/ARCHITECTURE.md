@@ -151,6 +151,9 @@ interface AIRequest {
     | 'ATS_EVALUATION'
     | 'INTERVIEW_QUESTION'
     | 'INTERVIEW_EVALUATION'
+    | 'STAGE_FEEDBACK'
+    | 'FINAL_REVIEW_SUMMARY'
+    | 'OFFER_NEGOTIATION'
     | 'TASK_GENERATION'
     | 'TASK_EVALUATION'
     | 'SCENARIO_GENERATION'
@@ -907,3 +910,167 @@ All internal AI interactions are isolated from vendor-specific payloads through 
 - **Enterprise Profile Detail (`/companies/:id`):** Executive overview banner, multi-dimensional rating breakdown (Overall, Culture, Work-Life, Technical Excellence), team capacity bar, and live open requisitions card list linking directly to job details.
 - **Job Board & Filter Controls (`/jobs`):** Keyword search box, engineering domain chips (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), and seniority level presets (Junior L1-L3, Mid L4-L6, Senior & Lead L7-L10).
 - **Position Detail & Application Quota UX (`/jobs/:id`):** Role responsibilities, required skills chips, employer card, active application quota indicator (`0 / 5 Active Applications` matching `PlatformConfig.applications.maxActive`), and disabled Apply CTA button with Phase 6.1 unlocking note.
+
+---
+
+## 20. Job Applications & ATS Evaluation Engine Architecture (TASK P5.3 Blueprint)
+
+### 20.1 Application Data Model (`ApplicationModel` in `applications` collection)
+
+- **Schema Fields:**
+  - `_id`: `ObjectId`, primary key.
+  - `userId`: `ObjectId`, required, ref `users`, indexed.
+  - `jobId`: `ObjectId`, required, ref `companyJobs`, indexed.
+  - `companyId`: `ObjectId`, required, ref `companies`, indexed.
+  - `mode`: `ApplicationMode` (`'PRODUCTION'`, `'DEMO'`), required, default: `'PRODUCTION'`.
+  - `currentStage`: `ApplicationStage` (`'APPLIED'`, `'ATS_SCREENING'`, `'SCREENING'`, `'ASSESSMENT'`, `'INTERVIEW'`, `'FINAL_REVIEW'`, `'OFFER'`, `'ACCEPTED'`), required, default: `'APPLIED'`.
+  - `status`: `ApplicationStatus` (`'ACTIVE'`, `'REJECTED'`, `'WITHDRAWN'`, `'EXPIRED'`, `'ACCEPTED'`), required, default: `'ACTIVE'`.
+  - `resumeAnalysisId`: `ObjectId`, required, ref `resumeAnalyses`.
+  - `resumeAnalysisSnapshot`: Embedded immutable snapshot of candidate parsed skills, domain, experience years, education, work history, projects, certifications at application submission.
+  - `stageHistory`: Array of `{ stage, enteredAt, exitedAt, result }` capturing the full progression journey.
+  - `atsScore`: `Number` (clamped 0–100), optional.
+  - `atsBreakdown`: Embedded object containing sub-scores (`domainRelevance`, `skillMatch`, `experience`, `clarity`), optional.
+  - `atsFeedback`: `String` (actionable diagnostic critique), optional.
+  - `interviewScore`: `Number` (clamped 0–100), optional.
+  - `rejectionReason`, `withdrawalReason`, `expiryReason`: Diagnostic rationale strings.
+  - `createdAt`, `updatedAt`: Timestamps.
+- **Database Indexes:**
+  - `{ userId: 1, status: 1 }`: For rapid active application count checks (`PlatformConfig.applications.maxActive`).
+  - `{ userId: 1, jobId: 1, status: 1 }`: To enforce uniqueness across active applications for the same job.
+  - `{ companyId: 1, currentStage: 1 }`: For company recruitment analytics.
+  - `{ jobId: 1, status: 1 }`: For job posting application tracking.
+
+### 20.2 Concurrency & State Machine Invariants (`ApplicationStateMachine`)
+
+- **Single Authoritative State Machine:** All stage and status transitions must flow through `ApplicationStateMachine`. Direct ad-hoc updates are strictly prohibited.
+- **Allowed Linear Stages:** `APPLIED` -> `ATS_SCREENING` -> `SCREENING` -> `ASSESSMENT` -> `INTERVIEW` -> `FINAL_REVIEW` -> `OFFER` -> `ACCEPTED`.
+- **Terminal States:** `REJECTED`, `WITHDRAWN`, `EXPIRED`, `ACCEPTED`. Applications in terminal states cannot be mutated further. Attempting any transition on a terminal application immediately throws `BUSINESS_RULE_VIOLATION`.
+- **Maximum Active Applications:** Candidates cannot have more than 5 non-terminal (`status: 'ACTIVE'`) applications simultaneously (`PlatformConfig.applications.maxActive`). Attempting to submit a 6th rejects with `400 BUSINESS_RULE_VIOLATION`.
+- **Duplicate Prevention:** A candidate cannot re-apply to a job while an active application exists for that job. Re-application is unlocked once the existing application transitions to a terminal state (`REJECTED`, `WITHDRAWN`, `EXPIRED`).
+- **Mode and Company Agnosticism:** The state machine and application engine operate identically for both `PRODUCTION` and `DEMO` modes, and for both `PLATFORM` and `FOUNDER` companies, routing AI bot interactions through the unified AI Gateway without distinct code branches.
+
+### 20.3 ATS Evaluation Engine & Scoring Invariants (`AtsScreeningService`)
+
+- **Asynchronous AI Job Enqueuing:**
+  - AI task type `ATS_SCREEN` (or `ATS_EVALUATION`) enqueued via `AIGateway.submit()` targeting `PIPELINE` pool (or `DEMO` pool if `application.mode === 'DEMO'`).
+  - Context includes `CompanyJob` requisition, candidate `ResumeAnalysis`, and `Profile`.
+  - **Grounding Mandate:** Prompts strictly instruct the evaluator that strengths, weaknesses, and improvement suggestions must reference verified candidate resume content only.
+- **Strict Output Schema Enforcement (`atsScreeningOutputSchema`):**
+  - Schema requires: `matchScore` (0-100), `matchedSkills` (string[]), `missingSkills` (string[]), `strengths` (string[], min 1), `weaknesses` (string[]), `improvementSuggestions` (string[], min 1), `recommendation` (`PASS` | `FAIL`).
+  - Strict Zod validation registered via `AIWorker.registerValidator('ATS_SCREEN')`. Unvalidated output is rejected.
+- **Authoritative Backend Decision (`applyAtsEvaluation`):**
+  - Evaluator score clamped to integer $[0, 100]$.
+  - Pass threshold retrieved from `configService.getAtsConfig()` (`passingScore`, default 70).
+  - Decision is strictly authoritative: $score \ge passingScore \rightarrow \text{PASS}$; $score < passingScore \rightarrow \text{FAIL}$.
+  - AI `recommendation` is advisory and stored in audit breakdown; backend decides progression.
+- **Collections Persistence:**
+  - `evaluations` collection: Record created for every completed screening with `applicationId`, `stage: 'ATS_SCREENING'`, `score`, `scoreBreakdown`, and `summary`.
+  - `feedbacks` collection: On failure, structured feedback document created with `applicationId`, `userId`, `rejectionStage: 'ATS_SCREENING'`, `strengths`, `weaknesses`, `actionableSuggestions`.
+- **Queue Resilience During Provider Outages:**
+  - When providers are down or degraded, AI job transitions to `WAITING_FOR_PROVIDER`.
+  - State change handler maintains application in `currentStage: 'ATS_SCREENING'`, `status: 'ACTIVE'`, waiting safely in queue without failing or rejecting.
+
+### 20.4 REST Endpoints Surface (`/api/applications`)
+
+- `POST /api/applications`: Submits application for a job ID (`careerRole === 'JOB_SEEKER'` required).
+- `GET /api/applications`: Lists all applications for authenticated candidate with stage badges and timestamps.
+- `GET /api/applications/:id`: Retrieves full application detail, populated with `evaluations` and `feedback` per Spec Section 27.4.
+- `POST /api/applications/:id/withdraw`: Allows candidate to voluntarily withdraw an active application, releasing their quota slot.
+- `POST /api/applications/:id/ats-screen`: Enqueues ATS screening AI evaluation, advancing `APPLIED` to `ATS_SCREENING`.
+- `POST /api/applications/:id/offer/accept`: Unlocked at `OFFER` stage; transitions user to `careerRole: 'EMPLOYEE'` and auto-withdraws other active applications.
+
+### 20.5 Multi-Stage Chat Engine (`StageEngineService`)
+
+- **Single Reusable Engine:** Manages all multi-turn conversational stages (`SCREENING`, `ASSESSMENT`, `INTERVIEW`) without duplicate pipelines.
+- **Stage & Mode Configuration (`PlatformConfig.stages`):**
+  - Configurable parameters per stage: `questionCount`, `difficulty` (`EASY` | `MEDIUM` | `HARD`), `passingScore` (0-100), `demoQuestionCount`, and `demoDifficulty`.
+  - Default production limits:
+    - `SCREENING`: 3 questions, MEDIUM, passing score 70.
+    - `ASSESSMENT`: 3 questions, HARD, passing score 70.
+    - `INTERVIEW`: 5 questions, HARD, passing score 75.
+  - Demo mode overrides: 1 question, EASY difficulty across all chat stages.
+- **Data Models:**
+  - `interviews` collection (`InterviewModel`): Session metadata, stage, current index, total questions, status (`IN_PROGRESS`, `WAITING_AI`, `COMPLETED`, `ABANDONED`), overall score. Indexed on `{ applicationId: 1, stage: 1 }`.
+  - `questions` collection (`QuestionModel`): Dynamic questions, sequence number, expected points, difficulty. Indexed on `{ interviewId: 1, sequenceNumber: 1 }`.
+  - `answers` collection (`AnswerModel`): Candidate responses, AI evaluation (score 0-100, strengths, weaknesses, notes). Indexed on `{ questionId: 1 }`.
+- **Dynamic Context Generation & Trimming:**
+  - Questions grounded in job requisition, candidate profile skills, resume extraction summary, and conversation history.
+  - Prior conversation history trimmed to character budget (`MAX_HISTORY_CHAR_BUDGET = 8000`) keeping most recent turns to fit token limits.
+- **Authoritative Backend Scoring:**
+  - AI evaluates individual turns (schema: `{ score, strengths, weaknesses, notes }`).
+  - Upon final answer submission, backend computes arithmetic mean of all turn scores.
+  - If $averageScore \ge passingScore$: advances stage via `ApplicationStateMachine.advanceStage`, persists `Evaluation` record, completes interview.
+  - If $averageScore < passingScore$: rejects via `ApplicationStateMachine.reject`, generates AI diagnostic feedback (`{ whatToImprove, whatToAdd, skillsToWorkOn, summary }`), persists `Feedback` and `Evaluation` records, completes interview.
+- **Chat REST API Endpoints:**
+  - `GET /api/applications/:id/stage` (alias `/interview`): Retrieves stage state, questions, prior answers, and waiting status.
+  - `POST /api/applications/:id/stage/messages` (alias `/interview/messages`): Submits candidate answer, returns turn evaluation + next question or stage completion result.
+- **Sequence Guards:** Strict validation prevents duplicate answers, out-of-order submissions, question skipping, and concurrent submissions.
+
+### 9.7 Final Review, Offer Negotiation & Notification Dispatch (TASK P6.4, P6.5)
+
+- **Final Review Engine (`FinalReviewOfferService`):**
+  - Authoritatively aggregates weighted stage scores: ATS (15%), Screening (20%), Assessment (30%), Interview (35%).
+  - Evaluates passing score against PlatformConfig (70 threshold). AI generates executive summary and key strengths/gaps only.
+  - If passing: advances to `OFFER`, seeds initial offer at level band midpoint. If failing: rejects with comprehensive diagnostic feedback.
+- **Conversational Offer Negotiation:**
+  - Candidate requests adjustments; AI acts as HR negotiation advisor; backend strictly clamps counter-offers to level bounds and caps negotiation rounds.
+- **Atomic Acceptance & In-App Notifications:**
+  - Executes MongoDB ACID transaction creating `CompanyEmployee`, updating user `careerRole = 'EMPLOYEE'`, incrementing company `employeeCount`, and auto-withdrawing competing applications.
+  - Notifications dispatched for `STAGE_ADVANCED`, `APPLICATION_REJECTED` (with `/feedback` link), `OFFER_RECEIVED`, `HIRED`, and `APPLICATION_EXPIRED`.
+
+### 9.8 Admin Demo Hiring Simulator Architecture & Production Isolation (TASK P6.6)
+
+- **Unified Hiring Engine Reuse:**
+  - Runs on the exact same core services (`AtsScreeningService`, `StageEngineService`, `FinalReviewOfferService`).
+  - Parameterized by domain, question count (1–10), difficulty (`EASY` | `MEDIUM` | `HARD`), and interview type.
+  - Instantiates `Application` with `mode: 'DEMO'`, automatically directing all AI requests to `pool: 'DEMO'`.
+- **Zero Production Contamination Guarantee:**
+  - Dedicated demo company (`CorpVerse Demo Corporation`) with `aiProviderPool: 'DEMO'`.
+  - In `FinalReviewOfferService.acceptOffer`: demo mode applications mark the offer as accepted but strictly skip `CompanyEmployee` document creation, user `careerRole` changes, company `employeeCount` mutation, and economy ledger writes.
+  - Production leaderboards and rankings filter strictly on `mode: 'PRODUCTION'` and exclude demo companies.
+- **Admin Control & Inspection Endpoints (`/api/admin/demo/hiring`):**
+  - `POST /demo/hiring`: Initializes parameterized session in `demoSessions` collection.
+  - `GET /demo/hiring/:sessionId`: Aggregates all stage evaluations, answers, questions, and AI telemetry (jobs, latency, tokens).
+  - `POST /demo/hiring/:sessionId/step`: Steps through the current stage.
+  - `POST /demo/hiring/:sessionId/answer`: Submits candidate answer to active chat question.
+  - `POST /demo/hiring/:sessionId/simulate`: Automates entire lifecycle end-to-end for instant demonstration.
+  - `DELETE /demo/hiring/:sessionId` & `DELETE /demo/hiring`: Purges demo data and records immutable audit log in `auditLogs`.
+
+### 9.9 Candidate Hiring Journey Presentation Architecture (TASK P6.7)
+
+- **Pure Presentation & Authoritative Backend Contract:**
+  - The frontend React client displays state fetched directly from `/api/applications`, `/api/applications/:id/stage`, `/api/applications/:id/offer`, and `/api/notifications`. It executes zero scoring calculations, progression decisions, or salary bound clampings.
+- **Application Tracker (`ApplicationsTrackerPage` at `/applications`):**
+  - Displays concurrent application quota utilization (`x/5`) using an animated meter bar mapped to `PlatformConfig.applications.maxActive`.
+  - Visual 8-stage linear stepper pipeline (`APPLIED` $\rightarrow$ `ATS_SCREENING` $\rightarrow$ `SCREENING` $\rightarrow$ `ASSESSMENT` $\rightarrow$ `INTERVIEW` $\rightarrow$ `FINAL_REVIEW` $\rightarrow$ `OFFER` $\rightarrow$ `ACCEPTED`) per application card with status checkmarks, active pulsing glowing indicators, and failure badges.
+  - Contextual stage CTAs ("Enter Interview", "Review Offer & Negotiate", "View Rejection Feedback", and "Withdraw Application" with confirmation modal).
+- **Stage Chat Interface (`StageChatPage` at `/applications/:id/stage`):**
+  - Multi-turn conversational interface for `SCREENING`, `ASSESSMENT`, and `INTERVIEW` stages.
+  - Bubble dialogue with AI interviewer prompts, question difficulty, and category tags.
+  - Turn evaluation cards attached to candidate responses displaying score pills, strengths, weaknesses, and notes.
+  - Pulsing 3-dot typing / waiting indicator when AI evaluation is queued.
+  - Strict anti-duplicate submission lock preventing multiple submissions while awaiting AI.
+- **Feedback Viewer Modal (`FeedbackModal`):**
+  - Displays structured rejection diagnostics from `GET /api/applications/:id/feedback`.
+  - Renders missing skills tag cloud, demonstrated strengths, weaknesses, and actionable recommendations.
+- **Offer Review & Negotiation Interface (`OfferPage` at `/applications/:id/offer`):**
+  - Executive summary showing position title, level, simulated annual compensation, and salary band range slider.
+  - Conversational negotiation chat tracking remaining round counters (`x of y rounds`).
+  - Atomic acceptance action promoting candidate to `EMPLOYEE` and auto-withdrawing competing applications, followed by workplace transition celebration view.
+- **Topbar In-App Notification Bell (`NotificationBell`):**
+  - Integrated into global `Topbar.tsx` with animated unread badge.
+  - Dropdown popover listing notifications with category icons, relative timestamps, click-to-read navigation to target routes, and "Mark all read" action.
+
+### 9.10 Admin Demo Hiring Console Architecture (TASK P6.8)
+
+- **Dedicated Admin Console (`AdminDemoPage` at `/admin/demo`):**
+  - Guarded strictly by `RoleRoute` with `allowedPlatformRoles={['ADMIN']}`.
+  - Accessible via Sidebar navigation under Platform Administration (`Hiring Demo Simulator`).
+- **Interactive Control Surface Modules:**
+  1. **Demo Setup Form:** Configures career domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), question count (1–10), difficulty tier (`EASY`, `MEDIUM`, `HARD`), and interview type (`CONCEPTUAL`, `CODING`, `ARCHITECTURE`, `BEHAVIORAL`). Submits to `POST /api/admin/demo/hiring`.
+  2. **Interactive Candidate Runner:** Embedded chat UI rendering AI interviewer prompts and turn-by-turn candidate response submission (`POST /api/admin/demo/hiring/:sessionId/answer`), single stage-step progression (`POST /api/admin/demo/hiring/:sessionId/step`), and one-click end-to-end simulation (`POST /api/admin/demo/hiring/:sessionId/simulate`).
+  3. **Stage Results Synthesis Panels:** Renders stage scores including Stage 1 ATS screening score & summary, Final Review weighted multi-stage synthesis (ATS 15%, Screening 20%, Assessment 30%, Interview 35%), and Formal Employment Offer terms (simulated salary, position title, level band).
+  4. **Per-Call AI Telemetry Inspector:** Displays comprehensive execution log of every AI gateway request including task type, AI provider (`GEMINI`, `OPENAI`, `GROQ`), model ID, round-trip latency in milliseconds, token counts (prompt & completion), and execution status.
+  5. **Session Management & Audited Cleanup:** Historical sessions table with inspection, single-session cleanup (`DELETE /api/admin/demo/hiring/:sessionId`), and system-wide bulk purge modal (`DELETE /api/admin/demo/hiring`) requiring mandatory audit justification reasons recorded in the append-only `auditLogs` collection.
+
+

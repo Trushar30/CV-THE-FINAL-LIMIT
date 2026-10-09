@@ -64,8 +64,10 @@ export type ResumeAnalysisOutput = z.infer<typeof resumeAnalysisOutputSchema>;
  */
 export const resumeAnalysisJsonSchema: Record<string, unknown> = {
   type: 'object',
+  additionalProperties: false,
   required: [
     'name',
+    'contact',
     'skills',
     'education',
     'experience',
@@ -79,13 +81,15 @@ export const resumeAnalysisJsonSchema: Record<string, unknown> = {
     name: { type: 'string' },
     contact: {
       type: 'object',
+      additionalProperties: false,
+      required: ['email', 'phone', 'location', 'linkedin', 'github', 'website'],
       properties: {
-        email: { type: 'string' },
-        phone: { type: 'string' },
-        location: { type: 'string' },
-        linkedin: { type: 'string' },
-        github: { type: 'string' },
-        website: { type: 'string' },
+        email: { type: ['string', 'null'] },
+        phone: { type: ['string', 'null'] },
+        location: { type: ['string', 'null'] },
+        linkedin: { type: ['string', 'null'] },
+        github: { type: ['string', 'null'] },
+        website: { type: ['string', 'null'] },
       },
     },
     skills: {
@@ -96,11 +100,13 @@ export const resumeAnalysisJsonSchema: Record<string, unknown> = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['institution'],
+        additionalProperties: false,
+        required: ['institution', 'degree', 'fieldOfStudy', 'graduationYear'],
         properties: {
           institution: { type: 'string' },
-          degree: { type: 'string' },
-          fieldOfStudy: { type: 'string' },
+          degree: { type: ['string', 'null'] },
+          fieldOfStudy: { type: ['string', 'null'] },
+          graduationYear: { type: ['string', 'null'] },
         },
       },
     },
@@ -108,12 +114,17 @@ export const resumeAnalysisJsonSchema: Record<string, unknown> = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['company', 'role'],
+        additionalProperties: false,
+        required: ['company', 'role', 'duration', 'description', 'highlights'],
         properties: {
           company: { type: 'string' },
           role: { type: 'string' },
-          duration: { type: 'string' },
-          description: { type: 'string' },
+          duration: { type: ['string', 'null'] },
+          description: { type: ['string', 'null'] },
+          highlights: {
+            type: 'array',
+            items: { type: 'string' },
+          },
         },
       },
     },
@@ -121,10 +132,16 @@ export const resumeAnalysisJsonSchema: Record<string, unknown> = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['title'],
+        additionalProperties: false,
+        required: ['title', 'description', 'techStack', 'link'],
         properties: {
           title: { type: 'string' },
-          description: { type: 'string' },
+          description: { type: ['string', 'null'] },
+          techStack: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+          link: { type: ['string', 'null'] },
         },
       },
     },
@@ -132,15 +149,20 @@ export const resumeAnalysisJsonSchema: Record<string, unknown> = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['name'],
+        additionalProperties: false,
+        required: ['name', 'issuer', 'year'],
         properties: {
           name: { type: 'string' },
-          issuer: { type: 'string' },
+          issuer: { type: ['string', 'null'] },
+          year: { type: ['string', 'null'] },
         },
       },
     },
     summary: { type: 'string' },
-    domainClassification: { type: 'string' },
+    domainClassification: {
+      type: 'string',
+      enum: ['SOFTWARE_ENGINEERING', 'CLOUD_ENGINEERING', 'AI_ENGINEERING'],
+    },
     yearsOfExperience: { type: 'number' },
   },
 };

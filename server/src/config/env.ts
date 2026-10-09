@@ -26,6 +26,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
+  GROQ_RESUME_API_KEY: z.string().optional(),
   EMAIL_SERVICE_TYPE: z.enum(['console', 'smtp']).default('console'),
   EMAIL_FROM: z.string().default('CorpVerse <noreply@corpverse.com>'),
   APP_URL: z.string().default('http://localhost:5173'),

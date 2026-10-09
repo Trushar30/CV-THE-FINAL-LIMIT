@@ -8,6 +8,8 @@ import { companyService } from './services/company/company.service.js';
 import { defaultAIWorker } from './ai/index.js';
 import { defaultAIManagerService } from './routes/aiManager.routes.js';
 import './services/resume/resumeAnalysis.service.js';
+import './services/career/atsScreening.service.js';
+import './services/career/stageEngine.service.js';
 import { logger } from './utils/logger.js';
 
 const app = createApp();

@@ -195,7 +195,7 @@ export function CompanyDetailPage(): ReactElement {
             description="This organization does not currently have any open job positions listed."
           />
         ) : (
-          <div className={styles.cardsGrid} style={{ marginTop: 'var(--cv-spacing-2)' }}>
+          <div className={styles.cardsGrid} style={{ marginTop: 'var(--cv-space-2)' }}>
             {openJobs.map((job) => (
               <Link
                 key={job._id}

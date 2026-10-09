@@ -141,11 +141,21 @@ export class ProviderRouter {
 
   /**
    * Select the highest-priority provider whose health state is NOT `DISABLED`.
+   * If `preferredProvider` is specified and active, it is prioritized.
    * Returns null if the pool is empty or all providers are DISABLED.
    */
-  selectProvider(pool: AIPool): ProviderEntry | null {
+  selectProvider(pool: AIPool, preferredProvider?: AIProvider): ProviderEntry | null {
     const entries = this.pools.get(pool);
     if (!entries || entries.length === 0) return null;
+
+    if (preferredProvider) {
+      const preferred = entries.find(
+        (e) => e.provider === preferredProvider && e.healthState !== 'DISABLED'
+      );
+      if (preferred) {
+        return preferred;
+      }
+    }
 
     for (const entry of entries) {
       if (entry.healthState !== 'DISABLED') {

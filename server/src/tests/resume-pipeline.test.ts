@@ -216,6 +216,8 @@ describe('Resume Processing Pipeline Suite (TASK P4.3)', () => {
   });
 
   beforeEach(async () => {
+    await AIJobModel.deleteMany({});
+
     // Setup isolated ProviderRouter, AIGateway, AIWorker, and ResumeAnalysisService
     testRouter = new ProviderRouter();
     testTracker = new HealthTracker(testRouter);
@@ -396,13 +398,40 @@ describe('Resume Processing Pipeline Suite (TASK P4.3)', () => {
       mockAdapter.setPersistentResponse({
         structuredData: {
           name: 'Alice Smith',
-          contact: { email: 'alice@example.com', location: 'New York, NY' },
+          contact: {
+            email: 'alice@example.com',
+            phone: null,
+            location: 'New York, NY',
+            linkedin: null,
+            github: null,
+            website: null,
+          },
           skills: ['TypeScript', 'React', 'Node.js', 'Distributed Systems'],
-          education: [{ institution: 'MIT', degree: 'B.S.', fieldOfStudy: 'Computer Science' }],
-          experience: [
-            { company: 'GlobalTech', role: 'Principal Software Engineer', duration: '8 years' },
+          education: [
+            {
+              institution: 'MIT',
+              degree: 'B.S.',
+              fieldOfStudy: 'Computer Science',
+              graduationYear: null,
+            },
           ],
-          projects: [{ title: 'CorpNet', description: 'Real-time message broker' }],
+          experience: [
+            {
+              company: 'GlobalTech',
+              role: 'Principal Software Engineer',
+              duration: '8 years',
+              description: null,
+              highlights: [],
+            },
+          ],
+          projects: [
+            {
+              title: 'CorpNet',
+              description: 'Real-time message broker',
+              techStack: [],
+              link: null,
+            },
+          ],
           certifications: [],
           summary: 'Experienced software engineer',
           domainClassification: 'SOFTWARE_ENGINEERING',
@@ -452,12 +481,40 @@ describe('Resume Processing Pipeline Suite (TASK P4.3)', () => {
       mockAdapter.setPersistentResponse({
         structuredData: {
           name: 'David Miller',
-          contact: { email: 'david@cloud.com' },
+          contact: {
+            email: 'david@cloud.com',
+            phone: null,
+            location: null,
+            linkedin: null,
+            github: null,
+            website: null,
+          },
           skills: ['AWS', 'Kubernetes', 'Terraform', 'Docker'],
-          education: [{ institution: 'Stanford University' }],
-          experience: [{ company: 'CloudWorks', role: 'Cloud Architect' }],
+          education: [
+            {
+              institution: 'Stanford University',
+              degree: null,
+              fieldOfStudy: null,
+              graduationYear: null,
+            },
+          ],
+          experience: [
+            {
+              company: 'CloudWorks',
+              role: 'Cloud Architect',
+              duration: null,
+              description: null,
+              highlights: [],
+            },
+          ],
           projects: [],
-          certifications: [{ name: 'CKA Certified Kubernetes Administrator' }],
+          certifications: [
+            {
+              name: 'CKA Certified Kubernetes Administrator',
+              issuer: null,
+              year: null,
+            },
+          ],
           summary: 'Cloud architecture expert',
           domainClassification: 'CLOUD_ENGINEERING',
           yearsOfExperience: 6,
@@ -515,12 +572,26 @@ describe('Resume Processing Pipeline Suite (TASK P4.3)', () => {
         mimetype: 'application/pdf',
       });
 
-      // Provider returns invalid structured data (missing required 'name' field)
+      // Provider returns invalid structured data (missing required 'name' field for Zod validation)
       mockAdapter.setPersistentResponse({
         structuredData: {
-          name: '', // Invalid: fails z.string().min(1)
+          name: '', // Invalid: fails z.string().trim().min(1)
+          contact: {
+            email: 'charlie@test.com',
+            phone: null,
+            location: null,
+            linkedin: null,
+            github: null,
+            website: null,
+          },
           skills: ['Python'],
+          education: [],
+          experience: [],
+          projects: [],
+          certifications: [],
+          summary: null,
           domainClassification: 'AI_ENGINEERING',
+          yearsOfExperience: 1,
         },
       });
 

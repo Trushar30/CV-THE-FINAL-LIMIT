@@ -461,7 +461,7 @@ describe('AI Manager Console, Key Vault & RBAC Integration Suite (TASK P3.6)', (
       const mockFactory = (code: AIProvider): MockAdapter =>
         new MockAdapter({ provider: code, model: `${code}-model` });
 
-      const seeded = await aiManagerService.seedDemoPoolFromEnv(mockFactory);
+      const seeded = await aiManagerService.seedDemoPoolFromEnv(mockFactory, ['DEMO']);
 
       // Verify returned seeded list has entries for any configured key in env
       expect(Array.isArray(seeded)).toBe(true);
@@ -476,7 +476,7 @@ describe('AI Manager Console, Key Vault & RBAC Integration Suite (TASK P3.6)', (
 
       // Idempotence test: running seed again should not create duplicate documents
       const countBefore = await AIProviderModel.countDocuments({ pool: 'DEMO' });
-      await aiManagerService.seedDemoPoolFromEnv(mockFactory);
+      await aiManagerService.seedDemoPoolFromEnv(mockFactory, ['DEMO']);
       const countAfter = await AIProviderModel.countDocuments({ pool: 'DEMO' });
       expect(countAfter).toBe(countBefore);
     });

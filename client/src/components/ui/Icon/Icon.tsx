@@ -377,3 +377,66 @@ export function FounderBadgeIllustration({
     </svg>
   );
 }
+export function BellIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+export function AlertCircleIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth={3} />
+    </svg>
+  );
+}
+
+export function ArrowLeftIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
+}
+
+export function SendIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+export function CheckCircle2Icon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  );
+}
+
+export function XCircleIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+export function MessageSquareIcon({ size, color, ...props }: IconProps): ReactElement {
+  return (
+    <svg {...baseProps(size, color)} {...props}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}

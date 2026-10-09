@@ -26,7 +26,10 @@ export function createDefaultAdapter(
     case 'openai':
       return new OpenAIAdapter({ modelId: modelId || 'gpt-4o-mini', apiKey });
     case 'groq':
-      return new GroqAdapter({ modelId: modelId || 'llama-3.3-70b-versatile', apiKey });
+      return new GroqAdapter({
+        modelId: modelId || process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+        apiKey,
+      });
     default:
       throw new Error(`Unsupported provider code: ${code}`);
   }
@@ -417,11 +420,13 @@ export class AIManagerService {
   }
 
   /**
-   * Idempotently seeds the DEMO pool providers from environment variables (GEMINI_API_KEY, OPENAI_API_KEY, GROQ_API_KEY).
-   * Called during server bootstrap to ensure DEMO pool reflects .env configurations.
+   * Idempotently seeds AI provider configurations from environment variables
+   * (GEMINI_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, GROQ_RESUME_API_KEY) into DEMO and PIPELINE pools.
+   * Called during server bootstrap to ensure AI Gateway reflects .env configurations.
    */
   async seedDemoPoolFromEnv(
-    adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter
+    adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter,
+    poolsToSeed: AIPool[] = ['DEMO', 'PIPELINE']
   ): Promise<ProviderResponseDto[]> {
     const defaultConfigs: Array<{
       code: AIProvider;
@@ -457,60 +462,62 @@ export class AIManagerService {
         priority: 3,
         rateLimitRpm: 30,
         dailyLimit: 14400,
-        apiKey: env.GROQ_API_KEY,
+        apiKey: env.GROQ_RESUME_API_KEY || env.GROQ_API_KEY,
       },
     ];
 
     const seeded: ProviderResponseDto[] = [];
     const factory = adapterFactory ?? createDefaultAdapter;
 
-    for (const config of defaultConfigs) {
-      const trimmedKey = config.apiKey?.trim();
-      if (!trimmedKey) {
-        continue;
-      }
+    for (const pool of poolsToSeed) {
+      for (const config of defaultConfigs) {
+        const trimmedKey = config.apiKey?.trim();
+        if (!trimmedKey) {
+          continue;
+        }
 
-      let doc = await AIProviderModel.findOne({
-        code: config.code,
-        pool: 'DEMO',
-      }).select('+encryptedApiKey');
-
-      if (!doc) {
-        const encryptedApiKey = encryptSecret(trimmedKey);
-        const maskedApiKey = maskApiKey(trimmedKey);
-
-        doc = await AIProviderModel.create({
+        let doc = await AIProviderModel.findOne({
           code: config.code,
-          name: config.name,
-          priority: config.priority,
-          pool: 'DEMO',
-          status: 'HEALTHY',
-          modelId: config.modelId,
-          encryptedApiKey,
-          maskedApiKey,
-          rateLimitRpm: config.rateLimitRpm,
-          dailyLimit: config.dailyLimit,
-          dailyRequests: 0,
-          consecutiveFailures: 0,
-          totalRequests: 0,
-          totalFailures: 0,
-          averageLatencyMs: 0,
-        });
+          pool,
+        }).select('+encryptedApiKey');
 
-        logger.info(`[AIManager] Seeded provider '${config.code}' into DEMO pool from environment`);
+        if (!doc) {
+          const encryptedApiKey = encryptSecret(trimmedKey);
+          const maskedApiKey = maskApiKey(trimmedKey);
+
+          doc = await AIProviderModel.create({
+            code: config.code,
+            name: config.name,
+            priority: config.priority,
+            pool,
+            status: 'HEALTHY',
+            modelId: config.modelId,
+            encryptedApiKey,
+            maskedApiKey,
+            rateLimitRpm: config.rateLimitRpm,
+            dailyLimit: config.dailyLimit,
+            dailyRequests: 0,
+            consecutiveFailures: 0,
+            totalRequests: 0,
+            totalFailures: 0,
+            averageLatencyMs: 0,
+          });
+
+          logger.info(`[AIManager] Seeded provider '${config.code}' into ${pool} pool from environment`);
+        }
+
+        // Always register adapter into ProviderRouter
+        try {
+          const adapter = factory(config.code, trimmedKey, doc.modelId || config.modelId);
+          this.router.registerAdapter(pool, adapter, doc.priority);
+        } catch (err) {
+          logger.warn(
+            `[AIManager] Failed to register adapter for '${config.code}' in ${pool} pool: ${(err as Error).message}`
+          );
+        }
+
+        seeded.push(this.toDto(doc));
       }
-
-      // Always register adapter into ProviderRouter
-      try {
-        const adapter = factory(config.code, trimmedKey, doc.modelId || config.modelId);
-        this.router.registerAdapter('DEMO', adapter, doc.priority);
-      } catch (err) {
-        logger.warn(
-          `[AIManager] Failed to register adapter for '${config.code}' in DEMO pool: ${(err as Error).message}`
-        );
-      }
-
-      seeded.push(this.toDto(doc));
     }
 
     return seeded;

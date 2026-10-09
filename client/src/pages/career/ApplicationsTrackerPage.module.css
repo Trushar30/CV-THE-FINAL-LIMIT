@@ -1,0 +1,390 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.headerBanner {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.bannerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cv-space-4);
+  flex-wrap: wrap;
+}
+
+.titleArea h1 {
+  font-size: var(--cv-text-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cv-text-primary);
+  margin: 0 0 var(--cv-space-1) 0;
+}
+
+.subtitle {
+  font-size: var(--cv-text-sm);
+  color: var(--cv-text-secondary);
+  margin: 0;
+}
+
+.quotaWidget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-2);
+  min-width: 220px;
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  padding: var(--cv-space-3) var(--cv-space-4);
+}
+
+.quotaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--cv-text-xs);
+  font-weight: 600;
+  color: var(--cv-text-secondary);
+}
+
+.quotaCount {
+  font-weight: 700;
+  color: var(--cv-brand-primary-500);
+}
+
+.quotaBar {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--cv-radius-full);
+  background: var(--cv-border-subtle);
+  overflow: hidden;
+}
+
+.quotaFill {
+  height: 100%;
+  border-radius: var(--cv-radius-full);
+  background: linear-gradient(90deg, var(--cv-palette-winter-garden), var(--cv-palette-cascades));
+  transition: width 0.3s ease;
+}
+
+.filterTabs {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-2);
+  border-bottom: 1px solid var(--cv-border-subtle);
+  padding-bottom: var(--cv-space-2);
+}
+
+.filterTab {
+  background: none;
+  border: none;
+  padding: var(--cv-space-2) var(--cv-space-3);
+  font-size: var(--cv-text-xs);
+  font-weight: 600;
+  color: var(--cv-text-secondary);
+  border-radius: var(--cv-radius-md);
+  cursor: pointer;
+  transition: all var(--cv-motion-duration-fast);
+}
+
+.filterTab:hover {
+  background: var(--cv-bg-surface-hover);
+  color: var(--cv-text-primary);
+}
+
+.filterTabActive {
+  background: var(--cv-bg-surface-elevated);
+  color: var(--cv-text-primary);
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.applicationsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+}
+
+.applicationCard {
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-5);
+  box-shadow: var(--cv-shadow-sm);
+  transition: all var(--cv-motion-duration-fast) var(--cv-motion-ease-spring);
+}
+
+.applicationCard:hover {
+  border-color: var(--cv-border-muted);
+  box-shadow: var(--cv-shadow-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cv-space-4);
+  flex-wrap: wrap;
+}
+
+.jobInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-1);
+}
+
+.jobTitle {
+  font-size: var(--cv-text-lg);
+  font-weight: 700;
+  color: var(--cv-text-primary);
+  margin: 0;
+  text-decoration: none;
+}
+
+.jobMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-2);
+  flex-wrap: wrap;
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-secondary);
+}
+
+.companyName {
+  font-weight: 600;
+  color: var(--cv-text-primary);
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-2);
+}
+
+/* Stepper Pipeline */
+.stepperContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-2);
+  background: var(--cv-bg-surface);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-lg);
+  padding: var(--cv-space-4);
+  overflow-x: auto;
+}
+
+.stepperLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cv-text-muted);
+}
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  min-width: 680px;
+  position: relative;
+  padding: var(--cv-space-2) 0;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cv-space-2);
+  flex: 1;
+  position: relative;
+  z-index: 2;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--cv-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface);
+  color: var(--cv-text-muted);
+  transition: all 0.2s ease;
+}
+
+.stepCircle.completed {
+  background: var(--cv-palette-cascades);
+  border-color: var(--cv-palette-cascades);
+  color: #ffffff;
+}
+
+:global([data-theme='dark']) .stepCircle.completed {
+  background: var(--cv-palette-winter-garden);
+  border-color: var(--cv-palette-winter-garden);
+  color: var(--cv-palette-vantablack);
+}
+
+.stepCircle.current {
+  background: var(--cv-brand-primary-500);
+  border-color: var(--cv-brand-primary-500);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px var(--cv-brand-primary-100);
+  animation: pulseCurrent 2s infinite ease-in-out;
+}
+
+:global([data-theme='dark']) .stepCircle.current {
+  box-shadow: 0 0 0 4px rgba(39, 62, 65, 0.4);
+}
+
+@keyframes pulseCurrent {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.stepCircle.rejected {
+  background: var(--cv-feedback-error);
+  border-color: var(--cv-feedback-error);
+  color: #ffffff;
+}
+
+.stepName {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cv-text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepName.active {
+  color: var(--cv-text-primary);
+  font-weight: 700;
+}
+
+.stepLine {
+  position: absolute;
+  top: 22px;
+  left: 30px;
+  right: 30px;
+  height: 2px;
+  background: var(--cv-border-subtle);
+  z-index: 1;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cv-space-3);
+  flex-wrap: wrap;
+  padding-top: var(--cv-space-3);
+  border-top: 1px solid var(--cv-border-subtle);
+}
+
+.footerMeta {
+  font-size: var(--cv-text-xs);
+  color: var(--cv-text-muted);
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--cv-space-3);
+  flex-wrap: wrap;
+}
+
+/* Modal Withdraw */
+.withdrawModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 1, 1, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cv-space-4);
+  z-index: 1100;
+}
+
+.withdrawModal {
+  width: 100%;
+  max-width: 460px;
+  background: var(--cv-bg-surface-elevated);
+  border: 1px solid var(--cv-border-subtle);
+  border-radius: var(--cv-radius-xl);
+  padding: var(--cv-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+  box-shadow: var(--cv-shadow-xl);
+}
+
+.withdrawTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--cv-space-3);
+  border-radius: var(--cv-radius-md);
+  border: 1px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface);
+  color: var(--cv-text-primary);
+  font-family: inherit;
+  font-size: var(--cv-text-xs);
+  resize: vertical;
+}
+
+.withdrawTextarea:focus {
+  outline: none;
+  border-color: var(--cv-brand-primary-500);
+}
+
+.withdrawActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cv-space-3);
+}
+
+@media (max-width: 768px) {
+  .headerBanner {
+    padding: var(--cv-space-4);
+  }
+  .bannerTop {
+    flex-direction: column;
+  }
+  .quotaWidget {
+    width: 100%;
+  }
+  .cardHeader {
+    flex-direction: column;
+  }
+  .cardFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .actionButtons {
+    justify-content: stretch;
+  }
+  .actionButtons > * {
+    flex: 1;
+  }
+}

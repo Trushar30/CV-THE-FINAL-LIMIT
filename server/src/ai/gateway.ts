@@ -39,21 +39,23 @@ export function validateAgainstSchema(
 
   // --- type check ---
   if (schema.type) {
-    const expected = schema.type as string;
-    const actual = Array.isArray(data) ? 'array' : typeof data;
+    const expectedTypes = Array.isArray(schema.type)
+      ? (schema.type as string[])
+      : [schema.type as string];
+    const actual = data === null ? 'null' : Array.isArray(data) ? 'array' : typeof data;
 
-    if (expected === 'integer') {
-      if (typeof data !== 'number' || !Number.isInteger(data)) {
-        errors.push(`${prefix}Expected integer, got ${actual}`);
-        return errors;
+    const matches = expectedTypes.some((expected) => {
+      if (expected === 'integer') {
+        return typeof data === 'number' && Number.isInteger(data);
       }
-    } else if (expected === 'object') {
-      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        errors.push(`${prefix}Expected object, got ${data === null ? 'null' : actual}`);
-        return errors;
+      if (expected === 'object') {
+        return typeof data === 'object' && data !== null && !Array.isArray(data);
       }
-    } else if (actual !== expected) {
-      errors.push(`${prefix}Expected ${expected}, got ${actual}`);
+      return actual === expected;
+    });
+
+    if (!matches) {
+      errors.push(`${prefix}Expected ${expectedTypes.join(' or ')}, got ${actual}`);
       return errors;
     }
   }
@@ -147,6 +149,7 @@ export class AIGateway {
       const job = await AIJobModel.create({
         taskType: request.taskType,
         pool,
+        preferredProvider: options.preferredProvider ?? null,
         status: 'PENDING',
         attempts: 0,
         maxAttempts: maxAttempts ?? 3,
@@ -191,10 +194,10 @@ export class AIGateway {
    * @throws AIError — UNAVAILABLE if no providers, TIMEOUT on timeout, or normalized adapter errors
    */
   async execute(request: AIRequest, options: AIGatewayOptions): Promise<AIResponse> {
-    const { pool, timeoutMs } = options;
+    const { pool, timeoutMs, preferredProvider } = options;
 
     // 1. Select provider
-    const entry = this.router.selectProvider(pool);
+    const entry = this.router.selectProvider(pool, preferredProvider);
     if (!entry) {
       throw new AIError(`No available providers in pool '${pool}'`, 'UNAVAILABLE');
     }

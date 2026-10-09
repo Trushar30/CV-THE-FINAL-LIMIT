@@ -109,10 +109,18 @@ export class GroqAdapter implements ProviderAdapter {
   }
 
   /**
-   * Resolves the API key securely
+   * Resolves the API key securely.
+   * If request.taskType is RESUME_ANALYSIS and GROQ_RESUME_API_KEY is configured in the environment,
+   * that dedicated key is strictly prioritized to conserve the primary key quota.
    */
-  private getApiKey(): string | undefined {
-    return this.apiKeyAccessor();
+  private getApiKey(request?: AIRequest): string | undefined {
+    if (request?.taskType === 'RESUME_ANALYSIS' && process.env.GROQ_RESUME_API_KEY) {
+      return process.env.GROQ_RESUME_API_KEY.trim();
+    }
+    return (
+      this.apiKeyAccessor() ??
+      (request?.taskType === 'RESUME_ANALYSIS' ? process.env.GROQ_RESUME_API_KEY?.trim() : undefined)
+    );
   }
 
   /**
@@ -126,7 +134,7 @@ export class GroqAdapter implements ProviderAdapter {
    * Executes an AI completion request via Groq Chat Completions API
    */
   async generate(request: AIRequest): Promise<AIResponse> {
-    const apiKey = this.getApiKey();
+    const apiKey = this.getApiKey(request);
     if (!apiKey || apiKey.trim().length === 0) {
       throw new AIError('Groq API key is not configured', 'AUTH_CONFIG', 'groq');
     }
@@ -350,6 +358,14 @@ export class GroqAdapter implements ProviderAdapter {
       const errData = await response.json();
       if (errData?.error?.message) {
         errorMessage = errData.error.message;
+      }
+      const failedGen = errData?.error?.failed_generation ?? errData?.failed_generation;
+      if (failedGen) {
+        const sample =
+          typeof failedGen === 'string'
+            ? failedGen.slice(0, 500)
+            : JSON.stringify(failedGen).slice(0, 500);
+        errorMessage += ` | failed_generation: ${sample}`;
       }
       if (errData?.error?.type) {
         groqType = errData.error.type;

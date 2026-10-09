@@ -20,24 +20,32 @@ export type { AIProvider, ProviderHealthState };
 export type AITaskType =
   | 'RESUME_ANALYSIS'
   | 'RESUME_PARSING'
+  | 'ATS_SCREEN'
   | 'ATS_EVALUATION'
   | 'INTERVIEW_QUESTION'
   | 'INTERVIEW_EVALUATION'
+  | 'STAGE_FEEDBACK'
   | 'TASK_GENERATION'
   | 'TASK_EVALUATION'
   | 'SCENARIO_GENERATION'
-  | 'SCENARIO_EVALUATION';
+  | 'SCENARIO_EVALUATION'
+  | 'FINAL_REVIEW_SUMMARY'
+  | 'OFFER_NEGOTIATION';
 
 export const AI_TASK_TYPES: readonly AITaskType[] = [
   'RESUME_ANALYSIS',
   'RESUME_PARSING',
+  'ATS_SCREEN',
   'ATS_EVALUATION',
   'INTERVIEW_QUESTION',
   'INTERVIEW_EVALUATION',
+  'STAGE_FEEDBACK',
   'TASK_GENERATION',
   'TASK_EVALUATION',
   'SCENARIO_GENERATION',
   'SCENARIO_EVALUATION',
+  'FINAL_REVIEW_SUMMARY',
+  'OFFER_NEGOTIATION',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -183,6 +191,7 @@ export interface AIGatewayExecuteOptions {
   pool: AIPool;
   timeoutMs?: number;
   requestorReference?: string;
+  preferredProvider?: AIProvider;
 }
 
 export type AIGatewayOptions = AIGatewayExecuteOptions;
@@ -192,4 +201,5 @@ export interface AIGatewaySubmitOptions {
   requestorReference?: string;
   idempotencyKey?: string;
   maxAttempts?: number;
+  preferredProvider?: AIProvider;
 }

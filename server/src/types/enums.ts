@@ -104,15 +104,26 @@ export const APPLICATION_STAGES: readonly ApplicationStage[] = [
   'ACCEPTED',
 ] as const;
 
-export type ApplicationStatus = 'IN_PROGRESS' | 'REJECTED' | 'WITHDRAWN' | 'EXPIRED' | 'ACCEPTED';
+export type ApplicationStatus =
+  | 'ACTIVE'
+  | 'IN_PROGRESS'
+  | 'REJECTED'
+  | 'WITHDRAWN'
+  | 'EXPIRED'
+  | 'ACCEPTED';
 
 export const APPLICATION_STATUSES: readonly ApplicationStatus[] = [
+  'ACTIVE',
   'IN_PROGRESS',
   'REJECTED',
   'WITHDRAWN',
   'EXPIRED',
   'ACCEPTED',
 ] as const;
+
+// Application Operating Mode (Spec Section 23, Decision D11, ADR-010)
+export type ApplicationMode = 'PRODUCTION' | 'DEMO';
+export const APPLICATION_MODES: readonly ApplicationMode[] = ['PRODUCTION', 'DEMO'] as const;
 
 // AI Providers and infrastructure
 export type AIProvider = 'gemini' | 'openai' | 'groq';
@@ -175,4 +186,30 @@ export const CORP_COIN_TRANSACTION_TYPES: readonly CorpCoinTransactionType[] = [
   'BUSINESS_REVENUE',
   'BUSINESS_EXPENSE',
   'ADMIN_ADJUSTMENT',
+] as const;
+
+// Notification Types (Spec Section 24 & 26.36)
+export type NotificationType =
+  | 'STAGE_ADVANCED'
+  | 'APPLICATION_REJECTED'
+  | 'OFFER_RECEIVED'
+  | 'HIRED'
+  | 'APPLICATION_EXPIRED'
+  | 'TASK_ASSIGNED'
+  | 'TASK_EVALUATED'
+  | 'WARNING_ISSUED'
+  | 'PROMOTION'
+  | 'SYSTEM_ANNOUNCEMENT';
+
+export const NOTIFICATION_TYPES: readonly NotificationType[] = [
+  'STAGE_ADVANCED',
+  'APPLICATION_REJECTED',
+  'OFFER_RECEIVED',
+  'HIRED',
+  'APPLICATION_EXPIRED',
+  'TASK_ASSIGNED',
+  'TASK_EVALUATED',
+  'WARNING_ISSUED',
+  'PROMOTION',
+  'SYSTEM_ANNOUNCEMENT',
 ] as const;

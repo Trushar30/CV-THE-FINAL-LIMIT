@@ -77,7 +77,20 @@ describe('ConfigService & PlatformConfig Model Integration', () => {
 
     it('should return typed sections accurately', async () => {
       const career = await service.getCareerConfig();
-      expect(career).toEqual({ founderUnlockExp: 12000, maxLevel: 10 });
+      expect(career.founderUnlockExp).toBe(12000);
+      expect(career.maxLevel).toBe(10);
+      expect(career.salaryBands).toHaveLength(10);
+
+      const bands = await service.getSalaryBands();
+      expect(bands).toHaveLength(10);
+      const l1Band = await service.getSalaryBandForLevel(1);
+      expect(l1Band?.minSalary).toBe(45000);
+
+      const finalReview = await service.getFinalReviewSettings();
+      expect(finalReview.passingScore).toBe(70);
+
+      const offer = await service.getOfferSettings();
+      expect(offer.maxNegotiationRounds).toBe(3);
 
       const employee = await service.getEmployeeConfig();
       expect(employee.warningThreshold).toBe(4);

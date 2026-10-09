@@ -6,6 +6,27 @@ import { z } from 'zod';
  * Zero magic numbers allowed in business logic; all values originate here.
  */
 
+export const salaryBandSchema = z.object({
+  level: z.number().int().min(1).max(10),
+  title: z.string(),
+  minSalary: z.number().min(0),
+  maxSalary: z.number().min(0),
+  defaultSalary: z.number().min(0),
+});
+
+export const DEFAULT_SALARY_BANDS = [
+  { level: 1, title: 'Intern', minSalary: 45000, maxSalary: 60000, defaultSalary: 50000 },
+  { level: 2, title: 'Junior', minSalary: 60000, maxSalary: 80000, defaultSalary: 70000 },
+  { level: 3, title: 'Junior+', minSalary: 80000, maxSalary: 100000, defaultSalary: 90000 },
+  { level: 4, title: 'Associate', minSalary: 100000, maxSalary: 125000, defaultSalary: 110000 },
+  { level: 5, title: 'Mid', minSalary: 125000, maxSalary: 155000, defaultSalary: 140000 },
+  { level: 6, title: 'Mid+', minSalary: 155000, maxSalary: 190000, defaultSalary: 170000 },
+  { level: 7, title: 'Senior', minSalary: 190000, maxSalary: 230000, defaultSalary: 210000 },
+  { level: 8, title: 'Senior+', minSalary: 230000, maxSalary: 280000, defaultSalary: 250000 },
+  { level: 9, title: 'Lead', minSalary: 280000, maxSalary: 340000, defaultSalary: 300000 },
+  { level: 10, title: 'Principal', minSalary: 340000, maxSalary: 420000, defaultSalary: 380000 },
+];
+
 export const careerConfigSchema = z.object({
   founderUnlockExp: z
     .number()
@@ -18,6 +39,7 @@ export const careerConfigSchema = z.object({
     .min(1, 'maxLevel must be at least 1')
     .max(100, 'maxLevel cannot exceed 100')
     .default(10),
+  salaryBands: z.array(salaryBandSchema).default(DEFAULT_SALARY_BANDS),
 });
 
 export const employeeConfigSchema = z.object({
@@ -245,6 +267,78 @@ export const securityConfigSchema = z.object({
     .default(10485760), // 10 MB
 });
 
+export const stageSettingsSchema = z.object({
+  questionCount: z
+    .number()
+    .int('questionCount must be an integer')
+    .min(1, 'questionCount must be at least 1')
+    .max(20, 'questionCount cannot exceed 20')
+    .default(3),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).default('MEDIUM'),
+  passingScore: z
+    .number()
+    .min(0, 'passingScore must be at least 0')
+    .max(100, 'passingScore cannot exceed 100')
+    .default(70),
+  demoQuestionCount: z
+    .number()
+    .int('demoQuestionCount must be an integer')
+    .min(1, 'demoQuestionCount must be at least 1')
+    .max(10, 'demoQuestionCount cannot exceed 10')
+    .default(1),
+  demoDifficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).default('EASY'),
+});
+
+export const finalReviewWeightsSchema = z.object({
+  atsWeight: z.number().min(0).max(100).default(15),
+  screeningWeight: z.number().min(0).max(100).default(20),
+  assessmentWeight: z.number().min(0).max(100).default(30),
+  interviewWeight: z.number().min(0).max(100).default(35),
+  passingScore: z.number().min(0).max(100).default(70),
+});
+
+export const offerSettingsSchema = z.object({
+  maxNegotiationRounds: z.number().int().min(1).max(10).default(3),
+  demoMaxNegotiationRounds: z.number().int().min(1).max(10).default(1),
+  declineStatus: z.enum(['WITHDRAWN', 'REJECTED']).default('WITHDRAWN'),
+});
+
+export const stagesConfigSchema = z.object({
+  screening: stageSettingsSchema.default({
+    questionCount: 3,
+    difficulty: 'MEDIUM',
+    passingScore: 70,
+    demoQuestionCount: 1,
+    demoDifficulty: 'EASY',
+  }),
+  assessment: stageSettingsSchema.default({
+    questionCount: 3,
+    difficulty: 'HARD',
+    passingScore: 70,
+    demoQuestionCount: 1,
+    demoDifficulty: 'EASY',
+  }),
+  interview: stageSettingsSchema.default({
+    questionCount: 5,
+    difficulty: 'HARD',
+    passingScore: 75,
+    demoQuestionCount: 1,
+    demoDifficulty: 'EASY',
+  }),
+  finalReview: finalReviewWeightsSchema.default({
+    atsWeight: 15,
+    screeningWeight: 20,
+    assessmentWeight: 30,
+    interviewWeight: 35,
+    passingScore: 70,
+  }),
+  offer: offerSettingsSchema.default({
+    maxNegotiationRounds: 3,
+    demoMaxNegotiationRounds: 1,
+    declineStatus: 'WITHDRAWN',
+  }),
+});
+
 /**
  * Root canonical PlatformConfig schema matching Specification Section 30
  */
@@ -261,6 +355,7 @@ export const platformConfigSchema = z.object({
   company: companyConfigSchema,
   bots: botsConfigSchema,
   ats: atsConfigSchema,
+  stages: stagesConfigSchema.default({}),
   ai: aiConfigSchema,
   security: securityConfigSchema,
 });
@@ -269,12 +364,17 @@ export const platformConfigSchema = z.object({
  * Infer TypeScript types from Zod schemas
  */
 export type CareerConfig = z.infer<typeof careerConfigSchema>;
+export type SalaryBandConfig = z.infer<typeof salaryBandSchema>;
 export type EmployeeConfig = z.infer<typeof employeeConfigSchema>;
 export type ApplicationsConfig = z.infer<typeof applicationsConfigSchema>;
 export type FounderConfig = z.infer<typeof founderConfigSchema>;
 export type CompanyConfig = z.infer<typeof companyConfigSchema>;
 export type BotsConfig = z.infer<typeof botsConfigSchema>;
 export type AtsConfig = z.infer<typeof atsConfigSchema>;
+export type StageSettingsConfig = z.infer<typeof stageSettingsSchema>;
+export type FinalReviewWeightsConfig = z.infer<typeof finalReviewWeightsSchema>;
+export type OfferSettingsConfig = z.infer<typeof offerSettingsSchema>;
+export type StagesConfig = z.infer<typeof stagesConfigSchema>;
 export type AiPoolConfig = z.infer<typeof aiPoolConfigSchema>;
 export type AiConfig = z.infer<typeof aiConfigSchema>;
 export type SecurityConfig = z.infer<typeof securityConfigSchema>;
@@ -288,6 +388,7 @@ export const DEFAULT_PLATFORM_CONFIG: Readonly<PlatformConfig> = Object.freeze({
   career: {
     founderUnlockExp: 12000,
     maxLevel: 10,
+    salaryBands: DEFAULT_SALARY_BANDS,
   },
   employee: {
     primaryTasksPerDay: 1,
@@ -322,6 +423,41 @@ export const DEFAULT_PLATFORM_CONFIG: Readonly<PlatformConfig> = Object.freeze({
     skillWeight: 35,
     experienceWeight: 15,
     formattingWeight: 10,
+  },
+  stages: {
+    screening: {
+      questionCount: 3,
+      difficulty: 'MEDIUM' as const,
+      passingScore: 70,
+      demoQuestionCount: 1,
+      demoDifficulty: 'EASY' as const,
+    },
+    assessment: {
+      questionCount: 3,
+      difficulty: 'HARD' as const,
+      passingScore: 70,
+      demoQuestionCount: 1,
+      demoDifficulty: 'EASY' as const,
+    },
+    interview: {
+      questionCount: 5,
+      difficulty: 'HARD' as const,
+      passingScore: 75,
+      demoQuestionCount: 1,
+      demoDifficulty: 'EASY' as const,
+    },
+    finalReview: {
+      atsWeight: 15,
+      screeningWeight: 20,
+      assessmentWeight: 30,
+      interviewWeight: 35,
+      passingScore: 70,
+    },
+    offer: {
+      maxNegotiationRounds: 3,
+      demoMaxNegotiationRounds: 1,
+      declineStatus: 'WITHDRAWN' as const,
+    },
   },
   ai: {
     retryPerProvider: 3,

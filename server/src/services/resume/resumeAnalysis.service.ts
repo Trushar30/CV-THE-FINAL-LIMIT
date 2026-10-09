@@ -19,6 +19,7 @@ import { AppError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import type { RequesterIdentity } from './resume.service.js';
 import type { CareerDomain } from '../../types/enums.js';
+import { env } from '../../config/env.js';
 
 export const RESUME_ANALYSIS_SYSTEM_PROMPT = `You are the authoritative, strict resume parsing and entity extraction engine for CorpVerse.
 Your mission is to parse candidate resumes and convert raw text into a verified structured profile.
@@ -26,10 +27,10 @@ Your mission is to parse candidate resumes and convert raw text into a verified 
 NON-NEGOTIABLE NON-INVENTION RULES:
 1. STRICT ADHERENCE TO SOURCE: Extract ONLY facts, names, contacts, skills, employment dates, roles, and education that are explicitly stated in the resume text.
 2. ZERO FABRICATION: Do NOT invent, assume, infer, extrapolate, or hallucinate missing information under any circumstances.
-3. ABSENT FIELDS: If an item or attribute is absent from the resume, leave it empty or null. Never fabricate fictional companies, dates, or skills.
+3. ALL SCHEMA KEYS MANDATORY: Every single key defined in the schema must appear in your JSON output. If any string or number field (e.g. phone, location, linkedin, github, website, duration, description, link, graduationYear, year) is not present in the resume, set its value explicitly to null. If any list (e.g. skills, highlights, techStack, projects, certifications, education, experience) is empty, set its value explicitly to []. NEVER omit any key from any object.
 4. DOMAIN CLASSIFICATION: Classify the candidate into exactly one of: 'SOFTWARE_ENGINEERING', 'CLOUD_ENGINEERING', or 'AI_ENGINEERING' based strictly on the technical evidence present in the text.
 5. YEARS OF EXPERIENCE: Extract the total professional experience in years as an integer/float. If unstated and cannot be derived directly from dates, set to 0.
-6. FORMAT: Output valid JSON strictly conforming to the required schema.`;
+6. STRICT JSON ONLY: Return ONLY the valid JSON object conforming strictly to the required schema. Do NOT include markdown code blocks, explanations, or any conversational text.`;
 
 export interface ResumeAnalysisResponseDto {
   status: ResumeAnalysisStatus | 'WAITING_FOR_PROVIDER';
@@ -165,15 +166,21 @@ export class ResumeAnalysisService {
     await analysis.save();
 
     try {
+      const preferredProvider =
+        process.env.GROQ_RESUME_API_KEY || env.GROQ_RESUME_API_KEY ? 'groq' : undefined;
+
       const jobId = await this.aiGateway.submit(
         {
           taskType: 'RESUME_ANALYSIS',
           userInput: `CANDIDATE RESUME TEXT:\n\n${extraction.text}`,
           systemInstruction: RESUME_ANALYSIS_SYSTEM_PROMPT,
           outputSchema: resumeAnalysisJsonSchema,
+          temperature: 0.1,
+          maxTokens: 4096,
         },
         {
           pool: 'PIPELINE',
+          preferredProvider,
           requestorReference: analysis._id.toString(),
           idempotencyKey: `resume-analysis-${resumeObjectId.toString()}`,
         }
@@ -242,6 +249,9 @@ export class ResumeAnalysisService {
       return analysis;
     }
 
+    const preferredProvider =
+      process.env.GROQ_RESUME_API_KEY || env.GROQ_RESUME_API_KEY ? 'groq' : undefined;
+
     // Call AIGateway synchronously
     const response = await this.aiGateway.execute(
       {
@@ -249,9 +259,12 @@ export class ResumeAnalysisService {
         userInput: `CANDIDATE RESUME TEXT:\n\n${extraction.text}`,
         systemInstruction: RESUME_ANALYSIS_SYSTEM_PROMPT,
         outputSchema: resumeAnalysisJsonSchema,
+        temperature: 0.1,
+        maxTokens: 4096,
       },
       {
         pool: 'PIPELINE',
+        preferredProvider,
       }
     );
 

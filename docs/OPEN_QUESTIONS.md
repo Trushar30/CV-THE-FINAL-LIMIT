@@ -241,3 +241,68 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
   - **Deletion:** Deletion is disallowed if active job applications exist. Re-upload acts as replacement through archiving.
 - **Reference:** ADR-040.
 - **Status:** **RESOLVED**
+
+---
+
+### Q2: Job Applications Lifecycle & ATS Evaluation Engine (TASK P5.3 Design)
+
+- **Context:** Spec Section 7, Section 26 (Collection 11), Section 27.4, and Section 39 define the 8-stage application pipeline and ATS scoring criteria, but execution semantics for the ATS evaluation stage require alignment with the asynchronous AI Gateway.
+- **Resolution / Design Decisions:**
+  - **Pre-Conditions for Application:** Candidate must possess `careerRole === 'JOB_SEEKER'`, an existing `Profile`, and a completed `ResumeAnalysis` (`profile.resumeAnalysisId`).
+  - **Concurrency Quota:** The count of non-terminal applications (`status === 'ACTIVE'`) for the user must be strictly $< 5$ (`PlatformConfig.applications.maxActive`). Exceeding returns 400 `BUSINESS_RULE_VIOLATION`.
+  - **Duplicate Prevention:** A candidate cannot submit a new application for a job if an active application already exists for the same `(userId, jobId)`. Returns 409 `BUSINESS_RULE_VIOLATION`. If a previous application reached a terminal state (`REJECTED`, `WITHDRAWN`, `EXPIRED`), re-application is permitted.
+  - **Asynchronous ATS Processing:** Upon submission (`POST /api/applications`), the application record is created with `currentStage: 'APPLIED'`, `status: 'ACTIVE'`, and transitions to `ATS_SCREENING` by enqueuing an AI task (`ATS_EVALUATION` in `PIPELINE` pool) via `AIGateway.submit()`.
+  - **Deterministic Formula & Gate:** The ATS evaluation scores candidate resume attributes against the job requirements using the locked weights (40% domain, 35% skills, 15% experience, 10% clarity). Passing score $\ge 70$ advances `currentStage` to `SCREENING`. Failing score $< 70$ sets `status = 'REJECTED'`, stores structured diagnostic feedback, and frees the active application slot.
+  - **Candidate Withdrawal:** `POST /api/applications/:id/withdraw` sets `status = 'WITHDRAWN'` if non-terminal, releasing the active application slot.
+- **Reference:** Spec Section 7, ADR-018, Task P5.3.
+- **Status:** **RESOLVED (Implementation Ready for P5.3)**
+
+---
+
+### Q3: Stale Job Application Expiry Duration (TASK P6.1)
+
+- **Context:** Spec Section 7.1 and Section 26.11 define `EXPIRED` as a valid terminal status for job applications (`APPLIED`, `ATS_SCREENING`, `SCREENING`, `ASSESSMENT`, `INTERVIEW`, `FINAL_REVIEW`, `OFFER`). However, the exact staleness duration (in days) is not defined in `CORPVERSE_SPECIFICATION.md` (unlike warnings which have an explicit 30-day window).
+- **Current Behavior:** The `expireStaleApplications(staleDays?: number)` service method and `runApplicationExpiryJob` default to 30 days of inactivity as a safe fallback.
+- **Open Question / TODO for Project Lead:**
+  - What should be the official staleness expiration duration?
+    - Option A: Uniform 30 days of inactivity across all stages.
+    - Option B: Uniform 14 days of inactivity across all stages.
+    - Option C: Multi-tier stage expirations (e.g., 7 days for `OFFER`, 14 days for `ASSESSMENT`/`INTERVIEW`, 30 days for others).
+    - Option D: Configurable in `PlatformConfig.applications.staleApplicationDays`.
+- **Status:** **TODO (Pending User Decision)**
+
+---
+
+### Q4: FINAL_REVIEW Stage Weights, Level Salary Bands, and Offer Decline Terminal State (TASK P6.4)
+
+- **Context:** TASK P6.4 builds `FINAL_REVIEW`, `OFFER`, and `ACCEPTED`. Per `GEMINI.md` No-Invention Rules and user prompt instructions, stage weights for `FINAL_REVIEW`, level salary bands for `OFFER`, negotiation caps, and the terminal state for declining an offer must be agreed with the project lead and configured in `PlatformConfig`.
+- **Proposed Defaults:**
+  1. **Final Review Stage Score Weights (`PlatformConfig.stages.finalReview`):**
+     - ATS Screening: 15%
+     - Screening: 20%
+     - Assessment: 30%
+     - Interview: 35%
+     - Passing Threshold: 70
+  2. **Level Salary Bands (Simulated Annual USD in `PlatformConfig.career.salaryBands`):**
+     - L1 Intern: $45,000 – $60,000 (default: $50,000)
+     - L2 Junior: $60,000 – $80,000 (default: $70,000)
+     - L3 Junior+: $80,000 – $100,000 (default: $90,000)
+     - L4 Associate: $100,000 – $125,000 (default: $110,000)
+     - L5 Mid: $125,000 – $155,000 (default: $140,000)
+     - L6 Mid+: $155,000 – $190,000 (default: $170,000)
+     - L7 Senior: $190,000 – $230,000 (default: $210,000)
+     - L8 Senior+: $230,000 – $280,000 (default: $250,000)
+     - L9 Lead: $280,000 – $340,000 (default: $300,000)
+     - L10 Principal: $340,000 – $420,000 (default: $380,000)
+  3. **Offer Negotiation (`PlatformConfig.stages.offer`):**
+     - `maxNegotiationRounds`: 3 (demo default: 1)
+  4. **Offer Decline State Transition:**
+     - Option A (Recommended): Moves to `WITHDRAWN` (candidate voluntarily declined/walked away from offer, releasing active quota cleanly).
+     - Option B: Moves to `REJECTED` (candidate rejected the company's offer).
+- **Status:** **RESOLVED (Confirmed by User)**
+- **Resolution:**
+  - `finalReview`: `atsWeight: 15`, `screeningWeight: 20`, `assessmentWeight: 30`, `interviewWeight: 35`, `passingScore: 70`.
+  - `salaryBands`: 10 level bands locked into `PlatformConfig.career.salaryBands`.
+  - `offer`: `maxNegotiationRounds: 3` (demo: 1).
+  - `declineStatus`: `WITHDRAWN` (candidate voluntarily declined/walked away from offer, releasing active quota cleanly).
+

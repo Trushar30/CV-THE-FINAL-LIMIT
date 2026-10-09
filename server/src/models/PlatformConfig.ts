@@ -9,10 +9,37 @@ export interface IPlatformConfigDocument extends Document {
   updatedAt: Date;
 }
 
+const salaryBandSubSchema = new Schema(
+  {
+    level: { type: Number, required: true },
+    title: { type: String, required: true },
+    minSalary: { type: Number, required: true },
+    maxSalary: { type: Number, required: true },
+    defaultSalary: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const careerSubSchema = new Schema(
   {
     founderUnlockExp: { type: Number, required: true, default: 12000 },
     maxLevel: { type: Number, required: true, default: 10 },
+    salaryBands: {
+      type: [salaryBandSubSchema],
+      required: true,
+      default: () => [
+        { level: 1, title: 'Intern', minSalary: 45000, maxSalary: 60000, defaultSalary: 50000 },
+        { level: 2, title: 'Junior', minSalary: 60000, maxSalary: 80000, defaultSalary: 70000 },
+        { level: 3, title: 'Junior+', minSalary: 80000, maxSalary: 100000, defaultSalary: 90000 },
+        { level: 4, title: 'Associate', minSalary: 100000, maxSalary: 125000, defaultSalary: 110000 },
+        { level: 5, title: 'Mid', minSalary: 125000, maxSalary: 155000, defaultSalary: 140000 },
+        { level: 6, title: 'Mid+', minSalary: 155000, maxSalary: 190000, defaultSalary: 170000 },
+        { level: 7, title: 'Senior', minSalary: 190000, maxSalary: 230000, defaultSalary: 210000 },
+        { level: 8, title: 'Senior+', minSalary: 230000, maxSalary: 280000, defaultSalary: 250000 },
+        { level: 9, title: 'Lead', minSalary: 280000, maxSalary: 340000, defaultSalary: 300000 },
+        { level: 10, title: 'Principal', minSalary: 340000, maxSalary: 420000, defaultSalary: 380000 },
+      ],
+    },
   },
   { _id: false }
 );
@@ -110,6 +137,78 @@ const securitySubSchema = new Schema(
   { _id: false }
 );
 
+const stageSettingSubSchema = new Schema(
+  {
+    questionCount: { type: Number, required: true, default: 3 },
+    difficulty: { type: String, required: true, enum: ['EASY', 'MEDIUM', 'HARD'], default: 'MEDIUM' },
+    passingScore: { type: Number, required: true, default: 70 },
+    demoQuestionCount: { type: Number, required: true, default: 1 },
+    demoDifficulty: { type: String, required: true, enum: ['EASY', 'MEDIUM', 'HARD'], default: 'EASY' },
+  },
+  { _id: false }
+);
+
+const finalReviewSubSchema = new Schema(
+  {
+    atsWeight: { type: Number, required: true, default: 15 },
+    screeningWeight: { type: Number, required: true, default: 20 },
+    assessmentWeight: { type: Number, required: true, default: 30 },
+    interviewWeight: { type: Number, required: true, default: 35 },
+    passingScore: { type: Number, required: true, default: 70 },
+  },
+  { _id: false }
+);
+
+const offerSubSchema = new Schema(
+  {
+    maxNegotiationRounds: { type: Number, required: true, default: 3 },
+    demoMaxNegotiationRounds: { type: Number, required: true, default: 1 },
+    declineStatus: { type: String, required: true, enum: ['WITHDRAWN', 'REJECTED'], default: 'WITHDRAWN' },
+  },
+  { _id: false }
+);
+
+const stagesSubSchema = new Schema(
+  {
+    screening: {
+      type: stageSettingSubSchema,
+      required: true,
+      default: () => ({ questionCount: 3, difficulty: 'MEDIUM', passingScore: 70, demoQuestionCount: 1, demoDifficulty: 'EASY' }),
+    },
+    assessment: {
+      type: stageSettingSubSchema,
+      required: true,
+      default: () => ({ questionCount: 3, difficulty: 'HARD', passingScore: 70, demoQuestionCount: 1, demoDifficulty: 'EASY' }),
+    },
+    interview: {
+      type: stageSettingSubSchema,
+      required: true,
+      default: () => ({ questionCount: 5, difficulty: 'HARD', passingScore: 75, demoQuestionCount: 1, demoDifficulty: 'EASY' }),
+    },
+    finalReview: {
+      type: finalReviewSubSchema,
+      required: true,
+      default: () => ({
+        atsWeight: 15,
+        screeningWeight: 20,
+        assessmentWeight: 30,
+        interviewWeight: 35,
+        passingScore: 70,
+      }),
+    },
+    offer: {
+      type: offerSubSchema,
+      required: true,
+      default: () => ({
+        maxNegotiationRounds: 3,
+        demoMaxNegotiationRounds: 1,
+        declineStatus: 'WITHDRAWN',
+      }),
+    },
+  },
+  { _id: false }
+);
+
 const fullConfigSubSchema = new Schema(
   {
     version: { type: Number, required: true, default: 1 },
@@ -120,6 +219,17 @@ const fullConfigSubSchema = new Schema(
     company: { type: companySubSchema, required: true },
     bots: { type: botsSubSchema, required: true },
     ats: { type: atsSubSchema, required: true },
+    stages: {
+      type: stagesSubSchema,
+      required: true,
+      default: () => ({
+        screening: { questionCount: 3, difficulty: 'MEDIUM', passingScore: 70, demoQuestionCount: 1, demoDifficulty: 'EASY' },
+        assessment: { questionCount: 3, difficulty: 'HARD', passingScore: 70, demoQuestionCount: 1, demoDifficulty: 'EASY' },
+        interview: { questionCount: 5, difficulty: 'HARD', passingScore: 75, demoQuestionCount: 1, demoDifficulty: 'EASY' },
+        finalReview: { atsWeight: 15, screeningWeight: 20, assessmentWeight: 30, interviewWeight: 35, passingScore: 70 },
+        offer: { maxNegotiationRounds: 3, demoMaxNegotiationRounds: 1, declineStatus: 'WITHDRAWN' },
+      }),
+    },
     ai: { type: aiSubSchema, required: true },
     security: { type: securitySubSchema, required: true },
   },

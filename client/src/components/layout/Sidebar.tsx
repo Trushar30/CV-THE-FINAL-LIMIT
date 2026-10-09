@@ -224,6 +224,16 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
                 </span>
                 <span>AI Health & Telemetry</span>
               </NavLink>
+              <NavLink
+                to="/admin/demo"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>
+                  <SparklesIcon size={18} />
+                </span>
+                <span>Hiring Demo Simulator</span>
+              </NavLink>
             </div>
           )}
 

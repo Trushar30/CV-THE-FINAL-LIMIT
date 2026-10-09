@@ -193,15 +193,27 @@ export class AIWorker {
       job.attemptsPerProvider = new Map<string, number>();
     }
 
-    // 1. Select eligible provider
+    // 1. Select eligible provider (prioritize preferredProvider if set)
     const availableEntries = this.router.getAvailableProviders(pool);
     let selectedEntry = null;
 
-    for (const entry of availableEntries) {
-      const attempts = job.attemptsPerProvider.get(entry.provider) ?? 0;
-      if (attempts < maxAttempts) {
-        selectedEntry = entry;
-        break;
+    if (job.preferredProvider) {
+      const preferred = availableEntries.find((e) => e.provider === job.preferredProvider);
+      if (preferred) {
+        const attempts = job.attemptsPerProvider.get(preferred.provider) ?? 0;
+        if (attempts < maxAttempts) {
+          selectedEntry = preferred;
+        }
+      }
+    }
+
+    if (!selectedEntry) {
+      for (const entry of availableEntries) {
+        const attempts = job.attemptsPerProvider.get(entry.provider) ?? 0;
+        if (attempts < maxAttempts) {
+          selectedEntry = entry;
+          break;
+        }
       }
     }
 

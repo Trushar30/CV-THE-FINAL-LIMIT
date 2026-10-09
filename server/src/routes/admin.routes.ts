@@ -15,6 +15,12 @@ import {
   adminUpdateJobSchema,
   adminDeleteJobSchema,
 } from '../schemas/company.schema.js';
+import { demoHiringController } from '../controllers/demoHiring.controller.js';
+import {
+  createDemoSessionSchema,
+  demoSessionIdParamsSchema,
+  demoAnswerInputSchema,
+} from '../schemas/demoHiring.schema.js';
 
 export function createAdminRoutes(): Router {
   const router = Router();
@@ -82,6 +88,53 @@ export function createAdminRoutes(): Router {
     '/jobs/:id',
     validate({ body: adminDeleteJobSchema }),
     companyController.adminDeleteJob.bind(companyController)
+  );
+
+  // Admin Hiring Demo Simulator Routes (Spec Section 23, 27.10)
+  router.get(
+    '/demo/hiring',
+    demoHiringController.listDemoSessions.bind(demoHiringController)
+  );
+
+  router.post(
+    '/demo/hiring',
+    validate({ body: createDemoSessionSchema }),
+    demoHiringController.createDemoSession.bind(demoHiringController)
+  );
+
+  router.get(
+    '/demo/hiring/:sessionId',
+    validate({ params: demoSessionIdParamsSchema }),
+    demoHiringController.getDemoSession.bind(demoHiringController)
+  );
+
+  router.post(
+    '/demo/hiring/:sessionId/step',
+    validate({ params: demoSessionIdParamsSchema }),
+    demoHiringController.stepDemoSession.bind(demoHiringController)
+  );
+
+  router.post(
+    '/demo/hiring/:sessionId/answer',
+    validate({ params: demoSessionIdParamsSchema, body: demoAnswerInputSchema }),
+    demoHiringController.submitDemoAnswer.bind(demoHiringController)
+  );
+
+  router.post(
+    '/demo/hiring/:sessionId/simulate',
+    validate({ params: demoSessionIdParamsSchema }),
+    demoHiringController.simulateDemoSession.bind(demoHiringController)
+  );
+
+  router.delete(
+    '/demo/hiring/:sessionId',
+    validate({ params: demoSessionIdParamsSchema }),
+    demoHiringController.cleanupDemoSession.bind(demoHiringController)
+  );
+
+  router.delete(
+    '/demo/hiring',
+    demoHiringController.cleanupAllDemoData.bind(demoHiringController)
   );
 
   return router;

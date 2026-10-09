@@ -4,6 +4,7 @@ import { useAuth, type CareerRole, type PlatformRole } from '../../store/AuthCon
 import { useTheme } from '../../store/ThemeContext';
 import { Button } from '../ui/Button/Button';
 import { MenuIcon, ZapIcon, CoinIcon, SunIcon, MoonIcon } from '../ui/Icon';
+import { NotificationBell } from '../notifications/NotificationBell';
 import styles from './Topbar.module.css';
 
 export interface TopbarProps {
@@ -90,6 +91,9 @@ export function Topbar({
             <option value="AI_MANAGER">Role: AI Manager</option>
           </select>
         )}
+
+        {/* Notifications Bell */}
+        {isAuthenticated && <NotificationBell />}
 
         {/* Theme Toggle Button */}
         <button
