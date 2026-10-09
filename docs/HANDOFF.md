@@ -1,116 +1,159 @@
-# CorpVerse — Session Handoff & Continuity State
-
-**Session Date:** 2026-10-09  
-**Completed Task:** `TASK P6.8: Frontend for Admin demo console (Spec Sections 23, 27.10, 42, ADR-054)`  
-**Authoritative Reference:** `GEMINI.md`, Spec Sections 23, 27.10, 42, ADR-054  
-**Current Monorepo Status:** 535 server tests passing across 26 suites, 88 client tests passing across 12 suites (623 total passing tests), 0 ESLint warnings/errors, clean production Vite + TypeScript build passing.
-
----
+# HANDOFF.md — CorpVerse Engineering Session Transition
 
 ## 1. What Was Done
 
-Built the complete Admin Demo Hiring Console (`AdminDemoPage` at `/admin/demo`) providing platform administrators with full simulation, inspection, and telemetry oversight of the multi-stage hiring engine with complete production state isolation:
+In **TASK P7.6 (Frontend for Employees)**, we built the complete frontend workplace experience and interactive task execution interfaces for active employees (`careerRole: 'EMPLOYEE'`) per Specification Sections 9, 10, 14, 16, 26, 28, and ADR-061:
 
-1. **Backend Integration & Listing Support:**
-   - Added `listDemoSessions()` service in `server/src/services/admin/demoHiring.service.ts` sorting sessions by `createdAt: -1`.
-   - Added `listDemoSessions` controller in `server/src/controllers/demoHiring.controller.ts`.
-   - Mounted `GET /api/admin/demo/hiring` route in `server/src/routes/admin.routes.ts`.
+1. **API Client & Data Layer (`client/src/api/employee.ts`):**
+   - Implemented strongly-typed API client wrappers integrating with `ApiClient`:
+     - `fetchTodayTasks`: `GET /api/employee/tasks/today`
+     - `fetchTaskById`: `GET /api/employee/tasks/:id`
+     - `submitTaskWork`: `POST /api/employee/tasks/:id/submit`
+     - `fetchTaskEvaluation`: `GET /api/employee/tasks/:id/evaluation`
+     - `fetchPromotionProgress`: `GET /api/employee/promotion/progress`
+     - `fetchActiveWarnings`: `GET /api/employee/warnings`
+     - `fetchEmployeeCompany`: `GET /api/employee/company`
+     - `fetchTaskHistory`: `GET /api/employee/tasks/history`
+     - `fetchExpLedger`: `GET /api/employee/ledger/exp`
+   - Defined robust TypeScript interfaces for `EmployeeTask`, `TaskSubmission`, `PerformanceRecord`, `PromotionProgress`, `EmployeeWarning`, `EmployeeCompanyInfo`, and `ExpTransaction`.
 
-2. **Client API Layer (`client/src/api/adminDemo.ts`):**
-   - Implemented typed API functions: `createDemoSession`, `listDemoSessions`, `getDemoSession`, `stepDemoSession`, `submitDemoAnswer`, `simulateDemoSession`, `cleanupDemoSession`, and `cleanupAllDemoData`.
-   - Correctly typed request payloads using `RequestInit` body and headers for `DELETE` calls with mandatory audit justification reasons.
+2. **Backend API Extensions (`server/src/controllers/dailyTask.controller.ts` & `routes/employee.routes.ts`):**
+   - Added `getEmployeeCompany`: returns the active employee record and associated company information.
+   - Added `getTaskHistory`: returns evaluated task history with performance records.
+   - Added `getExpLedger`: returns the immutable double-entry EXP transaction ledger for the employee.
+   - Mounted endpoints on `/api/employee/company`, `/api/employee/tasks/history`, and `/api/employee/ledger/exp`.
 
-3. **Admin Demo Console UI (`AdminDemoPage.tsx`, `AdminDemoPage.module.css`):**
-   - **Configuration Form:** Allows selecting career domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), questions count (1–10), difficulty tier (`EASY`, `MEDIUM`, `HARD`), and interview type (`CONCEPTUAL`, `CODING`, `ARCHITECTURE`, `BEHAVIORAL`).
-   - **Interactive Candidate Runner:** Embedded chat interface showing AI Interviewer Bot questions and candidate answer textarea (`/answer`), stage step progression button (`/step`), and one-click end-to-end simulation button (`/simulate`).
-   - **Stage Results Synthesis Grid:** Renders Stage 1 ATS screening score & summary, Final Review weighted multi-stage calculation (ATS 15%, Screening 20%, Assessment 30%, Interview 35%), and Formal Employment Offer terms (simulated salary, position title, level band).
-   - **Per-Call AI Telemetry Inspector:** Displays comprehensive execution log of every AI gateway request including task type, AI provider (`GEMINI`, `OPENAI`, `GROQ`), model ID, round-trip latency in milliseconds, token counts (prompt & completion), and execution status.
-   - **Session Management & Audited Cleanup:** Historical sessions table with inspection, single-session cleanup (`DELETE /api/admin/demo/hiring/:sessionId`), and system-wide bulk purge modal (`DELETE /api/admin/demo/hiring`) requiring mandatory audit justification reasons recorded in the append-only `auditLogs` collection.
+3. **Styling Tokens & Cyber-Corporate CSS (`client/src/pages/employee/Employee.module.css`):**
+   - Created scoped CSS module adhering to CorpVerse Vanilla CSS design system tokens:
+     - Founder mode banner with gold accent border and glow.
+     - Stat cards grid for Level, Experience Capital, and Active Disciplinary Warnings.
+     - Promotion criteria grid with individual progress bars and met/missing chips.
+     - Daily tasks grid with Primary and Bonus task cards, difficulty tags, and max EXP pills.
+     - Rubric breakdown cards, evaluator score hero, and AI-waiting status tags.
+     - Responsive history table and double-entry EXP transaction ledger.
 
-4. **Routing & Navigation Integration:**
-   - Mounted `/admin/demo` route in `client/src/App.tsx` guarded by `<RoleRoute allowedPlatformRoles={['ADMIN']}>`.
-   - Added `Hiring Demo Simulator` NavLink with `SparklesIcon` in `client/src/components/layout/Sidebar.tsx` under Platform Administration.
+4. **Workplace Dashboard Page (`client/src/pages/employee/WorkplaceDashboardPage.tsx`):**
+   - Routed at `/workplace` and `/employee/dashboard`.
+   - **Deployment Header:** Displays company name, business domain, and simulated annual salary.
+   - **Founder Mode Banner:** Displays locked/unlocked status and exact EXP remaining until the 12,000 EXP threshold with progress bar.
+   - **Career Level & EXP Meter:** Displays level, position title, current accumulated EXP, and target EXP progress bar toward next level.
+   - **Active Warnings Section:** Lists active unexpired warnings with expiration dates and live days-left countdown.
+   - **Promotion Readiness Panel:** Displays real-time status across all 4 criteria (EXP, tasks completed, average score, active warnings) with met/missing badges and missing requirement summaries.
+   - **Today's Daily Tasks Grid:** Shows primary and bonus tasks with on-demand generation state and start buttons.
 
-5. **Comprehensive Vitest Integration Test Suite (`adminDemo.test.tsx`):**
-   - 8 new unit/integration tests verifying setup form submission, past sessions listing, interactive question answering, step advancement, full lifecycle simulation, stage scores rendering, AI telemetry breakdown, single session cleanup, and bulk purge modal with audit reason.
-   - All 8 tests passing cleanly (88 client tests total, 623 passing monorepo tests).
+5. **Task Execution & Rubric Evaluation Page (`client/src/pages/employee/TaskWorkPage.tsx`):**
+   - Routed at `/tasks/:id`.
+   - Displays technical scenario, core requirements, and evaluation rubric criteria.
+   - Solution answer editor with minimum 10-character validation and single-submission guard.
+   - Post-evaluation score hero (aiScore / 100), score band badge, EXP awarded pill, evaluator feedback, strengths, deficiencies, and criterion-by-criterion rubric scoring breakdown.
+   - Disciplinary alert banner displayed when evaluation score falls into the Poor band ($\le 39$).
+   - Clearly communicates AI-waiting states with a dedicated banner when a task is in `WAITING_FOR_PROVIDER` status.
+
+6. **Task History & Ledger Page (`client/src/pages/employee/TaskHistoryPage.tsx`):**
+   - Routed at `/tasks` and `/tasks/history`.
+   - Tab 1: Evaluated tasks table showing date, title, kind, tier, score band, awarded EXP, and rubric drill-down link.
+   - Tab 2: Double-entry EXP transaction ledger showing immutable timestamp, type, amount, balance after, and source justification.
+
+7. **Verification & Testing:**
+   - Added comprehensive integration test suite `client/src/tests/employeeWorkplace.test.tsx` verifying:
+     - Dashboard renders level, EXP bar, Founder mode banner, active warnings, promotion progress, and daily tasks.
+     - TaskWorkPage renders scenario, enforces minimum submission length, and displays post-evaluation score hero and rubric breakdown.
+     - TaskHistoryPage renders past tasks and toggles to the immutable EXP ledger.
+   - All 96 client unit tests pass across 13 suites.
+   - Monorepo build `npm run build --workspaces` succeeds with 0 errors.
+   - Monorepo lint `npm run lint` passes 100% clean.
 
 ---
 
 ## 2. Files Changed
 
-### Backend Files Changed:
-- `server/src/services/admin/demoHiring.service.ts`: Added `listDemoSessions` service method.
-- `server/src/controllers/demoHiring.controller.ts`: Added `listDemoSessions` handler.
-- `server/src/routes/admin.routes.ts`: Mounted `GET /api/admin/demo/hiring` route.
+### Backend Additions
+- `server/src/controllers/dailyTask.controller.ts`: Added `getEmployeeCompany`, `getTaskHistory`, and `getExpLedger`.
+- `server/src/routes/employee.routes.ts`: Mounted `/company`, `/tasks/history`, and `/ledger/exp`.
 
-### Frontend Files Created / Changed:
-- `client/src/api/adminDemo.ts`: Created typed client API for admin demo operations.
-- `client/src/pages/admin/AdminDemoPage.tsx`: Created complete admin demo hiring simulator console.
-- `client/src/pages/admin/AdminDemoPage.module.css`: Created CSS module conforming to canonical design tokens.
-- `client/src/App.tsx`: Mounted `/admin/demo` guarded route.
-- `client/src/components/layout/Sidebar.tsx`: Added `Hiring Demo Simulator` NavLink.
-- `client/src/tests/adminDemo.test.tsx`: Created Vitest test suite (8 tests).
+### Frontend Additions
+- `client/src/api/employee.ts`: Created API client and full type definitions.
+- `client/src/pages/employee/Employee.module.css`: Created scoped styles for dashboard, task editor, rubric, and history.
+- `client/src/pages/employee/WorkplaceDashboardPage.tsx`: Created employee workplace dashboard.
+- `client/src/pages/employee/TaskWorkPage.tsx`: Created technical task execution and rubric evaluation page.
+- `client/src/pages/employee/TaskHistoryPage.tsx`: Created task history and immutable EXP ledger page.
+- `client/src/App.tsx`: Wired `/workplace`, `/employee/dashboard`, `/tasks`, `/tasks/history`, `/tasks/:id`.
+- `client/src/tests/employeeWorkplace.test.tsx`: Added 8 comprehensive integration tests.
 
-### Documentation Files Updated:
-- `docs/PROGRESS.md`: Marked Phase 6 as COMPLETED, updated Section 2 & 3 logs for P6.4 through P6.8, set next task to P7.1.
-- `docs/DECISIONS.md`: Recorded ADR-054 for Admin Demo Hiring Console Architecture.
-- `docs/ARCHITECTURE.md`: Added Section 9.10 documenting Admin Demo Hiring Console Architecture.
-- `docs/HANDOFF.md`: Overwritten with current continuity state.
+### Documentation
+- `docs/DECISIONS.md`: Recorded ADR-061.
+- `docs/ARCHITECTURE.md`: Added Section 10.10.
+- `docs/PROGRESS.md`: Marked TASK P7.6 as COMPLETED; updated next tasks.
+- `docs/HANDOFF.md`: Overwritten with current repository state.
 
 ---
 
 ## 3. Current Repository State
 
-- **Monorepo Tests:** 623 passing tests (535 server integration tests, 88 client tests).
-- **Linter Status:** Clean (0 errors, 0 warnings).
-- **Build Status:** Clean (server TypeScript build and client Vite production build pass).
-- **Phase Status:** Phase 0–6 COMPLETED; Phase 7 (Employee System) IN PROGRESS.
+- **Branch / Workspaces:** `@corpverse/server` and `@corpverse/client`.
+- **Server Status:** TypeScript build clean. All employee service tests (39/39 passing in `promotion.test.ts`, `discipline.test.ts`, `taskEvaluation.test.ts`; 30/30 in dailyTask suites).
+- **Client Status:** Vite bundle and TypeScript build clean (`dist/` built in 7.08s). All 96 client tests passing across 13 test suites.
+- **Monorepo Lint:** Clean (0 errors, 0 warnings).
+- **Phase Status:** Phase 7 (Employee Progression & Daily Gameplay) is now 100% complete!
 
 ---
 
 ## 4. Exact Next Steps
 
-**TASK P7.1: Employee workspace foundation and daily task engine**
-- Read Spec Section 9, 26 (Collections 17–19), 27.6.
-- Build:
-  1. Employee workspace foundation (`/workplace`).
-  2. Daily task issuance engine (1 primary task + 1 optional bonus task per day).
-  3. Task model (`tasks` collection) tracking domain, difficulty (`EASY`, `MEDIUM`, `HARD`), max EXP (`30`, `60`, `100`), status (`ISSUED`, `IN_PROGRESS`, `SUBMITTED`, `EVALUATED`, `EXPIRED`).
-  4. Endpoints to retrieve today's tasks and initiate daily work.
+The next task according to the roadmap is **TASK P8.1: Founder Unlock & Company Creation**:
+1. Read Spec Sections 17 and 20.
+2. Build Founder Unlock Check & Confirmation:
+   - Check if user has accumulated $\ge 12,000$ total EXP.
+   - Endpoint for user confirmation to activate Founder Mode.
+   - Transition `user.careerRole` from `EMPLOYEE` / `JOB_SEEKER` to `FOUNDER`.
+3. Build Starter Capital Grant:
+   - Grant 1,000 CorpCoin once ever, setting `founderStarterCoinGranted = true`.
+   - Record immutable double-entry transaction in `corpCoinTransactions`.
+4. Build Company Creation:
+   - Deduct 100 CorpCoin creation fee from founder's balance.
+   - Enforce company limits: 1 active company per founder.
+   - Initialize company record (`name`, `domain`, `tier: 'STARTUP'`, `financialHealth: 1000`, `founderId: user._id`).
+   - Deduct fee and record ledger entry in `corpCoinTransactions`.
+5. Unit and integration tests covering:
+   - Rejection below 12,000 EXP.
+   - Exactly once grant of 1,000 CorpCoin.
+   - Deduction of 100 CorpCoin fee.
+   - Prevention of creating more than 1 active company per founder.
 
 ---
 
 ## 5. Commands to Run
 
 ```bash
-# Run server test suite
-npm test --workspace=@corpverse/server
+# Run employee workplace client test suite
+npm run test --workspace=@corpverse/client
 
-# Run client test suite
-npm test --workspace=@corpverse/client -- --run
+# Run all employee server test suites
+npx vitest run src/tests/promotion.test.ts src/tests/discipline.test.ts src/tests/taskEvaluation.test.ts src/tests/dailyTask.service.test.ts
 
-# Run linter
+# Run linting across monorepo
 npm run lint
 
-# Run production build
-npm run build
+# Build server and client
+npm run build --workspaces
 ```
 
 ---
 
 ## 6. Known Bugs or Open Items
 
-- None. All requirements for TASK P6.8 and Phase 6 are fulfilled with zero regressions.
+- None. All requirements for TASK P7.6 are complete, tested, and recorded.
 
 ---
 
 ## 7. Conventional Commit Message
 
-`feat(client): implement admin demo hiring console and telemetry inspector (P6.8)`
+```
+feat(employee): build workplace dashboard, task solver, rubric feedback, and history pages (P7.6)
+```
 
 ---
 
-## 8. Unsure Items
+## 8. Items Unsure About
 
-- None. All implementation details follow Spec Sections 23, 27.10, and 42 without inventions.
+- None. All implementations strictly follow Spec Sections 9, 10, 14, 16, 26, 28, and approved decisions.

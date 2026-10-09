@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   platformConfigSchema,
   DEFAULT_PLATFORM_CONFIG,
+  DEFAULT_LEVEL_TABLE,
   atsConfigSchema,
   employeeConfigSchema,
   careerConfigSchema,
@@ -20,10 +21,15 @@ describe('PlatformConfig Zod Schema & Sensible Limits', () => {
     expect(parsed.version).toBe(1);
     expect(parsed.career.founderUnlockExp).toBe(12000);
     expect(parsed.career.maxLevel).toBe(10);
+    expect(parsed.career.levelTable).toEqual(DEFAULT_LEVEL_TABLE);
+    expect(parsed.career.levelTable.length).toBe(10);
     expect(parsed.employee.warningThreshold).toBe(4);
     expect(parsed.employee.warningExpirationDays).toBe(30);
     expect(parsed.employee.primaryTasksPerDay).toBe(1);
     expect(parsed.employee.bonusTasksPerDay).toBe(1);
+    expect(parsed.employee.easyMaxExp).toBe(30);
+    expect(parsed.employee.mediumMaxExp).toBe(60);
+    expect(parsed.employee.hardMaxExp).toBe(100);
     expect(parsed.employee.minimumPromotionScore).toBe(70);
     expect(parsed.applications.maxActive).toBe(5);
     expect(parsed.founder.starterCorpCoin).toBe(1000);
@@ -59,6 +65,32 @@ describe('PlatformConfig Zod Schema & Sensible Limits', () => {
     it('should reject maxLevel < 1 or > 100', () => {
       expect(() => careerConfigSchema.parse({ founderUnlockExp: 12000, maxLevel: 0 })).toThrow();
       expect(() => careerConfigSchema.parse({ founderUnlockExp: 12000, maxLevel: 101 })).toThrow();
+    });
+
+    it('should reject invalid levelTable entries', () => {
+      expect(() =>
+        careerConfigSchema.parse({
+          founderUnlockExp: 12000,
+          maxLevel: 10,
+          levelTable: [{ level: 0, title: 'Invalid', minExp: 0 }],
+        })
+      ).toThrow();
+
+      expect(() =>
+        careerConfigSchema.parse({
+          founderUnlockExp: 12000,
+          maxLevel: 10,
+          levelTable: [{ level: 1, title: '', minExp: 0 }],
+        })
+      ).toThrow();
+
+      expect(() =>
+        careerConfigSchema.parse({
+          founderUnlockExp: 12000,
+          maxLevel: 10,
+          levelTable: [{ level: 1, title: 'Intern', minExp: -50 }],
+        })
+      ).toThrow();
     });
   });
 

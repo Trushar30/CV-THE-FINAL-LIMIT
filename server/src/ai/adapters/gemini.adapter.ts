@@ -62,6 +62,46 @@ interface GeminiResponsePayload {
   usageMetadata?: GeminiUsageMetadata;
 }
 
+/**
+ * Strips properties unsupported by Google Gemini Schema specification
+ * (e.g. additionalProperties, $schema, numeric limits) while preserving type,
+ * properties, required, items, enum, and description.
+ */
+export function sanitizeSchemaForGemini(schema: unknown): unknown {
+  if (Array.isArray(schema)) {
+    return schema.map(sanitizeSchemaForGemini);
+  }
+  if (schema !== null && typeof schema === 'object') {
+    const cleaned: Record<string, unknown> = {};
+    const disallowedKeys = new Set([
+      'additionalProperties',
+      '$schema',
+      '$defs',
+      'definitions',
+      'minimum',
+      'maximum',
+      'exclusiveMinimum',
+      'exclusiveMaximum',
+      'minLength',
+      'maxLength',
+      'pattern',
+      'minItems',
+      'maxItems',
+      'uniqueItems',
+      'default',
+    ]);
+
+    for (const [key, value] of Object.entries(schema)) {
+      if (disallowedKeys.has(key)) {
+        continue;
+      }
+      cleaned[key] = sanitizeSchemaForGemini(value);
+    }
+    return cleaned;
+  }
+  return schema;
+}
+
 export class GeminiAdapter implements ProviderAdapter {
   readonly name: AIProvider = 'gemini';
 
@@ -305,7 +345,7 @@ export class GeminiAdapter implements ProviderAdapter {
     // Structured output schema
     if (request.outputSchema) {
       generationConfig.responseMimeType = 'application/json';
-      generationConfig.responseSchema = request.outputSchema;
+      generationConfig.responseSchema = sanitizeSchemaForGemini(request.outputSchema);
     }
 
     if (Object.keys(generationConfig).length > 0) {

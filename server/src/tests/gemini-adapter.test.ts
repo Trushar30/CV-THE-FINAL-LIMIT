@@ -20,7 +20,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { GeminiAdapter } from '../ai/adapters/gemini.adapter.js';
+import { GeminiAdapter, sanitizeSchemaForGemini } from '../ai/adapters/gemini.adapter.js';
 import type { AIRequest } from '../ai/types.js';
 import { AIError } from '../ai/types.js';
 
@@ -339,6 +339,74 @@ describe('GeminiAdapter', () => {
         expect(aiError.category).toBe('INVALID_REQUEST');
         expect(aiError.message).toContain('empty content');
       }
+    });
+
+    it('should strip additionalProperties and unsupported numeric bounds when sending responseSchema', async () => {
+      const openAiStyleSchema = {
+        type: 'object',
+        properties: {
+          score: { type: 'number', minimum: 0, maximum: 100 },
+          tags: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['score', 'tags'],
+        additionalProperties: false,
+      };
+
+      const mockBody = createGeminiResponse(JSON.stringify({ score: 95, tags: ['ts'] }));
+      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(mockBody), { status: 200 }));
+
+      const adapter = new GeminiAdapter({
+        modelId: TEST_MODEL,
+        apiKey: TEST_API_KEY,
+      });
+
+      await adapter.generate(createTestRequest({ outputSchema: openAiStyleSchema }));
+
+      const [, calledInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      const sentPayload = JSON.parse(calledInit.body as string);
+      const schemaSent = sentPayload.generationConfig.responseSchema;
+
+      expect(schemaSent.additionalProperties).toBeUndefined();
+      expect(schemaSent.properties.score.minimum).toBeUndefined();
+      expect(schemaSent.properties.score.maximum).toBeUndefined();
+      expect(schemaSent.properties.score.type).toBe('number');
+      expect(schemaSent.required).toEqual(['score', 'tags']);
+    });
+
+    it('sanitizeSchemaForGemini should cleanly strip all disallowed properties recursively', () => {
+      const complexSchema = {
+        $schema: 'http://json-schema.org/draft-07/schema#',
+        type: 'object',
+        properties: {
+          nested: {
+            type: 'object',
+            properties: {
+              value: { type: 'string', minLength: 1, maxLength: 50 },
+            },
+            additionalProperties: false,
+          },
+          items: {
+            type: 'array',
+            items: { type: 'number', minimum: 10 },
+            minItems: 1,
+            uniqueItems: true,
+          },
+        },
+        additionalProperties: false,
+      };
+
+      const result = sanitizeSchemaForGemini(complexSchema) as Record<string, unknown>;
+      expect(result.$schema).toBeUndefined();
+      expect(result.additionalProperties).toBeUndefined();
+      const nested = (result.properties as Record<string, unknown>).nested as Record<string, unknown>;
+      expect(nested.additionalProperties).toBeUndefined();
+      const nestedValue = (nested.properties as Record<string, unknown>).value as Record<string, unknown>;
+      expect(nestedValue.minLength).toBeUndefined();
+      expect(nestedValue.maxLength).toBeUndefined();
+      expect(nestedValue.type).toBe('string');
+      const items = (result.properties as Record<string, unknown>).items as Record<string, unknown>;
+      expect(items.minItems).toBeUndefined();
+      expect(items.uniqueItems).toBeUndefined();
     });
   });
 

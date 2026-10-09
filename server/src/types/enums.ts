@@ -213,3 +213,64 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'PROMOTION',
   'SYSTEM_ANNOUNCEMENT',
 ] as const;
+
+// Performance Score Bands (GEMINI.md Section 5 & Spec Section 11.1)
+export type PerformanceBand =
+  | 'POOR'
+  | 'NEEDS_IMPROVEMENT'
+  | 'ACCEPTABLE'
+  | 'GOOD'
+  | 'EXCELLENT';
+
+export const PERFORMANCE_BANDS: readonly PerformanceBand[] = [
+  'POOR',
+  'NEEDS_IMPROVEMENT',
+  'ACCEPTABLE',
+  'GOOD',
+  'EXCELLENT',
+] as const;
+
+export type PerformanceBandLabel =
+  | 'Poor'
+  | 'Needs Improvement'
+  | 'Acceptable'
+  | 'Good'
+  | 'Excellent';
+
+// Employee Task Types & Difficulties (Spec Section 9, 26.17, GEMINI.md Section 5)
+export type TaskKind = TaskType;
+export const TASK_KINDS = TASK_TYPES;
+
+export type EmployeeTaskStatus =
+  | 'ASSIGNED'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'EVALUATED'
+  | 'EXPIRED'
+  | 'WAITING_FOR_PROVIDER';
+
+export const EMPLOYEE_TASK_STATUSES: readonly EmployeeTaskStatus[] = [
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'SUBMITTED',
+  'EVALUATED',
+  'EXPIRED',
+  'WAITING_FOR_PROVIDER',
+] as const;
+
+// Discipline & Review Enums (Spec Sections 11 & 26.20–26.22)
+export type WarningStatus = 'ACTIVE' | 'EXPIRED' | 'RESOLVED' | 'ESCALATED';
+export const WARNING_STATUSES: readonly WarningStatus[] = [
+  'ACTIVE',
+  'EXPIRED',
+  'RESOLVED',
+  'ESCALATED',
+] as const;
+
+export type EmploymentReviewDecision = 'DEMOTION' | 'TERMINATION';
+export const EMPLOYMENT_REVIEW_DECISIONS: readonly EmploymentReviewDecision[] = [
+  'DEMOTION',
+  'TERMINATION',
+] as const;
+
+

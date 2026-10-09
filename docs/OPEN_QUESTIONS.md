@@ -306,3 +306,16 @@ Per the **No-Invention Rules** in [GEMINI.md](file:///Users/trushargpatel/Downlo
   - `offer`: `maxNegotiationRounds: 3` (demo: 1).
   - `declineStatus`: `WITHDRAWN` (candidate voluntarily declined/walked away from offer, releasing active quota cleanly).
 
+---
+
+### Q5: Daily Task Late Submission Policy & Expiration Window (TASK P7.3)
+
+- **Context:** TASK P7.3 implements daily task submission and evaluation before `dueAt`. Specification Section 9 notes tasks expire if not submitted by `dueAt`. In current implementation, submissions attempted strictly after `dueAt` or when `status === 'EXPIRED'` are rejected with HTTP 400 (`Task deadline has passed`) and the task transitions to `status = 'EXPIRED'`.
+- **Current Behavior:** Strict cutoff at end-of-day UTC (`dueAt`); late submissions are rejected and expired with 0 EXP awarded.
+- **Open Question / Proposal for Project Lead:**
+  - Option A (Current & Recommended): Strict cutoff at end-of-day UTC (`dueAt`); late submissions are rejected and expired with 0 EXP awarded.
+  - Option B: Grace period (e.g. 2 hours after `dueAt`) with a 50% EXP penalty.
+  - Option C: Configurable late submission window in `PlatformConfig.employee.lateSubmissionGraceMinutes`.
+- **Status:** **TODO (Option A currently enforced pending user preference)**
+
+

@@ -41,7 +41,7 @@ export { AIGateway, validateAgainstSchema } from './gateway.js';
 // Adapters
 export { MockAdapter } from './adapters/mock.adapter.js';
 export type { MockAdapterConfig } from './adapters/mock.adapter.js';
-export { GeminiAdapter } from './adapters/gemini.adapter.js';
+export { GeminiAdapter, sanitizeSchemaForGemini } from './adapters/gemini.adapter.js';
 export type { GeminiAdapterOptions } from './adapters/gemini.adapter.js';
 export { OpenAIAdapter } from './adapters/openai.adapter.js';
 export type { OpenAIAdapterOptions } from './adapters/openai.adapter.js';

@@ -20,6 +20,15 @@ const salaryBandSubSchema = new Schema(
   { _id: false }
 );
 
+const levelTableSubSchema = new Schema(
+  {
+    level: { type: Number, required: true },
+    title: { type: String, required: true },
+    minExp: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const careerSubSchema = new Schema(
   {
     founderUnlockExp: { type: Number, required: true, default: 12000 },
@@ -40,6 +49,33 @@ const careerSubSchema = new Schema(
         { level: 10, title: 'Principal', minSalary: 340000, maxSalary: 420000, defaultSalary: 380000 },
       ],
     },
+    levelTable: {
+      type: [levelTableSubSchema],
+      required: true,
+      default: () => [
+        { level: 1, title: 'Intern', minExp: 0 },
+        { level: 2, title: 'Junior', minExp: 500 },
+        { level: 3, title: 'Junior+', minExp: 1200 },
+        { level: 4, title: 'Associate', minExp: 2000 },
+        { level: 5, title: 'Mid', minExp: 3000 },
+        { level: 6, title: 'Mid+', minExp: 4500 },
+        { level: 7, title: 'Senior', minExp: 6500 },
+        { level: 8, title: 'Senior+', minExp: 9000 },
+        { level: 9, title: 'Lead', minExp: 12000 },
+        { level: 10, title: 'Principal', minExp: 16000 },
+      ],
+    },
+  },
+  { _id: false }
+);
+
+const promotionRuleSubSchema = new Schema(
+  {
+    targetLevel: { type: Number, required: true },
+    minExp: { type: Number, required: true },
+    requiredCompletedTasks: { type: Number, required: true },
+    minAverageScore: { type: Number, required: true, default: 70 },
+    maxActiveWarnings: { type: Number, required: true, default: 1 },
   },
   { _id: false }
 );
@@ -48,9 +84,27 @@ const employeeSubSchema = new Schema(
   {
     primaryTasksPerDay: { type: Number, required: true, default: 1 },
     bonusTasksPerDay: { type: Number, required: true, default: 1 },
+    easyMaxExp: { type: Number, required: true, default: 30 },
+    mediumMaxExp: { type: Number, required: true, default: 60 },
+    hardMaxExp: { type: Number, required: true, default: 100 },
     warningThreshold: { type: Number, required: true, default: 4 },
     warningExpirationDays: { type: Number, required: true, default: 30 },
     minimumPromotionScore: { type: Number, required: true, default: 70 },
+    promotionRules: {
+      type: [promotionRuleSubSchema],
+      required: true,
+      default: () => [
+        { targetLevel: 2, minExp: 500, requiredCompletedTasks: 5, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 3, minExp: 1200, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 4, minExp: 2000, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 5, minExp: 3000, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 6, minExp: 4500, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 7, minExp: 6500, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 8, minExp: 9000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 9, minExp: 12000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+        { targetLevel: 10, minExp: 16000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+      ],
+    },
   },
   { _id: false }
 );

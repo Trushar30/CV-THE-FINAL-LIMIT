@@ -314,6 +314,19 @@ APPLIED ──► ATS_SCREENING ──► SCREENING ──► ASSESSMENT ──�
    - $\ge 4$ ACTIVE warnings triggers an automatic **Employment Review**.
    - Employment review evaluates whether to demote (level drops by 1, EXP preserved) or terminate (role resets to `JOB_SEEKER`).
 
+### 8.1 Level and EXP Engine Architecture (TASK P7.1, ADR-055)
+
+- **Pure Functions Engine (`services/economy/expEngine.ts`):**
+  - `levelForExp(totalExp, levelTable)`: Resolves career level (1–10) deterministically from cumulative EXP against `PlatformConfig.career.levelTable`.
+  - `calculateTaskExp(score, maxExp)`: Implements $\text{round}((\text{score} / 100) \times \text{maxExp})$, strictly clamped to $[0, \text{maxExp}]$, handling strings, negative values, and non-finite numbers safely.
+  - `performanceBand(score)`: Maps scores into canonical bands: `POOR` (0–39), `NEEDS_IMPROVEMENT` (40–59), `ACCEPTABLE` (60–74), `GOOD` (75–89), `EXCELLENT` (90–100).
+  - `getLevelDetails(totalExp, levelTable, founderUnlockExp)`: Computes progress percentages, title, next level threshold, and Founder Mode eligibility ($12,000$ EXP).
+- **Service Layer (`services/economy/level.service.ts`):**
+  - Authoritative calculation without stale persisted level columns.
+  - All EXP awards route through `ExpService.awardExp` with immutable ledger transaction creation in `expTransactions`. Zero direct writes to `totalExp`.
+  - Handles 0-EXP outcomes safely without creating zero-amount transactions.
+  - Telemetry and level-up detection (`leveledUp: boolean`).
+
 ---
 
 ## 9. Founder Simulation Engine
@@ -1072,5 +1085,173 @@ All internal AI interactions are isolated from vendor-specific payloads through 
   3. **Stage Results Synthesis Panels:** Renders stage scores including Stage 1 ATS screening score & summary, Final Review weighted multi-stage synthesis (ATS 15%, Screening 20%, Assessment 30%, Interview 35%), and Formal Employment Offer terms (simulated salary, position title, level band).
   4. **Per-Call AI Telemetry Inspector:** Displays comprehensive execution log of every AI gateway request including task type, AI provider (`GEMINI`, `OPENAI`, `GROQ`), model ID, round-trip latency in milliseconds, token counts (prompt & completion), and execution status.
   5. **Session Management & Audited Cleanup:** Historical sessions table with inspection, single-session cleanup (`DELETE /api/admin/demo/hiring/:sessionId`), and system-wide bulk purge modal (`DELETE /api/admin/demo/hiring`) requiring mandatory audit justification reasons recorded in the append-only `auditLogs` collection.
+
+---
+
+## 10. Employee Task System & Daily Work Engine Architecture (TASK P7.2)
+
+### 10.1 Daily Task Data Model & Idempotency Invariants
+
+- **`employeeTasks` Collection:**
+  - `employeeId`: `Types.ObjectId` referencing `companyEmployees` (indexed).
+  - `userId`: `Types.ObjectId` referencing `users` (indexed).
+  - `companyId`: `Types.ObjectId` referencing `companies` (indexed).
+  - `domain`: `CareerDomain` (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`).
+  - `level`: Number (1–10).
+  - `kind`: `TaskKind` (`'PRIMARY'` | `'BONUS'`).
+  - `difficulty`: `TaskDifficulty` (`'EASY'` | `'MEDIUM'` | `'HARD'`).
+  - `maxExp`: Number (30, 60, or 100), authoritatively derived from difficulty tier and `PlatformConfig.employee`.
+  - `status`: `EmployeeTaskStatus` (`'ASSIGNED'`, `'IN_PROGRESS'`, `'SUBMITTED'`, `'EVALUATED'`, `'EXPIRED'`, `'WAITING_FOR_PROVIDER'`).
+  - `scenario`: Structured scenario object (`title`, `scenario`, `requirements: string[]`, `difficulty`, `evaluationCriteria: string[]`).
+  - `dayKey`: String (`YYYY-MM-DD` in UTC).
+  - `dueAt`: UTC timestamp for end of calendar day (23:59:59.999 UTC).
+  - `aiJobId`: Optional reference to background `AIJob` document during queue processing.
+- **Compound Unique Index:**
+  - `{ employeeId: 1, dayKey: 1, kind: 1 }` (unique: true).
+  - Guarantees zero duplicate task issuance per employee per calendar day without background cron schedulers.
+
+### 10.2 Authoritative Option A Difficulty & Max EXP Resolution
+
+- **Option A (Graduated Stretch) Mapping:**
+  - **L1–L3 (Intern, Junior, Junior+):** PRIMARY = `EASY` (30 maxExp), BONUS = `MEDIUM` (60 maxExp).
+  - **L4–L6 (Associate, Mid, Mid+):** PRIMARY = `MEDIUM` (60 maxExp), BONUS = `HARD` (100 maxExp).
+  - **L7–L10 (Senior, Senior+, Lead, Principal):** PRIMARY = `HARD` (100 maxExp), BONUS = `HARD` (100 maxExp).
+- **Backend Authority Invariant:**
+  - LLMs cannot set task difficulty or EXP rewards. Backend code strictly computes difficulty from employee level and resolves `maxExp` from `PlatformConfig.employee` limits (`easyMaxExp: 30`, `mediumMaxExp: 60`, `hardMaxExp: 100`).
+
+### 10.3 Lazy, On-Demand Generation Protocol (`DailyTaskService`)
+
+- **Cron-Free Design:**
+  - When an employee opens their dashboard or queries `GET /api/employee/tasks/today`, `DailyTaskService.getOrCreateDailyTasks({ userId })` evaluates whether today's `PRIMARY` and `BONUS` tasks already exist for that employee and `dayKey`.
+  - If both tasks exist, they are returned immediately with zero AI Gateway invocations or database mutations.
+  - If tasks do not exist, missing kinds are generated on-demand and persisted.
+  - Concurrent incoming requests are protected against race conditions by catching MongoDB duplicate key errors (`code: 11000`) and fetching the concurrently generated task.
+
+### 10.4 AI Resilience, WAITING_FOR_PROVIDER Fallback & Background Queue Fulfillment
+
+- **AI Gateway Integration:**
+  - Calls `AIGateway.execute` with `taskType: 'TASK_GENERATION'` in the `PIPELINE` pool.
+  - Prompts are grounded in the employer company's profile, domain, employee level, and target difficulty.
+  - Output is strictly validated against `taskGenerationOutputSchema` (Zod) and `taskGenerationJsonSchema`.
+- **Graceful Fallback:**
+  - If all AI providers are unavailable, degraded, or encounter rate limits, the task document is still created with `status: 'WAITING_FOR_PROVIDER'` and placeholder scenario text so the employee sees their queued tasks.
+  - An asynchronous background job is queued via `AIGateway.submit`.
+  - An `AIWorker` handler automatically intercepts the completed job and updates the task from `WAITING_FOR_PROVIDER` to `ASSIGNED` with full scenario details.
+  - Subsequent requests to `getOrCreateDailyTasks` also attempt synchronous re-generation if provider availability has recovered.
+
+### 10.5 Employee RBAC & API Endpoints
+
+- **`GET /api/employee/tasks/today` & `GET /api/v1/employee/tasks/today`:**
+  - Authenticated via `authenticateJwt`.
+  - Guarded by `requireCareerRole('EMPLOYEE')` (denies `JOB_SEEKER` or `NONE` with 403 Forbidden).
+  - Returns array of today's tasks (PRIMARY first, then BONUS).
+- **`GET /api/employee/tasks/:id` & `GET /api/v1/employee/tasks/:id`:**
+  - Authenticated via `authenticateJwt`.
+  - Guarded by `requireCareerRole('EMPLOYEE')` with employee ownership verification.
+
+### 10.6 Task Submission, AI Evaluation & Authoritative EXP Awarding (TASK P7.3)
+
+- **Mongoose Data Models:**
+  - `TaskSubmissionModel` (`taskSubmissions` collection): `taskId`, `userId`, `content` (10–50,000 characters), `submittedAt`, timestamps. Compound unique index on `{ taskId: 1 }` prevents double submissions.
+  - `PerformanceRecordModel` (`performanceRecords` collection): `taskSubmissionId`, `taskId`, `userId`, `companyId`, `aiScore`, `scoreBand`, `awardedExp`, `feedback`, `strengths`, `weaknesses`, `criteriaScores: [{ criterion, score, comment }]`, timestamps. Compound unique index on `{ taskSubmissionId: 1 }` guarantees idempotent evaluation.
+- **Submission Protocol (`submitTask`):**
+  - Asserts employee task ownership and active employment status in `CompanyEmployee`.
+  - Enforces deadline strictly: if `Date.now() > task.dueAt` or `task.status === 'EXPIRED'`, the task transitions to `'EXPIRED'` and the submission is rejected with 400 (`Task deadline has passed`).
+  - Transitions task status to `'SUBMITTED'`.
+- **Authoritative AI Evaluation Protocol (`evaluateSubmission`):**
+  - AI Gateway execution: Calls `AIGateway.execute` with `taskType: 'TASK_EVALUATION'` in `PIPELINE` pool, providing full employer context, domain, level, scenario requirements, rubric evaluation criteria, and candidate submission.
+  - Schema validation: Validated against strict Zod schema `taskEvaluationOutputSchema` and JSON Schema `taskEvaluationJsonSchema`.
+  - **Score Clamping & EXP Invariant:** Raw score from AI is clamped to $[0, 100]$ via `clampScore`. Awarded EXP is calculated via pure `calculateTaskExp(clampedScore, task.maxExp)` and bounded strictly to $[0, \text{maxExp}]$. Even if AI returns 150, negative values, NaN, or strings, awarded EXP never exceeds `maxExp` and user total EXP never decreases.
+  - **Idempotency Guarantee:** If `PerformanceRecordModel.findOne({ taskSubmissionId })` exists, the service immediately returns the existing record without invoking the AI Gateway or awarding additional EXP.
+  - **Double-Entry Ledger:** EXP is awarded via `LevelService.awardTaskExp` with `sourceId = submission._id`, recording an immutable `ExpTransaction` in `expTransactions`.
+  - **Notification:** Sends an in-app notification of type `'TASK_EVALUATED'` with links to the evaluated task.
+
+### 10.7 Employee Performance Statistics Aggregation
+
+- **Aggregation Protocol (`getEmployeePerformanceStats`):**
+  - `completedTasksCount`: Total number of performance records for the user.
+  - `averageScore`: Running arithmetic mean of clamped AI scores across completed submissions.
+  - `scoreBandsCount`: Frequency map across `POOR` (0–39), `NEEDS_IMPROVEMENT` (40–59), `ACCEPTABLE` (60–74), `GOOD` (75–89), and `EXCELLENT` (90–100).
+  - Used for promotion eligibility checks per Spec Section 11.3 (D17: average score $\ge 70$, required completed tasks).
+- **New Endpoints:**
+  - `POST /api/employee/tasks/:id/submit`: Submits work, triggers evaluation, returns submission and performance record.
+  - `GET /api/employee/tasks/:id/evaluation`: Retrieves evaluation and rubric scoring details.
+  - `GET /api/employee/performance/stats`: Returns aggregated performance stats.
+
+### 10.8 Discipline System, Warning Natural Decay & Employment Reviews (TASK P7.4)
+
+- **Mongoose Data Models:**
+  - `WarningModel` (`warnings` collection, Spec 26.20): `userId`, `companyId`, `taskSubmissionId`, `status` (`'ACTIVE'`, `'EXPIRED'`, `'RESOLVED'`, `'ESCALATED'`), `reason`, `issuedAt`, `expiresAt`. Compound indexes `{ userId: 1, companyId: 1, status: 1, expiresAt: 1 }`, and unique `{ taskSubmissionId: 1 }`.
+  - `DemotionModel` (`demotions` collection, Spec 26.22): `employeeId`, `userId`, `companyId`, `previousLevel`, `newLevel`, `previousPositionTitle`, `newPositionTitle`, `previousSalarySimulated`, `newSalarySimulated`, `activeWarningCount`, `reason`, `demotedAt`.
+  - `EmploymentReviewModel` (`employmentReviews` collection, Spec 26.21): `trigger`, `activeWarningCount`, `decision` (`'DEMOTION'`, `'TERMINATION'`), `reason`, `aiRecommendation`, `reviewedAt`.
+- **Warning Natural Query Decay (Cron-Free Invariant):**
+  - Active warnings are computed strictly as `{ userId, companyId, status: 'ACTIVE', expiresAt: { $gt: now } }`.
+  - Stored `expiresAt = issuedAt + warningExpirationDays` (30 days from `PlatformConfig.employee`).
+  - Naturally decays without needing any scheduled cron workers.
+- **Rule D4 Warning Issuance:**
+  - Issued automatically on Poor performance band ($0 \le \text{score} \le 39$) during task evaluation.
+  - Idempotent: exactly one warning per evaluated task submission.
+  - Dispatches `'WARNING_ISSUED'` in-app notification.
+- **Rule D5 Authoritative Employment Review:**
+  - Triggered automatically when active warnings reach or exceed `warningThreshold` (4 from `PlatformConfig.employee`).
+  - AI may supply advisory commentary text only; backend authoritatively executes the business decision:
+    - **Demotion Branch (`employee.level > 1`):** Decrements employee level by 1, recalculates position title and simulated salary from `PlatformConfig.career.levels`, logs to `demotions`, resets active warnings to `'RESOLVED'`, and leaves user total EXP untouched.
+    - **Termination Branch (`employee.level === 1`):** At Level 1 Intern, further demotion is impossible. Transitions employee to `'TERMINATED'`, decrements `CompanyModel.employeeCount` by 1, reverts user to `'JOB_SEEKER'`, while permanently preserving accumulated EXP, level history, skills, resume, and profile.
+- **Admin Force-Termination:**
+  - Requires confirmation payload `confirmation: 'CONFIRM_FORCE_TERMINATE'` and minimum 10-character reason.
+  - Generates immutable audit log in `auditLogs` with `actorRole: 'ADMIN'`, `action: 'ADMIN_MUTATION'`, `targetType: 'companyEmployees'`.
+  - Preserves employee history and career EXP intact.
+- **Endpoints:**
+  - `GET /api/employee/warnings`: Returns employee's unexpired active warnings and active count (`requireCareerRole('EMPLOYEE')`).
+  - `POST /api/admin/employees/:id/terminate`: Admin force-termination endpoint (`requirePlatformRole('ADMIN')`).
+
+### 10.9 Employee Promotion Engine & Real-Time Progression Telemetry (TASK P7.5)
+
+- **Mongoose Data Model (`promotions` collection, Spec 26.21):**
+  - `PromotionModel`: `userId`, `companyId`, `employeeId`, `previousLevel`, `newLevel`, `previousPositionTitle`, `newPositionTitle`, `previousSalarySimulated`, `newSalarySimulated`, `totalExpSnapshot`, `reason`, `aiRecommendation`, `promotedAt`.
+  - Indexed on `{ userId: 1, promotedAt: -1 }` and `{ companyId: 1, promotedAt: -1 }`.
+- **PlatformConfig Rules Matrix (`PlatformConfig.employee.promotionRules`):**
+  - Defines per-target-level thresholds for `minExp`, `requiredCompletedTasks`, `minAverageScore` (default 70), and `maxActiveWarnings` (default 1).
+  - Encodes the canonical Spec Section 11.3 & D17 progression matrix (e.g. $L4 \rightarrow L5$: $3,000$ EXP, $10$ completed tasks, $\ge 70$ avg score, $\le 1$ active warning).
+- **Authoritative Deterministic Evaluation (`PromotionService`):**
+  - Evaluates all 4 criteria independently. All four criteria must evaluate to true simultaneously to qualify for promotion.
+  - Automatically handles maximum level boundary ($L10$ Principal) with `isMaxLevel = true`.
+  - When eligible, mutates `CompanyEmployee` (increments level, assigns new title and simulated salary from `PlatformConfig.career.levelTable` and `salaryBands`), writes immutable audit record to `promotions`, and dispatches `'PROMOTION'` in-app notification.
+- **Advisory AI Non-Deciding Invariant:**
+  - AI may supply optional qualitative commendation remarks (`aiRecommendation`), but possesses zero decision-making authority. If AI fails, times out, or is omitted, backend promotions execute deterministically based purely on quantitative criteria.
+- **Post-Evaluation Trigger:**
+  - Invoked automatically in `TaskEvaluationService.evaluateSubmission` following every daily task evaluation and EXP award.
+- **Endpoints:**
+  - `GET /api/employee/promotion/progress`: Returns real-time progression telemetry detailing met versus missing requirements (`requireCareerRole('EMPLOYEE')`).
+
+### 10.10 Employee Workplace Frontend Architecture (TASK P7.6)
+
+- **Presentation Pages:**
+  - `WorkplaceDashboardPage` (`/workplace`, `/employee/dashboard`):
+    - Company deployment header with simulated annual salary.
+    - Founder Mode status banner highlighting locked/unlocked state with progress bar showing remaining EXP needed to reach the 12,000 EXP threshold.
+    - Career Level card, total accumulated EXP meter, and active disciplinary warnings count.
+    - Active Disciplinary Warnings section listing unexpired warnings with expiration dates and days-remaining countdowns.
+    - Promotion Readiness panel displaying live status across all 4 criteria (EXP, tasks completed, average score, active warnings) with progress bars and missing requirements feedback.
+    - Today's Daily Engineering Tasks grid with Primary and Bonus tasks, difficulty tier badges, maximum EXP rewards, and on-demand generation triggers.
+  - `TaskWorkPage` (`/tasks/:id`):
+    - Scenario brief containing title, domain level, technical narrative, core requirements, and rubric criteria.
+    - Solution answer editor with minimum 10-character validation and client-side single-submission guard.
+    - Post-evaluation score hero (aiScore / 100), performance score band badge, awarded EXP pill, and qualitative evaluator feedback.
+    - Deficiencies, observed strengths, and criterion-by-criterion rubric scoring breakdown.
+    - Disciplinary warning alert when score is in the Poor band ($\le 39$).
+  - `TaskHistoryPage` (`/tasks/history`):
+    - Tab 1: Evaluated tasks table showing date, title, kind, tier, score band, awarded EXP, and rubric drill-down link.
+    - Tab 2: Double-entry EXP transaction ledger showing immutable timestamp, type, amount, balance after, and source justification.
+- **AI Waiting States Telemetry:**
+  - Surfaces purple `WAITING_FOR_PROVIDER` banner and status badge when tasks are queued during degraded provider conditions.
+  - Interactive spinner indicator during active AI Evaluator scoring of submitted solutions.
+- **Backend APIs:**
+  - `GET /api/employee/company`: Returns authenticated employee's active company details.
+  - `GET /api/employee/tasks/history`: Returns completed task history with performance records.
+  - `GET /api/employee/ledger/exp`: Returns immutable double-entry EXP transaction ledger entries.
+
+
+
 
 

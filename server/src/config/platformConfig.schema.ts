@@ -27,6 +27,31 @@ export const DEFAULT_SALARY_BANDS = [
   { level: 10, title: 'Principal', minSalary: 340000, maxSalary: 420000, defaultSalary: 380000 },
 ];
 
+export interface LevelDefinition {
+  level: number;
+  title: string;
+  minExp: number;
+}
+
+export const levelDefinitionSchema = z.object({
+  level: z.number().int().min(1).max(10),
+  title: z.string().min(1),
+  minExp: z.number().int().min(0),
+});
+
+export const DEFAULT_LEVEL_TABLE: LevelDefinition[] = [
+  { level: 1, title: 'Intern', minExp: 0 },
+  { level: 2, title: 'Junior', minExp: 500 },
+  { level: 3, title: 'Junior+', minExp: 1200 },
+  { level: 4, title: 'Associate', minExp: 2000 },
+  { level: 5, title: 'Mid', minExp: 3000 },
+  { level: 6, title: 'Mid+', minExp: 4500 },
+  { level: 7, title: 'Senior', minExp: 6500 },
+  { level: 8, title: 'Senior+', minExp: 9000 },
+  { level: 9, title: 'Lead', minExp: 12000 },
+  { level: 10, title: 'Principal', minExp: 16000 },
+];
+
 export const careerConfigSchema = z.object({
   founderUnlockExp: z
     .number()
@@ -40,7 +65,48 @@ export const careerConfigSchema = z.object({
     .max(100, 'maxLevel cannot exceed 100')
     .default(10),
   salaryBands: z.array(salaryBandSchema).default(DEFAULT_SALARY_BANDS),
+  levelTable: z.array(levelDefinitionSchema).default(DEFAULT_LEVEL_TABLE),
 });
+
+export const promotionRuleSchema = z.object({
+  targetLevel: z
+    .number()
+    .int('targetLevel must be an integer')
+    .min(2, 'targetLevel must be at least 2')
+    .max(10, 'targetLevel cannot exceed 10'),
+  minExp: z
+    .number()
+    .int('minExp must be an integer')
+    .min(0, 'minExp cannot be negative'),
+  requiredCompletedTasks: z
+    .number()
+    .int('requiredCompletedTasks must be an integer')
+    .min(0, 'requiredCompletedTasks cannot be negative'),
+  minAverageScore: z
+    .number()
+    .min(0, 'minAverageScore must be at least 0')
+    .max(100, 'minAverageScore cannot exceed 100')
+    .default(70),
+  maxActiveWarnings: z
+    .number()
+    .int('maxActiveWarnings must be an integer')
+    .min(0, 'maxActiveWarnings cannot be negative')
+    .default(1),
+});
+
+export type PromotionRule = z.infer<typeof promotionRuleSchema>;
+
+export const DEFAULT_PROMOTION_RULES: PromotionRule[] = [
+  { targetLevel: 2, minExp: 500, requiredCompletedTasks: 5, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 3, minExp: 1200, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 4, minExp: 2000, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 5, minExp: 3000, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 6, minExp: 4500, requiredCompletedTasks: 10, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 7, minExp: 6500, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 8, minExp: 9000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 9, minExp: 12000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+  { targetLevel: 10, minExp: 16000, requiredCompletedTasks: 15, minAverageScore: 70, maxActiveWarnings: 1 },
+];
 
 export const employeeConfigSchema = z.object({
   primaryTasksPerDay: z
@@ -55,6 +121,24 @@ export const employeeConfigSchema = z.object({
     .min(0, 'bonusTasksPerDay cannot be negative')
     .max(20, 'bonusTasksPerDay cannot exceed 20')
     .default(1),
+  easyMaxExp: z
+    .number()
+    .int('easyMaxExp must be an integer')
+    .min(1, 'easyMaxExp must be at least 1')
+    .max(100, 'easyMaxExp cannot exceed 100')
+    .default(30),
+  mediumMaxExp: z
+    .number()
+    .int('mediumMaxExp must be an integer')
+    .min(1, 'mediumMaxExp must be at least 1')
+    .max(100, 'mediumMaxExp cannot exceed 100')
+    .default(60),
+  hardMaxExp: z
+    .number()
+    .int('hardMaxExp must be an integer')
+    .min(1, 'hardMaxExp must be at least 1')
+    .max(100, 'hardMaxExp cannot exceed 100')
+    .default(100),
   warningThreshold: z
     .number()
     .int('warningThreshold must be an integer')
@@ -72,6 +156,7 @@ export const employeeConfigSchema = z.object({
     .min(0, 'minimumPromotionScore must be at least 0')
     .max(100, 'minimumPromotionScore cannot exceed 100')
     .default(70),
+  promotionRules: z.array(promotionRuleSchema).default(DEFAULT_PROMOTION_RULES),
 });
 
 export const applicationsConfigSchema = z.object({
@@ -389,13 +474,18 @@ export const DEFAULT_PLATFORM_CONFIG: Readonly<PlatformConfig> = Object.freeze({
     founderUnlockExp: 12000,
     maxLevel: 10,
     salaryBands: DEFAULT_SALARY_BANDS,
+    levelTable: DEFAULT_LEVEL_TABLE,
   },
   employee: {
     primaryTasksPerDay: 1,
     bonusTasksPerDay: 1,
+    easyMaxExp: 30,
+    mediumMaxExp: 60,
+    hardMaxExp: 100,
     warningThreshold: 4,
     warningExpirationDays: 30,
     minimumPromotionScore: 70,
+    promotionRules: DEFAULT_PROMOTION_RULES,
   },
   applications: {
     maxActive: 5,

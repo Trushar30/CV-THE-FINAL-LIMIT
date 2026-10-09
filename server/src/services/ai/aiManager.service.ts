@@ -22,7 +22,7 @@ export function createDefaultAdapter(
 ): ProviderAdapter {
   switch (code) {
     case 'gemini':
-      return new GeminiAdapter({ modelId: modelId || 'gemini-2.5-flash', apiKey });
+      return new GeminiAdapter({ modelId: modelId || 'gemini-3.5-flash', apiKey });
     case 'openai':
       return new OpenAIAdapter({ modelId: modelId || 'gpt-4o-mini', apiKey });
     case 'groq':
@@ -440,7 +440,7 @@ export class AIManagerService {
       {
         code: 'gemini',
         name: 'Google Gemini Pro',
-        modelId: 'gemini-2.5-flash',
+        modelId: 'gemini-3.5-flash',
         priority: 1,
         rateLimitRpm: 60,
         dailyLimit: 10000,
@@ -457,8 +457,8 @@ export class AIManagerService {
       },
       {
         code: 'groq',
-        name: 'Groq Llama 3.3 70B',
-        modelId: 'llama-3.3-70b-versatile',
+        name: 'Groq LPU Engine',
+        modelId: 'openai/gpt-oss-120b',
         priority: 3,
         rateLimitRpm: 30,
         dailyLimit: 14400,
@@ -504,6 +504,27 @@ export class AIManagerService {
           });
 
           logger.info(`[AIManager] Seeded provider '${config.code}' into ${pool} pool from environment`);
+        } else {
+          let updated = false;
+          // Auto-upgrade deprecated/unavailable models from earlier sessions
+          if (doc.code === 'gemini' && (doc.modelId === 'gemini-2.5-flash' || doc.modelId === 'gemini-1.5-flash')) {
+            doc.modelId = config.modelId;
+            updated = true;
+          }
+          if (doc.code === 'groq' && doc.modelId === 'llama-3.3-70b-versatile') {
+            doc.modelId = config.modelId;
+            updated = true;
+          }
+          // Reset status to HEALTHY if temporarily failed due to earlier schema or model errors
+          if (doc.status === 'TEMPORARILY_FAILED') {
+            doc.status = 'HEALTHY';
+            doc.consecutiveFailures = 0;
+            updated = true;
+          }
+          if (updated) {
+            await doc.save();
+            logger.info(`[AIManager] Synchronized provider '${config.code}' in ${pool} pool to model '${doc.modelId}'`);
+          }
         }
 
         // Always register adapter into ProviderRouter

@@ -16,6 +16,7 @@ import {
   adminDeleteJobSchema,
 } from '../schemas/company.schema.js';
 import { demoHiringController } from '../controllers/demoHiring.controller.js';
+import { disciplineController } from '../controllers/discipline.controller.js';
 import {
   createDemoSessionSchema,
   demoSessionIdParamsSchema,
@@ -23,6 +24,7 @@ import {
 } from '../schemas/demoHiring.schema.js';
 
 export function createAdminRoutes(): Router {
+
   const router = Router();
 
   router.use(authenticateJwt);
@@ -137,7 +139,14 @@ export function createAdminRoutes(): Router {
     demoHiringController.cleanupAllDemoData.bind(demoHiringController)
   );
 
+  // Admin Force-Terminate Employee (dangerous action with confirmation & audit log)
+  router.post(
+    '/employees/:id/terminate',
+    disciplineController.adminForceTerminate.bind(disciplineController)
+  );
+
   return router;
 }
 
 export const adminRouter = createAdminRoutes();
+

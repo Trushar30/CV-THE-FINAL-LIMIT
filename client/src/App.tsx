@@ -12,12 +12,14 @@ import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { JobsPage } from './pages/JobsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import {
-  WorkplacePage,
   FounderHqPage,
   AdminConsolePage,
   UnauthorizedPage,
   NotFoundPage,
 } from './pages/StubPages';
+import { WorkplaceDashboardPage } from './pages/employee/WorkplaceDashboardPage';
+import { TaskWorkPage } from './pages/employee/TaskWorkPage';
+import { TaskHistoryPage } from './pages/employee/TaskHistoryPage';
 import { ApplicationsTrackerPage } from './pages/career/ApplicationsTrackerPage';
 import { StageChatPage } from './pages/career/StageChatPage';
 import { OfferPage } from './pages/career/OfferPage';
@@ -97,7 +99,15 @@ export function App(): ReactElement {
                     path="/workplace"
                     element={
                       <RoleRoute allowedCareerRoles={['EMPLOYEE']}>
-                        <WorkplacePage />
+                        <WorkplaceDashboardPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee/dashboard"
+                    element={
+                      <RoleRoute allowedCareerRoles={['EMPLOYEE']}>
+                        <WorkplaceDashboardPage />
                       </RoleRoute>
                     }
                   />
@@ -105,7 +115,23 @@ export function App(): ReactElement {
                     path="/tasks"
                     element={
                       <RoleRoute allowedCareerRoles={['EMPLOYEE']}>
-                        <WorkplacePage />
+                        <WorkplaceDashboardPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/tasks/history"
+                    element={
+                      <RoleRoute allowedCareerRoles={['EMPLOYEE']}>
+                        <TaskHistoryPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/tasks/:id"
+                    element={
+                      <RoleRoute allowedCareerRoles={['EMPLOYEE']}>
+                        <TaskWorkPage />
                       </RoleRoute>
                     }
                   />
