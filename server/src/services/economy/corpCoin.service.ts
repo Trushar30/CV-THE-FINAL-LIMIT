@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, type ClientSession } from 'mongoose';
 import {
   CorpCoinTransactionModel,
   ICorpCoinTransactionDocument,
@@ -15,6 +15,7 @@ export interface CreditCorpCoinParams {
   companyId?: string | Types.ObjectId | null;
   referenceId?: string | Types.ObjectId | null;
   reason: string;
+  session?: ClientSession;
 }
 
 export interface DebitCorpCoinParams {
@@ -24,6 +25,7 @@ export interface DebitCorpCoinParams {
   companyId?: string | Types.ObjectId | null;
   referenceId?: string | Types.ObjectId | null;
   reason: string;
+  session?: ClientSession;
 }
 
 export interface CorpCoinOperationResult {
@@ -75,7 +77,7 @@ export class CorpCoinService {
     const updatedUser = await UserModel.findOneAndUpdate(
       { _id: userObjectId },
       { $inc: { corpCoinBalanceCached: params.amount, corpCoinBalance: params.amount } },
-      { new: true }
+      { new: true, session: params.session }
     );
 
     if (!updatedUser) {
@@ -96,7 +98,7 @@ export class CorpCoinService {
       createdAt: new Date(),
     });
 
-    await transaction.save();
+    await transaction.save({ session: params.session });
 
     logger.info(
       `[CorpCoinService] Credited ${params.amount} CorpCoin to user ${userObjectId}. New balance: ${balanceAfter}`,
@@ -153,12 +155,12 @@ export class CorpCoinService {
       {
         $inc: { corpCoinBalanceCached: -params.amount, corpCoinBalance: -params.amount },
       },
-      { new: true }
+      { new: true, session: params.session }
     );
 
     if (!updatedUser) {
       // Check if user exists
-      const userExists = await UserModel.findById(userObjectId);
+      const userExists = await UserModel.findById(userObjectId).session(params.session ?? null);
       if (!userExists) {
         throw AppError.notFound(`User with ID ${userObjectId} not found`);
       }
@@ -181,7 +183,7 @@ export class CorpCoinService {
       createdAt: new Date(),
     });
 
-    await transaction.save();
+    await transaction.save({ session: params.session });
 
     logger.info(
       `[CorpCoinService] Debited ${params.amount} CorpCoin from user ${userObjectId}. New balance: ${balanceAfter}`,

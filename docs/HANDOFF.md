@@ -1,159 +1,153 @@
-# HANDOFF.md — CorpVerse Engineering Session Transition
+# CorpVerse — Engineering Session Handoff
 
 ## 1. What Was Done
 
-In **TASK P7.6 (Frontend for Employees)**, we built the complete frontend workplace experience and interactive task execution interfaces for active employees (`careerRole: 'EMPLOYEE'`) per Specification Sections 9, 10, 14, 16, 26, 28, and ADR-061:
+In **TASK P8.7** (Founder Dashboard & Corporate Governance UI), we completed the full frontend implementation for Founder Mode, spanning 9 core views, dedicated navigation, an executive styling design system, and an end-to-end client test suite:
 
-1. **API Client & Data Layer (`client/src/api/employee.ts`):**
-   - Implemented strongly-typed API client wrappers integrating with `ApiClient`:
-     - `fetchTodayTasks`: `GET /api/employee/tasks/today`
-     - `fetchTaskById`: `GET /api/employee/tasks/:id`
-     - `submitTaskWork`: `POST /api/employee/tasks/:id/submit`
-     - `fetchTaskEvaluation`: `GET /api/employee/tasks/:id/evaluation`
-     - `fetchPromotionProgress`: `GET /api/employee/promotion/progress`
-     - `fetchActiveWarnings`: `GET /api/employee/warnings`
-     - `fetchEmployeeCompany`: `GET /api/employee/company`
-     - `fetchTaskHistory`: `GET /api/employee/tasks/history`
-     - `fetchExpLedger`: `GET /api/employee/ledger/exp`
-   - Defined robust TypeScript interfaces for `EmployeeTask`, `TaskSubmission`, `PerformanceRecord`, `PromotionProgress`, `EmployeeWarning`, `EmployeeCompanyInfo`, and `ExpTransaction`.
+1. **Unlock Founder Mode Page (`client/src/pages/founder/FounderUnlockPage.tsx`, `/founder/unlock`):**
+   - Displays real-time eligibility telemetry, including career EXP meter (12,000 EXP threshold for Level 9 Lead), current employment status, and starter capital grant banner (1,000 CC for first-time founders; disabled indicator if previously unlocked).
+   - Features confirmation modal disclosing executive transition invariants (prior employment termination, lifelong EXP preservation, seed capital grant, and insolvency liquidation accountability at $\le -1000$ CC).
+   - Atomic unlock handler calling `POST /api/founder/unlock` with `{ confirm: true }`.
 
-2. **Backend API Extensions (`server/src/controllers/dailyTask.controller.ts` & `routes/employee.routes.ts`):**
-   - Added `getEmployeeCompany`: returns the active employee record and associated company information.
-   - Added `getTaskHistory`: returns evaluated task history with performance records.
-   - Added `getExpLedger`: returns the immutable double-entry EXP transaction ledger for the employee.
-   - Mounted endpoints on `/api/employee/company`, `/api/employee/tasks/history`, and `/api/employee/ledger/exp`.
+2. **Create Company Wizard (`client/src/pages/founder/CreateCompanyPage.tsx`, `/founder/company/new`):**
+   - Company registration form with legal name input, primary engineering domain dropdown (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), and optional corporate brief.
+   - Live cost preview calculating registration fee (100 CC), available personal CorpCoin balance, and remaining balance with overdraft blocking.
+   - Form submission posting to `POST /api/founder/company`.
 
-3. **Styling Tokens & Cyber-Corporate CSS (`client/src/pages/employee/Employee.module.css`):**
-   - Created scoped CSS module adhering to CorpVerse Vanilla CSS design system tokens:
-     - Founder mode banner with gold accent border and glow.
-     - Stat cards grid for Level, Experience Capital, and Active Disciplinary Warnings.
-     - Promotion criteria grid with individual progress bars and met/missing chips.
-     - Daily tasks grid with Primary and Bonus task cards, difficulty tags, and max EXP pills.
-     - Rubric breakdown cards, evaluator score hero, and AI-waiting status tags.
-     - Responsive history table and double-entry EXP transaction ledger.
+3. **AI Bot Storefront (`client/src/pages/founder/BotShopPage.tsx`, `/founder/bots`):**
+   - Catalog featuring the 3 basic abstract AI workforce bots (`HIRING_BOT`, `TASK_BOT`, `EVALUATION_BOT`) at 250 CC each.
+   - Owned state indicators, live CorpCoin debit, and "Coming in v2" card for advanced bots (400 CC).
+   - Prominent Open for Hiring status banner: warning banner when $< 3$ bots are owned (candidate intake locked); emerald activation banner when all 3 bots are acquired.
 
-4. **Workplace Dashboard Page (`client/src/pages/employee/WorkplaceDashboardPage.tsx`):**
-   - Routed at `/workplace` and `/employee/dashboard`.
-   - **Deployment Header:** Displays company name, business domain, and simulated annual salary.
-   - **Founder Mode Banner:** Displays locked/unlocked status and exact EXP remaining until the 12,000 EXP threshold with progress bar.
-   - **Career Level & EXP Meter:** Displays level, position title, current accumulated EXP, and target EXP progress bar toward next level.
-   - **Active Warnings Section:** Lists active unexpired warnings with expiration dates and live days-left countdown.
-   - **Promotion Readiness Panel:** Displays real-time status across all 4 criteria (EXP, tasks completed, average score, active warnings) with met/missing badges and missing requirement summaries.
-   - **Today's Daily Tasks Grid:** Shows primary and bonus tasks with on-demand generation state and start buttons.
+4. **Executive Company Dashboard (`client/src/pages/founder/FounderDashboardPage.tsx`, `/founder`, `/founder/dashboard`):**
+   - Visual needle gauge displaying company financial health ($H \in [-1000, 2000]$ CC) with insolvency danger zone ($\le -1000$ CC) and solvency status pill.
+   - Revenue, Expenses, Net Profit, and cumulative financial metrics cards.
+   - Secondary corporate telemetry: employee satisfaction ($S$), productivity coefficient ($P$), retention rate ($T$), and company reputation rating ($Q$).
+   - Workforce roster table listing active engineers, seniority levels, status, and hire dates.
+   - Historical point-in-time financial snapshots table.
+   - Automatic redirect to `/founder/bankrupt` if company status is `BANKRUPT`.
 
-5. **Task Execution & Rubric Evaluation Page (`client/src/pages/employee/TaskWorkPage.tsx`):**
-   - Routed at `/tasks/:id`.
-   - Displays technical scenario, core requirements, and evaluation rubric criteria.
-   - Solution answer editor with minimum 10-character validation and single-submission guard.
-   - Post-evaluation score hero (aiScore / 100), score band badge, EXP awarded pill, evaluator feedback, strengths, deficiencies, and criterion-by-criterion rubric scoring breakdown.
-   - Disciplinary alert banner displayed when evaluation score falls into the Poor band ($\le 39$).
-   - Clearly communicates AI-waiting states with a dedicated banner when a task is in `WAITING_FOR_PROVIDER` status.
+5. **Daily Dilemma & Tick Execution Page (`client/src/pages/founder/DailyScenarioPage.tsx`, `/founder/simulation`):**
+   - Active daily dilemma card displaying prompt, category, and date.
+   - Strategic options grid (2–4 options) rendering narrative text, template ID, and bounded modifier pills ($\pm\% \text{ Rev}$, $\pm\% \text{ Exp}$, $-\text{CC Immediate}$, $\pm S$, $\pm Q$).
+   - Executive rationale input and decision submission (`POST /api/founder/simulation/decision`).
+   - "Run Daily Tick" execution button calling `POST /api/founder/simulation/tick` with post-tick telemetry banner showing delta revenue, expenses, net profit, new health, and solvency status.
 
-6. **Task History & Ledger Page (`client/src/pages/employee/TaskHistoryPage.tsx`):**
-   - Routed at `/tasks` and `/tasks/history`.
-   - Tab 1: Evaluated tasks table showing date, title, kind, tier, score band, awarded EXP, and rubric drill-down link.
-   - Tab 2: Double-entry EXP transaction ledger showing immutable timestamp, type, amount, balance after, and source justification.
+6. **Job Requisitions Manager (`client/src/pages/founder/JobOpeningsPage.tsx`, `/founder/jobs`):**
+   - Active job listings table with target seniority level, required skills tags, and opening status.
+   - Create Requisition modal with title, domain, seniority level (L1–L10), required skills, and description (`POST /api/founder/jobs`).
+   - Requisition closure action (`PATCH /api/founder/jobs/:id/close`).
 
-7. **Verification & Testing:**
-   - Added comprehensive integration test suite `client/src/tests/employeeWorkplace.test.tsx` verifying:
-     - Dashboard renders level, EXP bar, Founder mode banner, active warnings, promotion progress, and daily tasks.
-     - TaskWorkPage renders scenario, enforces minimum submission length, and displays post-evaluation score hero and rubric breakdown.
-     - TaskHistoryPage renders past tasks and toggles to the immutable EXP ledger.
-   - All 96 client unit tests pass across 13 suites.
-   - Monorepo build `npm run build --workspaces` succeeds with 0 errors.
-   - Monorepo lint `npm run lint` passes 100% clean.
+7. **Applicant Pipeline View (`client/src/pages/founder/ApplicantPipelinePage.tsx`, `/founder/applicants`):**
+   - Candidate intake table tracking applicants across recruitment stages (`APPLIED`, `ATS_SCREENING`, `ASSESSMENT`, `INTERVIEW`, `OFFER`, `ACCEPTED`).
+   - Evaluation inspector modal displaying bot round scores, pass/fail status, and qualitative feedback generated by company bots via the AI Gateway.
+
+8. **Immutable CorpCoin Ledger Page (`client/src/pages/founder/FounderLedgerPage.tsx`, `/founder/ledger`):**
+   - Double-entry transaction history table tracking seed grants (`FOUNDER_STARTER_GRANT`), incorporation fees (`COMPANY_CREATION`), and bot purchases (`BOT_PURCHASE`).
+   - Added backend controller and route `GET /api/founder/ledger` (`server/src/routes/founder.routes.ts`, `founder.service.ts`).
+
+9. **Bankruptcy Outcome Screen (`client/src/pages/founder/BankruptcyOutcomePage.tsx`, `/founder/bankrupt`):**
+   - Insolvency liquidation hero screen explaining state transitions when health crossed $\le -1000$ CC.
+   - Stat cards highlighting preserved assets: 100% of lifelong career EXP and untouched personal CorpCoin liquidity.
+   - Clear explanation of corporate debt absorption and talent market re-entry buttons (`/jobs`, `/career`).
+
+10. **Executive Styling & Design System (`client/src/pages/founder/Founder.module.css`):**
+    - Cyber-Corporate dark mode aesthetic with glassmorphic cards, gold executive accents, responsive tables, and gauge geometry.
+
+11. **Routing & Navigation Wiring:**
+    - Mounted all 9 founder routes under `ProtectedRoute` in `client/src/App.tsx`.
+    - Updated `Sidebar.tsx` with dedicated `Executive HQ` navigation group for founders.
+
+12. **Comprehensive Test Suite (`client/src/tests/founder.test.tsx`):**
+    - 12 Vitest unit and integration tests verifying all 9 views, modal interactions, form validations, bot purchases, scenario submission, tick runner, and bankruptcy state.
 
 ---
 
 ## 2. Files Changed
 
-### Backend Additions
-- `server/src/controllers/dailyTask.controller.ts`: Added `getEmployeeCompany`, `getTaskHistory`, and `getExpLedger`.
-- `server/src/routes/employee.routes.ts`: Mounted `/company`, `/tasks/history`, and `/ledger/exp`.
+### Created
+- `client/src/pages/founder/Founder.module.css` (Executive design system styling)
+- `client/src/pages/founder/FounderUnlockPage.tsx` (Eligibility meter & unlock modal)
+- `client/src/pages/founder/CreateCompanyPage.tsx` (Company incorporation wizard)
+- `client/src/pages/founder/BotShopPage.tsx` (AI bot storefront & hiring gate)
+- `client/src/pages/founder/FounderDashboardPage.tsx` (Executive overview & health gauge)
+- `client/src/pages/founder/DailyScenarioPage.tsx` (Daily dilemma & simulation tick runner)
+- `client/src/pages/founder/JobOpeningsPage.tsx` (Job requisition manager)
+- `client/src/pages/founder/ApplicantPipelinePage.tsx` (Candidate intake pipeline)
+- `client/src/pages/founder/FounderLedgerPage.tsx` (Immutable CorpCoin ledger)
+- `client/src/pages/founder/BankruptcyOutcomePage.tsx` (Insolvency liquidation hero)
+- `client/src/tests/founder.test.tsx` (12 founder frontend tests)
 
-### Frontend Additions
-- `client/src/api/employee.ts`: Created API client and full type definitions.
-- `client/src/pages/employee/Employee.module.css`: Created scoped styles for dashboard, task editor, rubric, and history.
-- `client/src/pages/employee/WorkplaceDashboardPage.tsx`: Created employee workplace dashboard.
-- `client/src/pages/employee/TaskWorkPage.tsx`: Created technical task execution and rubric evaluation page.
-- `client/src/pages/employee/TaskHistoryPage.tsx`: Created task history and immutable EXP ledger page.
-- `client/src/App.tsx`: Wired `/workplace`, `/employee/dashboard`, `/tasks`, `/tasks/history`, `/tasks/:id`.
-- `client/src/tests/employeeWorkplace.test.tsx`: Added 8 comprehensive integration tests.
-
-### Documentation
-- `docs/DECISIONS.md`: Recorded ADR-061.
-- `docs/ARCHITECTURE.md`: Added Section 10.10.
-- `docs/PROGRESS.md`: Marked TASK P7.6 as COMPLETED; updated next tasks.
-- `docs/HANDOFF.md`: Overwritten with current repository state.
+### Modified
+- `server/src/services/founder/founder.service.ts` (Added `getCorpCoinLedger` method)
+- `server/src/controllers/founder.controller.ts` (Added `getLedger` controller)
+- `server/src/routes/founder.routes.ts` (Added `GET /api/founder/ledger` endpoint)
+- `client/src/App.tsx` (Registered all 9 founder routes)
+- `client/src/components/layout/Sidebar.tsx` (Added Executive HQ navigation group)
+- `docs/DECISIONS.md` (Recorded ADR-068)
+- `docs/PROGRESS.md` (Marked TASK P8.7 & Phase 8 COMPLETED)
+- `docs/ARCHITECTURE.md` (Documented Section 24.5 Founder Mode Frontend Architecture)
 
 ---
 
 ## 3. Current Repository State
 
-- **Branch / Workspaces:** `@corpverse/server` and `@corpverse/client`.
-- **Server Status:** TypeScript build clean. All employee service tests (39/39 passing in `promotion.test.ts`, `discipline.test.ts`, `taskEvaluation.test.ts`; 30/30 in dailyTask suites).
-- **Client Status:** Vite bundle and TypeScript build clean (`dist/` built in 7.08s). All 96 client tests passing across 13 test suites.
-- **Monorepo Lint:** Clean (0 errors, 0 warnings).
-- **Phase Status:** Phase 7 (Employee Progression & Daily Gameplay) is now 100% complete!
+- **Phase 8 (Founder Mode & Corporate Simulation):** 100% COMPLETED.
+- **Client Build:** `npm run build` in `/client` passes cleanly with 0 TypeScript/Vite errors (Exit code 0).
+- **Client Tests:** 14 test files, 108 tests passing in `/client` (Exit code 0).
+- **Server Build:** `npm run build` in `/server` passes cleanly (Exit code 0).
+- **Founder Unit & Service Tests:** 40 passing tests in `/server` (`founder-service.test.ts`, `founder-company-bots.test.ts`, `simulation-service.test.ts`, `bankruptcy.test.ts`).
+- **ESLint:** `npm run lint` across entire monorepo passes with 0 errors (Exit code 0).
 
 ---
 
 ## 4. Exact Next Steps
 
-The next task according to the roadmap is **TASK P8.1: Founder Unlock & Company Creation**:
-1. Read Spec Sections 17 and 20.
-2. Build Founder Unlock Check & Confirmation:
-   - Check if user has accumulated $\ge 12,000$ total EXP.
-   - Endpoint for user confirmation to activate Founder Mode.
-   - Transition `user.careerRole` from `EMPLOYEE` / `JOB_SEEKER` to `FOUNDER`.
-3. Build Starter Capital Grant:
-   - Grant 1,000 CorpCoin once ever, setting `founderStarterCoinGranted = true`.
-   - Record immutable double-entry transaction in `corpCoinTransactions`.
-4. Build Company Creation:
-   - Deduct 100 CorpCoin creation fee from founder's balance.
-   - Enforce company limits: 1 active company per founder.
-   - Initialize company record (`name`, `domain`, `tier: 'STARTUP'`, `financialHealth: 1000`, `founderId: user._id`).
-   - Deduct fee and record ledger entry in `corpCoinTransactions`.
-5. Unit and integration tests covering:
-   - Rejection below 12,000 EXP.
-   - Exactly once grant of 1,000 CorpCoin.
-   - Deduction of 100 CorpCoin fee.
-   - Prevention of creating more than 1 active company per founder.
+We are ready to begin **Phase 9: Consoles, Telemetry, Leaderboards & Platform Hardening**:
+
+1. **TASK P9.1: AI Operations Console & Provider Management:**
+   - Real-time provider health dashboard (`gemini`, `openai`, `groq`).
+   - Priority and pool routing overrides, failure rate alarms, circuit breaker controls, and audit log inspection.
+2. **TASK P9.2: Leaderboards & Global Company Rankings:**
+   - Deterministic ranking scores based on financial health, employee satisfaction, revenue, and reputation.
+   - Global company leaderboard, domain leaderboards, and founder prestige rankings.
+3. **TASK P9.3: Platform Hardening & System Verification:**
+   - End-to-end cross-role integration tests, stress tests, security validations.
 
 ---
 
 ## 5. Commands to Run
 
 ```bash
-# Run employee workplace client test suite
-npm run test --workspace=@corpverse/client
+# Verify client build and test suite
+cd client
+npm run build
+npm test
 
-# Run all employee server test suites
-npx vitest run src/tests/promotion.test.ts src/tests/discipline.test.ts src/tests/taskEvaluation.test.ts src/tests/dailyTask.service.test.ts
+# Verify server build and founder tests
+cd ../server
+npm run build
+npx vitest run src/tests/founder-service.test.ts src/tests/founder-company-bots.test.ts src/tests/simulation-service.test.ts src/tests/bankruptcy.test.ts
 
-# Run linting across monorepo
+# Monorepo lint check
+cd ..
 npm run lint
-
-# Build server and client
-npm run build --workspaces
 ```
 
 ---
 
 ## 6. Known Bugs or Open Items
 
-- None. All requirements for TASK P7.6 are complete, tested, and recorded.
+- None. All founder endpoints, mathematical models, UI pages, and transactional liquidation flows conform strictly to Specification Sections 12, 14, 17, 18, 20, 21, and Decisions D12, D14, D15.
 
 ---
 
-## 7. Conventional Commit Message
+## 7. Recommended Commit Message
 
-```
-feat(employee): build workplace dashboard, task solver, rubric feedback, and history pages (P7.6)
-```
+`feat(founder): implement founder mode frontend pages, executive styling and test suite (P8.7)`
 
 ---
 
-## 8. Items Unsure About
+## 8. Uncertainties
 
-- None. All implementations strictly follow Spec Sections 9, 10, 14, 16, 26, 28, and approved decisions.
+- None.

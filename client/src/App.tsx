@@ -12,11 +12,19 @@ import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { JobsPage } from './pages/JobsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import {
-  FounderHqPage,
   AdminConsolePage,
   UnauthorizedPage,
   NotFoundPage,
 } from './pages/StubPages';
+import { FounderUnlockPage } from './pages/founder/FounderUnlockPage';
+import { CreateCompanyPage } from './pages/founder/CreateCompanyPage';
+import { BotShopPage } from './pages/founder/BotShopPage';
+import { FounderDashboardPage } from './pages/founder/FounderDashboardPage';
+import { DailyScenarioPage } from './pages/founder/DailyScenarioPage';
+import { JobOpeningsPage } from './pages/founder/JobOpeningsPage';
+import { ApplicantPipelinePage } from './pages/founder/ApplicantPipelinePage';
+import { FounderLedgerPage } from './pages/founder/FounderLedgerPage';
+import { BankruptcyOutcomePage } from './pages/founder/BankruptcyOutcomePage';
 import { WorkplaceDashboardPage } from './pages/employee/WorkplaceDashboardPage';
 import { TaskWorkPage } from './pages/employee/TaskWorkPage';
 import { TaskHistoryPage } from './pages/employee/TaskHistoryPage';
@@ -136,12 +144,46 @@ export function App(): ReactElement {
                     }
                   />
 
-                  {/* Founder Guarded Routes */}
+                  {/* Founder Unlock & Transition Route */}
+                  <Route
+                    path="/founder/unlock"
+                    element={
+                      <RoleRoute allowedCareerRoles={['EMPLOYEE', 'JOB_SEEKER', 'FOUNDER']}>
+                        <FounderUnlockPage />
+                      </RoleRoute>
+                    }
+                  />
+
+                  {/* Founder Creation & Operating Routes */}
+                  <Route
+                    path="/founder/company/new"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <CreateCompanyPage />
+                      </RoleRoute>
+                    }
+                  />
                   <Route
                     path="/founder"
                     element={
                       <RoleRoute allowedCareerRoles={['FOUNDER']}>
-                        <FounderHqPage />
+                        <FounderDashboardPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/dashboard"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <FounderDashboardPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/bots"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <BotShopPage />
                       </RoleRoute>
                     }
                   />
@@ -149,7 +191,47 @@ export function App(): ReactElement {
                     path="/bots"
                     element={
                       <RoleRoute allowedCareerRoles={['FOUNDER']}>
-                        <FounderHqPage />
+                        <BotShopPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/simulation"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <DailyScenarioPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/jobs"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <JobOpeningsPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/applicants"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <ApplicantPipelinePage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/ledger"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER']}>
+                        <FounderLedgerPage />
+                      </RoleRoute>
+                    }
+                  />
+                  <Route
+                    path="/founder/bankrupt"
+                    element={
+                      <RoleRoute allowedCareerRoles={['FOUNDER', 'JOB_SEEKER']}>
+                        <BankruptcyOutcomePage />
                       </RoleRoute>
                     }
                   />

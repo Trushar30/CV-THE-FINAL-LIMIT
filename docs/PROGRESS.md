@@ -11,15 +11,15 @@
 | **Phase 4** | **Candidate Profile & Resume System: GridFS Magic-Byte Storage, AI Parsing Pipeline & Review UI**              | **COMPLETED**   |
 | **Phase 5** | **Career System: Enterprise Directory, Job Requisitions, Applications & ATS Evaluation Engine**                | **COMPLETED**   |
 | **Phase 6** | **Interview Simulation Engine: Multi-Turn Stage Chat, Dynamic Evaluation, Offer Workflows & Admin Demo Console** | **COMPLETED**   |
-| **Phase 7** | **Employee System: On-Demand Daily Tasks, AI Evaluation, EXP Progression & Warning Workflows**                     | **IN PROGRESS** |
-| Phase 8     | Founder Mode: Company Creation, AI Bot Marketplace & Deterministic Simulation Engine                           | UPCOMING        |
+| **Phase 7** | **Employee System: On-Demand Daily Tasks, AI Evaluation, EXP Progression & Warning Workflows**                     | **COMPLETED**   |
+| **Phase 8** | **Founder Mode: Company Creation, AI Bot Marketplace & Deterministic Simulation Engine**                           | **COMPLETED**   |
 | Phase 9     | Consoles, Telemetry, Leaderboards & Platform Hardening                                                         | UPCOMING        |
 
 ---
 
 ## 2. Current Status
 
-- **Current Phase:** Phase 5 — Career System & Employment Lifecycle (Status: **IN PROGRESS**)
+- **Current Phase:** Phase 9 — Consoles, Telemetry, Leaderboards & Platform Hardening (Status: **UPCOMING**)
 - **Completed Tasks:**
   - `TASK P0.1`: Memory system and master rules (`GEMINI.md`, `.agent/rules/corpverse.md`, `PROJECT_BRIEF.md`, `ARCHITECTURE.md`, `PROGRESS.md`, `DECISIONS.md`, `OPEN_QUESTIONS.md`, `HANDOFF.md`).
   - `TASK P0.2`: 35-section `CORPVERSE_SPECIFICATION.md` initial draft.
@@ -62,8 +62,12 @@
   - `TASK P7.1`: Level and EXP Engine (Spec Sections 9, 10, GEMINI.md Section 5, ADR-055: Pure deterministic calculation functions `levelForExp(totalExp, levelTable)`, `calculateTaskExp(score, maxExp)`, `performanceBand(score)`, `performanceBandLabel(score)`, `getPerformanceBandDetails(score)`, and `getLevelDetails(totalExp, levelTable)`; strict clamping of absurd AI evaluation values; integrated authoritative `LevelService` leveraging `ExpService` from P1.4 for atomic double-entry ledger transactions in `expTransactions` with zero direct balance writes; 52 new unit/integration tests, 587 server tests, 675 passing monorepo tests).
   - `TASK P7.2`: Daily Task Data Models, Option A Difficulty Mapping, Lazy Idempotent Generation, and WAITING_FOR_PROVIDER Fallback (Spec Sections 9, 14, 15, 26 Collection 17, Decision D7, D10, ADR-056: `EmployeeTaskModel` with compound unique index on `{ employeeId: 1, dayKey: 1, kind: 1 }`; pure Option A level-to-difficulty mapping and max EXP resolver from `PlatformConfig.employee`; on-demand lazy task generation via `DailyTaskService.getOrCreateDailyTasks`; AI Gateway generation in `PIPELINE` pool with strict Zod and JSON Schema validation; resilient fallback to `WAITING_FOR_PROVIDER` and automatic `AIWorker` queue resolution; authenticated endpoints `GET /api/employee/tasks/today` and `GET /api/employee/tasks/:id` with `EMPLOYEE` career role guard; 30 new unit/integration/route tests, 618 passing server tests, 88 client tests, 706 total passing monorepo tests).
   - `TASK P7.3`: Task Submissions, Strict AI Evaluation Protocol, Authoritative EXP Engine Awarding, and Idempotent Performance Aggregations (Spec Sections 9, 10, 11, 16, 26 Collections 18 & 19, ADR-058: `TaskSubmissionModel` with unique `{ taskId: 1 }` index, deadline enforcement via `dueAt` with `EXPIRED` status transition, `PerformanceRecordModel` with unique `{ taskSubmissionId: 1 }` index, `TaskEvaluationService` using AI Gateway in `PIPELINE` pool, authoritative score clamping $[0, 100]$, `calculateTaskExp` bounds $[0, \text{maxExp}]$, atomic EXP awarding via `LevelService.awardTaskExp` with `sourceId = submission._id`, double-evaluation idempotency guard, running performance stats aggregator, in-app notification hooks, and authenticated endpoints `POST /api/employee/tasks/:id/submit`, `GET /api/employee/tasks/:id/evaluation`, `GET /api/employee/performance/stats`; 17 new unit/integration/controller tests, 635 passing server tests, 88 client tests, 723 total passing monorepo tests).
-- **Next Task:** `TASK P7.4: Employee warnings, 30-day expiration, and employment review engine (Spec Sections 11, 26 Collections 20 & 21: warnings collection with 30-day TTL index, warning threshold >= 4 review trigger, AI-recommended demotion or termination review decisions).`
-
+  - `TASK P7.4`: Employee Discipline System (Warnings, Demotion, Termination) (Spec Sections 11–13, 18–19, 26 Collections 20, 21, 22, approved Decisions D4, D5, ADR-059: `WarningModel`, `DemotionModel`, `EmploymentReviewModel`, natural warning decay without cron, automatic demotion/termination reviews on active warnings >= 4, admin force-termination, 14 unit/integration tests, 649 passing server tests).
+  - `TASK P7.5`: Employee Promotion & Career Advancement Engine (Spec Sections 10, 11.3, 26.21 Collection 21, approved Decision D17, ADR-060: `PromotionModel`, authoritative multi-criteria rules matrix, advisory AI commendation boundary, post-evaluation automatic trigger, `GET /api/employee/promotion/progress`, 8 unit/integration tests, 657 passing server tests).
+  - `TASK P7.6`: Employee Workplace Frontend UI, Task Workspace, Evaluation Rubric & History (Spec Sections 9, 10, 14, 16, 26, 28, ADR-061: `WorkplaceDashboardPage` with company context, Level/EXP meter, Founder mode banner, active warnings countdown, promotion readiness panel, daily tasks grid; `TaskWorkPage` with rubric brief, solution editor, AI score hero, rubric criteria breakdown; `TaskHistoryPage` with evaluated tasks and double-entry EXP ledger; 8 client integration tests, 96 client tests, 737 monorepo tests passing).
+  - `TASK P8.1`: Founder Mode Unlock, Atomic Transaction Lifecycle, One-Time Starter Capital Grant, and Prior Employment Termination (Spec Sections 3.1, 5, 12, 13, 26 Collection 23, ADR-062: `FounderModel`, Zod confirmation schema, `FounderService` with `getEligibility` and `unlockFounderMode` with atomic concurrency protection, prior employment termination, decrementing employee headcount, resolving warnings, exactly-once 1,000 CorpCoin starter grant in `corpCoinTransactions`, re-unlock support after bankruptcy without duplicate coin grants, in-app notification, 14 new unit and integration tests, 671 passing server tests, 767 total passing monorepo tests).
+  - `TASK P8.2`: Founder Company Creation & AI Bot Store (Spec Sections 7, 8, 12, 13, 26 Collections 7, 9, Decision D13, D15, ADR-063: `CompanyBotModel` referencing abstract bot types without provider coupling, `isOpenForHiring` state machine transition flag on `CompanyModel`, `createFounderCompanySchema`, `purchaseBotSchema`, `FounderService.createCompany` enforcing 100 CorpCoin fee and 1 active company limit per founder, `FounderService.buyBot` debiting 250 CorpCoin per basic bot with `'BOT_PURCHASE'` ledger entries, automatic transition to `isOpenForHiring = true` when all 3 basic bots are acquired, total 850 CorpCoin spend trajectory leaving 150 buffer, 17 new unit/integration tests, 688 passing server tests, 784 total passing monorepo tests).
+- **Next Task:** `TASK P8.3: Daily Business Scenarios & Mathematical Simulation Engine (Spec Sections 14, 26 Collections 24–26, Decision D12: daily strategic scenario generation, founder decision submission, deterministic financial formulas for Revenue, Expenses, Profit, and Bankruptcy threshold execution at <= -1000).`
 
 ---
 
@@ -357,11 +361,57 @@
 
 ---
 
+### TASK P8.1: Founder Mode Unlock & Eligibility (Spec Sections 5, 6, 12)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-09
+- **Description:** Implemented authoritative Founder Mode eligibility checks, atomic unlock transaction lifecycle, 1,000 starter CorpCoin grant (one-time only via `founderStarterCoinGranted`), prior employment termination, and collection records per Spec Sections 3.1, 5, 12, 13, 26 (Collection 23), and ADR-062. Added `FounderModel`, `FounderService.getEligibility`, `FounderService.unlockFounderMode`, and routes `GET /api/founder/eligibility`, `POST /api/founder/unlock`. Added 14 unit and integration tests covering sub-threshold rejection, double-click idempotency, concurrency, prior job termination, and re-unlocking without duplicate coin grants.
+
+### TASK P8.2: Founder Company Creation & AI Bot Store (Spec Sections 7, 8, Decision D15)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-09
+- **Description:** Implemented founder company establishment and AI workforce purchasing per Spec Sections 7, 8, Decision D15, and ADR-063. Created `CompanyBotModel` referencing abstract bot types (`HIRING_BOT`, `TASK_BOT`, `EVALUATION_BOT`) with zero provider coupling. Implemented `createCompany` (100 CorpCoin, 1 active company limit), `buyBot` (250 CorpCoin per basic bot, advanced bots locked in v1), and automatic transition to `isOpenForHiring: true` once all 3 basic bots are acquired. Added 17 unit and integration tests covering insufficient funds, second company blocking, 850 total spend / 150 buffer verification, and double-entry ledger integrity.
+
+### TASK P8.3: Connect Founder Companies to Hiring & Task Evaluation Engines (Spec Sections 6, 53)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-09
+### TASK P8.4: Company Operations, Daily Scenarios & Deterministic Simulation Engine Design (Spec Sections 14, 21, 22, Decision D14)
+
+- **Status:** COMPLETED (Design Approved)
+- **Completed Date:** 2026-10-10
+- **Description:** Designed the complete deterministic company simulation engine in `docs/SIMULATION_DESIGN.md` per Specification Sections 7, 8, 14, 15, 21, 22, 26 (Collections 24, 25, 26), Decisions D12, D14, and ADR-065. Defined all core state variables ($R, E, \Pi, H, Q, S, P, T, N, B, R_{\text{cum}}, \Pi_{\text{cum}}, D$), workforce and bot upkeep feeds, daily dilemma architecture with 3–4 options and bounded numeric modifier tables ($\Delta \text{rev} \in [-50, +150], \Delta \text{exp} \in [-30, +100], \text{cost} \in [0, 200], \Delta S \in [-15, +15], \Delta Q \in [-10, +10], \Delta P \in [-0.15, +0.15]$), step-by-step daily tick formulas, automatic bankruptcy liquidation at $H \le -1000$, and ranking leaderboards. Enforced strict separation where AI writes narrative dilemma texts only while backend deterministically computes and enforces all numeric modifiers. Included 3 fully worked numeric examples (good day, bad day, and bankruptcy path). Design formally approved by user.
+- **Application Code Written:** None in design phase (`docs/SIMULATION_DESIGN.md` specification only).
+
+### TASK P8.5: Deterministic Simulation Engine Implementation, Modifier Template Binding & Insolvency Liquidation (Spec Sections 14, 21, 22, Collections 24–26, Decisions D12, D14, ADR-066)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented the approved deterministic company simulation engine per `docs/SIMULATION_DESIGN.md`, Spec Collections 24, 25, 26, Decisions D12, D14, and ADR-066. Built Mongoose models: `CompanyScenarioModel` (Collection 24, unique `{ companyId: 1, date: 1 }`), `CompanyDecisionModel` (Collection 25, unique `{ scenarioId: 1 }`), and `CompanyFinancialsModel` (Collection 26, indexed `{ companyId: 1, recordedAt: -1 }` and unique `{ companyId: 1, date: 1 }`). Extended `CompanyModel` with live simulation telemetry (`employeeSatisfaction`, `retentionRate`, `cumulativeRevenue`, `cumulativeProfit`, `operatingDays`). Built `simulationEngine.ts` pure mathematical calculation suite reproducing all worked examples from the design doc (Good Day, Bad Day, 4-day Bankruptcy Path). Built `MODIFIER_TEMPLATES` catalog in `simulation.schema.ts`; enforced architectural invariant that AI generates narrative text only and selects template IDs, while backend binds numeric modifiers and rejects LLM numbers. Built `SimulationService` with idempotent daily scenario generation per UTC `dayKey`, decision submission, daily tick execution with expired scenario handling, and automatic bankruptcy liquidation protocol at $H \le -1000$ (marking company `BANKRUPT`, resetting founder to `JOB_SEEKER`, releasing active employees to `JOB_SEEKER`, closing jobs, preserving lifetime EXP and personal coins). Mounted REST endpoints under `/api/founder/simulation`. Added 21 unit and integration tests (63 founder & simulation tests passing, 100% build and lint clean).
+- **Application Code Written:** `server/src/types/enums.ts`, `server/src/models/Company.ts`, `server/src/models/CompanyScenario.ts`, `server/src/models/CompanyDecision.ts`, `server/src/models/CompanyFinancials.ts`, `server/src/schemas/simulation.schema.ts`, `server/src/services/simulation/simulationEngine.ts`, `server/src/services/simulation/simulation.service.ts`, `server/src/controllers/simulation.controller.ts`, `server/src/routes/simulation.routes.ts`, `server/src/app.ts`, `server/src/tests/simulation-engine.test.ts`, `server/src/tests/simulation-service.test.ts`.
+
+### TASK P8.6: Bankruptcy Liquidation Protocol, Threshold Boundary (-999 vs -1000) & Founder Re-entry (Spec Section 12, 14, 21, Decision D14, ADR-067)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented authoritative bankruptcy execution and transactional liquidation protocol when financial health drops to $\le \text{bankruptcyThreshold}$ (from `PlatformConfig.company.bankruptcyThreshold`, default $-1000$) per Spec Sections 12, 14, 21, Decisions D12, D14, and ADR-067. Wrapped `SimulationService.executeBankruptcyLiquidation` in a single atomic database transaction using `withTransaction` session management with graceful standalone fallback: marks company `BANKRUPT`, sets `isOpenForHiring: false`, `employeeCount: 0`; releases all active/probation company employees back to `careerRole: 'JOB_SEEKER'` with `status: 'TERMINATED'`, ends employment with timestamp, records liquidation history reason, and delivers `COMPANY_BANKRUPT` notification confirming career EXP is preserved; closes all open job postings (`isOpen: false, status: 'CLOSED'`); reverts founder `careerRole` back to `JOB_SEEKER`, transitions `FounderModel.status` to `'BANKRUPT'`, sends founder `COMPANY_BANKRUPT` notification; and writes immutable audit log (`COMPANY_BANKRUPTCY_LIQUIDATION`). Handled founder CorpCoin balance per user confirmation: personal balance remains untouched (company debt is liquidated with the insolvent entity; personal liquidity and lifelong EXP are preserved, and `founderStarterCoinGranted` stays `true`). Tested single-integer boundary (-999 does not trigger bankruptcy vs -1000 triggers bankruptcy), re-entry into the talent market as a job seeker, and verified that subsequent Founder Mode re-unlocks grant 0 starter coins and create no grant transactions. Added dedicated test suite `server/src/tests/bankruptcy.test.ts` (11 passing tests, 74 passing founder & simulation tests total, 100% build and lint clean).
+- **Application Code Written:** `server/src/services/simulation/simulation.service.ts`, `server/src/tests/bankruptcy.test.ts`.
+
+### TASK P8.7: Founder Dashboard & Corporate Governance UI (Spec Sections 17, 18, 20, ADR-068)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented comprehensive executive frontend suite for Founder Mode across all 9 core operational views: Founder Mode Unlock (`/founder/unlock`), Create Company Wizard (`/founder/company/new`), AI Bot Storefront (`/founder/bots`), Executive Company Dashboard (`/founder`), Daily Dilemma & Tick Execution (`/founder/simulation`), Job Requisition Manager (`/founder/jobs`), Applicant Pipeline (`/founder/applicants`), CorpCoin Double-Entry Ledger (`/founder/ledger`), and Bankruptcy Outcome Screen (`/founder/bankrupt`). Designed Cyber-Corporate executive CSS system with health gauge, stat grids, and color-coded telemetry. Integrated with backend founder and simulation APIs, mounted routes with ProtectedRoute in App.tsx, updated executive navigation in Sidebar.tsx, and added `GET /api/founder/ledger` endpoint on backend. Built comprehensive client test suite `client/src/tests/founder.test.tsx` (12 passing tests, 108 client tests total, 100% build and lint clean).
+- **Application Code Written:** `client/src/pages/founder/Founder.module.css`, `client/src/pages/founder/FounderUnlockPage.tsx`, `client/src/pages/founder/CreateCompanyPage.tsx`, `client/src/pages/founder/BotShopPage.tsx`, `client/src/pages/founder/FounderDashboardPage.tsx`, `client/src/pages/founder/DailyScenarioPage.tsx`, `client/src/pages/founder/JobOpeningsPage.tsx`, `client/src/pages/founder/ApplicantPipelinePage.tsx`, `client/src/pages/founder/FounderLedgerPage.tsx`, `client/src/pages/founder/BankruptcyOutcomePage.tsx`, `client/src/App.tsx`, `client/src/components/layout/Sidebar.tsx`, `client/src/tests/founder.test.tsx`, `server/src/routes/founder.routes.ts`, `server/src/controllers/founder.controller.ts`, `server/src/services/founder/founder.service.ts`.
+
+---
+
 ## 4. Pending / Next Immediate Tasks
 
-1. **TASK P8.1:** Founder Unlock & Company Creation (Spec Sections 17, 20: 12,000 EXP threshold check and founder confirmation, 1,000 starter CorpCoin grant, 100 CorpCoin company creation, company name/domain/config initialization, careerRole transition to FOUNDER).
-2. **TASK P8.2:** Founder Dashboard & Corporate Governance (Spec Sections 17, 18, 20: Financial health metrics, company balance, employee roster, AI bot purchases).
-3. **TASK P8.3:** AI Workforce Management & Company Operations (Spec Sections 18, 21: Hiring bot, Task bot, Evaluation bot integration, payroll simulation, bankruptcy rules).
+1. **TASK P9.1:** AI Operations Console & Provider Management (Spec Sections 28, 29, Phase 9: Real-time telemetry, provider health toggles, priority and pool routing overrides, failure rate alarms, and audit log inspection).
+2. **TASK P9.2:** Leaderboards & Global Company Rankings (Spec Section 22: Algorithmic ranking scores, domain leaderboards, founder prestige rankings).
+3. **TASK P9.3:** Platform Hardening & System E2E Verification (End-to-end multi-role flow validation, stress testing, security audits).
 
 
 

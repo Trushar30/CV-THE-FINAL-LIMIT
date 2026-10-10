@@ -199,6 +199,8 @@ export type NotificationType =
   | 'TASK_EVALUATED'
   | 'WARNING_ISSUED'
   | 'PROMOTION'
+  | 'FOUNDER_UNLOCKED'
+  | 'COMPANY_BANKRUPT'
   | 'SYSTEM_ANNOUNCEMENT';
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
@@ -211,7 +213,42 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'TASK_EVALUATED',
   'WARNING_ISSUED',
   'PROMOTION',
+  'FOUNDER_UNLOCKED',
+  'COMPANY_BANKRUPT',
   'SYSTEM_ANNOUNCEMENT',
+] as const;
+
+// Company Simulation & Scenario Enums (Spec Collections 24 & 25, SIMULATION_DESIGN.md)
+export type CompanyScenarioStatus = 'ACTIVE' | 'DECIDED' | 'EXPIRED';
+export const COMPANY_SCENARIO_STATUSES: readonly CompanyScenarioStatus[] = [
+  'ACTIVE',
+  'DECIDED',
+  'EXPIRED',
+] as const;
+
+export type ScenarioCategory =
+  | 'PRODUCT'
+  | 'ENGINEERING'
+  | 'CLIENT'
+  | 'CULTURE'
+  | 'FINANCE';
+export const SCENARIO_CATEGORIES: readonly ScenarioCategory[] = [
+  'PRODUCT',
+  'ENGINEERING',
+  'CLIENT',
+  'CULTURE',
+  'FINANCE',
+] as const;
+
+export type ScenarioOptionId = 'A' | 'B' | 'C' | 'D';
+export const SCENARIO_OPTION_IDS: readonly ScenarioOptionId[] = ['A', 'B', 'C', 'D'] as const;
+
+// Founder Statuses (Spec Section 26.23)
+export type FounderStatus = 'ACTIVE' | 'BANKRUPT' | 'RETIRED';
+export const FOUNDER_STATUSES: readonly FounderStatus[] = [
+  'ACTIVE',
+  'BANKRUPT',
+  'RETIRED',
 ] as const;
 
 // Performance Score Bands (GEMINI.md Section 5 & Spec Section 11.1)
@@ -271,6 +308,20 @@ export type EmploymentReviewDecision = 'DEMOTION' | 'TERMINATION';
 export const EMPLOYMENT_REVIEW_DECISIONS: readonly EmploymentReviewDecision[] = [
   'DEMOTION',
   'TERMINATION',
+] as const;
+
+// Company Bot Enums (Spec Sections 13, 26 Collection 9)
+export type CompanyBotType = 'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT';
+export const COMPANY_BOT_TYPES: readonly CompanyBotType[] = [
+  'HIRING_BOT',
+  'TASK_BOT',
+  'EVALUATION_BOT',
+] as const;
+
+export type CompanyBotTier = 'BASIC' | 'ADVANCED';
+export const COMPANY_BOT_TIERS: readonly CompanyBotTier[] = [
+  'BASIC',
+  'ADVANCED',
 ] as const;
 
 

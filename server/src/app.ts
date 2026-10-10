@@ -18,6 +18,8 @@ import { companyRouter, jobRouter } from './routes/company.routes.js';
 import { applicationRouter } from './routes/application.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { employeeRouter } from './routes/employee.routes.js';
+import { founderRouter } from './routes/founder.routes.js';
+import { simulationRouter } from './routes/simulation.routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
@@ -90,6 +92,10 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use('/api/v1/notifications', notificationRouter);
   app.use('/api/employee', employeeRouter);
   app.use('/api/v1/employee', employeeRouter);
+  app.use('/api/founder', founderRouter);
+  app.use('/api/v1/founder', founderRouter);
+  app.use('/api/founder/simulation', simulationRouter);
+  app.use('/api/v1/founder/simulation', simulationRouter);
 
   const activeAiManagerRouter = options?.aiManagerController
     ? createAIManagerRoutes(options.aiManagerController)

@@ -65,6 +65,9 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-058: Task Submissions, Strict AI Evaluation Protocol, Authoritative EXP Engine Awarding, and Idempotent Performance Aggregations (TASK P7.3)](#adr-058-task-submissions-strict-ai-evaluation-protocol-authoritative-exp-engine-awarding-and-idempotent-performance-aggregations-task-p73)
 - [ADR-059: Discipline System, Cron-Free Warning Decay, Employment Reviews (Demotion vs Termination), Admin Force-Termination, and Permanent EXP Immobility (TASK P7.4)](#adr-059-discipline-system-cron-free-warning-decay-employment-reviews-demotion-vs-termination-admin-force-termination-and-permanent-exp-immobility-task-p74)
 - [ADR-060: Deterministic Level Promotion Engine, Multi-Criteria Rules Matrix, Advisory AI Non-Deciding Boundary, and Real-Time Progression Progress Telemetry (TASK P7.5)](#adr-060-deterministic-level-promotion-engine-multi-criteria-rules-matrix-advisory-ai-non-deciding-boundary-and-real-time-progression-progress-telemetry-task-p75)
+- [ADR-061: Employee Workplace Frontend Architecture, Task Execution Interface, Rubric Evaluation Breakdown, Promotion Telemetry & Immutable EXP Ledger (TASK P7.6)](#adr-061-employee-workplace-frontend-architecture-task-execution-interface-rubric-evaluation-breakdown-promotion-telemetry--immutable-exp-ledger-task-p76)
+- [ADR-062: Founder Mode Unlock, Atomic Transaction Lifecycle, One-Time Starter Capital Grant, and Prior Employment Termination (TASK P8.1)](#adr-062-founder-mode-unlock-atomic-transaction-lifecycle-one-time-starter-capital-grant-and-prior-employment-termination-task-p81)
+- [ADR-063: Founder Company Creation, AI Bot Store, and State Machine Transition to OPEN FOR HIRING (TASK P8.2)](#adr-063-founder-company-creation-ai-bot-store-and-state-machine-transition-to-open-for-hiring-task-p82)
 
 ---
 
@@ -922,6 +925,209 @@ This document tracks all foundational architectural and technical decisions made
     - `GET /api/employee/company`: Returns active employee record and associated company information.
     - `GET /api/employee/tasks/history`: Returns evaluated task history and associated performance records.
     - `GET /api/employee/ledger/exp`: Returns employee's immutable EXP transactions.
+
+---
+
+### ADR-062: Founder Mode Unlock, Atomic Transaction Lifecycle, One-Time Starter Capital Grant, and Prior Employment Termination (TASK P8.1)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Sections 3.1, 5, 12, 13, and 26 (Collection 23) define the Founder Mode transition lifecycle. Upon reaching 12,000 accumulated EXP (Level 9 Lead), employees become eligible to unlock Founder Mode. The progression does not occur automatically; it requires explicit user confirmation. In a single atomic transaction, the backend must update the user's role to `FOUNDER`, record `founderModeUnlockedAt`, terminate active employment at the prior company (decrementing company headcount and resolving active warnings), grant starter capital of 1,000 CorpCoin once ever (`founderStarterCoinGranted`), record an immutable double-entry ledger entry, create a `founders` collection document, and dispatch an in-app notification. Subsequent unlock/leave cycles (e.g. after company bankruptcy liquidation where the founder returns to `JOB_SEEKER`) must permit re-unlocking without ever re-granting starter CorpCoin.
+- **Decision:**
+  - **Data Models:**
+    - Created `FounderModel` (`founders` collection per Spec Collection 23) with fields `userId` (unique), optional `companyId`, `unlockedAt`, and `status` (`'ACTIVE' | 'BANKRUPT' | 'RETIRED'`).
+    - Added `FOUNDER_UNLOCKED` to `NOTIFICATION_TYPES` and `FounderStatus` to master enums.
+    - Extended `CorpCoinService.credit` and `debit` with optional Mongoose session support to participate in parent transactions.
+  - **Authoritative Service Layer (`FounderService`):**
+    - `getEligibility(userId)`: Reads user accumulated EXP against `PlatformConfig.career.founderUnlockExp` (12,000) and asserts eligible role (`EMPLOYEE` or returning ex-founder `JOB_SEEKER`). Returns eligibility flag, current EXP, required EXP, deficit, role, starter coin amount (1,000), availability flag, and reason.
+    - `unlockFounderMode(userId, confirm)`: Executes within `withTransaction` with graceful standalone fallback:
+      1. Validates explicit confirmation (`confirm: true` enforced via Zod schema).
+      2. Validates EXP threshold ($\ge 12,000$) and role eligibility.
+      3. Concurrency guard: executes atomic `UserModel.findOneAndUpdate` matching `{ _id, careerRole: { $ne: 'FOUNDER' } }`, preventing race-condition double-unlocks.
+      4. Employment termination (Spec §3.1 & §12.1): finds active `CompanyEmployee`, updates to `status: 'TERMINATED'`, sets `endedAt`, appends history, decrements `Company.employeeCount` by 1, and resolves active warnings.
+      5. One-time starter capital: if `founderStarterCoinGranted === false`, credits 1,000 CorpCoin with type `'FOUNDER_STARTER_GRANT'` in `corpCoinTransactions` and flags `founderStarterCoinGranted = true`. If previously granted (e.g. re-unlock), 0 coins are credited.
+      6. Creates/updates `founders` collection document (`status: 'ACTIVE'`).
+      7. Dispatches in-app notification (`FOUNDER_UNLOCKED`).
+  - **REST Endpoints & Routing:**
+    - `GET /api/founder/eligibility` (`authenticateJwt`): Returns eligibility details.
+    - `POST /api/founder/unlock` (`authenticateJwt`, Zod validated): Authoritatively unlocks Founder Mode.
+    - Mounted on `/api/founder` and `/api/v1/founder` in `app.ts`.
+
+---
+
+### ADR-063: Founder Company Creation, AI Bot Store, and State Machine Transition to OPEN FOR HIRING (TASK P8.2)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Sections 7, 8, 12, 13, 26 (Collections 7 & 9), Decision D13, and D15 define enterprise establishment and AI workforce acquisition for active founders:
+  1. An active founder can operate at most 1 active company in v1 (`config.founder.maxActiveCompanies: 1`). Company creation costs 100 CorpCoin (`config.founder.companyCreationCost`), debiting user liquidity and recording an immutable double-entry ledger entry (`type: 'COMPANY_CREATION'`).
+  2. Founders purchase AI bots to power organizational automation: Basic Hiring Bot (250 CorpCoin), Basic Task Bot (250 CorpCoin), and Basic Evaluation Bot (250 CorpCoin). Advanced bots (400 CorpCoin in config) are locked/unpurchasable in v1 per D13.
+  3. The `companyBots` model must strictly reference abstract bot types (`'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT'`) and never store or couple to external AI providers (Gemini, OpenAI, Groq), preserving total provider agnosticism.
+  4. Each bot purchase debits 250 CorpCoin with ledger type `'BOT_PURCHASE'` and `referenceId = bot._id`.
+  5. A company becomes `isOpenForHiring = true` if and only if all three basic bots are acquired.
+  6. The complete initialization cycle (company creation + 3 basic bots) requires exactly $100 + 250 + 250 + 250 = 850$ CorpCoin, leaving a 150 CorpCoin operational buffer from the 1,000 starter grant.
+- **Decision:**
+  - **Data Models:**
+    - Created `CompanyBotModel` (`companyBots` collection per Spec Collection 9) with fields `companyId`, `botType` (`'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT'`), `tier` (`'BASIC' | 'ADVANCED'`), `purchaseCost`, `isActive`, and `purchasedAt`. Enforced unique compound index `{ companyId: 1, botType: 1 }`.
+    - Added `isOpenForHiring: boolean` to `CompanyModel` (default: `false` for founder companies, `true` for platform companies).
+  - **Validation (`server/src/schemas/founder.schema.ts`):**
+    - `createFounderCompanySchema`: validates company name (2–100 chars), description, and hired career domains.
+    - `purchaseBotSchema`: validates and normalizes bot type aliases (`HIRING` -> `HIRING_BOT`, etc.), rejecting advanced bot types with clear errors.
+  - **Service Layer (`FounderService`):**
+    - `createCompany(userId, input)`: Verifies `careerRole === 'FOUNDER'`, enforces 1 active company limit per founder, verifies name uniqueness, verifies CorpCoin balance $\ge 100$, and executes atomic transaction debiting 100 CorpCoin via `CorpCoinService.debit` (`type: 'COMPANY_CREATION'`), creating the company, and linking `founder.companyId`.
+    - `buyBot(userId, input)`: Verifies active company ownership, rejects advanced bots (D13), checks duplicate bot purchase, verifies CorpCoin balance $\ge 250$, debits 250 CorpCoin via `CorpCoinService.debit` (`type: 'BOT_PURCHASE'`, `referenceId: bot._id`), creates `CompanyBot`, checks if all 3 basic bots are owned, and automatically updates `company.isOpenForHiring = true`.
+    - `getBots(userId)`: Returns purchased bots and storefront catalog with ownership/locked state.
+    - `getFounderCompany(userId)`: Returns active company details, bots roster, and hiring state.
+  - **REST Endpoints:**
+    - `POST /api/founder/company` (`authenticateJwt`): Creates founder company (201 Created).
+    - `GET /api/founder/company` (`authenticateJwt`): Retrieves founder company (200 OK).
+    - `POST /api/founder/bots/purchase` (`authenticateJwt`): Buys bot (201 Created).
+    - `GET /api/founder/bots` (`authenticateJwt`): Retrieves bot catalog & owned bots (200 OK).
+
+---
+
+### ADR-064: Connecting Founder Companies to Hiring & Task Evaluation Engines via AI Gateway PIPELINE Pool, Requisition Controls, and Multi-Tenant Privacy Guards (TASK P8.3)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Sections 6, 12, 13, 26 (Collections 7, 8, 9, 10, 11, 17, 18, 19), and 53 define the integration of founder-owned companies with the hiring and performance management engines:
+  1. Once a founder company transitions to `isOpenForHiring: true` (having acquired all 3 basic bots per ADR-063), job seekers can discover and apply for open positions.
+  2. The hiring engine (ATS screening, stage chats, final review offer) and employee daily task/evaluation engine resolve behavior through the company's bots via the AI Gateway `PIPELINE` pool. Bots remain completely abstract; companies never know which underlying provider (Gemini, OpenAI, Groq) processes requests, ensuring seamless provider failover and resilience.
+  3. Founders must have complete visibility and control over their own company's requisitions and workforce:
+     - Create and close job openings within their company's approved domains (`domainsHired`).
+     - View applicants, stage progression statuses, and evaluation feedback.
+     - Inspect the employee roster with active headcount, `maxEmployees` (from config/company, default 20), and remaining capacity.
+  4. Multi-Tenant Privacy and Data Isolation Guards:
+     - Founders cannot view, modify, or close job openings belonging to other companies (403 Forbidden).
+     - Founders cannot view applicant rosters or individual application details of other companies (403 Forbidden).
+     - Founders cannot edit, tamper with, or override candidate/employee evaluation outcomes, scores, feedback, or EXP allocations (strictly read-only views).
+  5. Hiring Capacity Safeguards:
+     - Job seekers cannot apply to founder companies that are not open for hiring (`isOpenForHiring === false`) or that have reached maximum employee capacity (`employeeCount >= maxEmployees`).
+- **Decision:**
+  - **Application Service Invariant Guards (`application.service.ts`):**
+    - Updated `applyForJob` to verify `isOpenForHiring !== false` and `employeeCount < maxEmployees` (default 20 from config) for founder companies.
+  - **Validation Schemas (`server/src/schemas/founder.schema.ts`):**
+    - `createFounderJobSchema`: validates job title, domain (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), requirements, description, target level, and simulated salary band.
+    - `listFounderApplicationsQuerySchema`: supports optional status, stage, and jobId filtering with strict pagination bounds.
+  - **Founder Service Operations (`FounderService`):**
+    - `createJob(userId, input)`: Verifies active company ownership, `isOpenForHiring: true`, domain included in company's `domainsHired`, and headcount capacity $< maxEmployees$. Creates `CompanyJob` with `status: 'OPEN'`, `isOpen: true`.
+    - `closeJob(userId, jobId)`: Enforces ownership (`job.companyId === founder.companyId`), rejecting foreign founders with 403 Forbidden. Sets `status: 'CLOSED'`, `isOpen: false`.
+    - `getJobs(userId)`: Returns all job postings for the founder's company.
+    - `getEmployees(userId)`: Returns active and under-review employee roster with `currentCount`, `maxEmployees` (from config), and `remainingCapacity`.
+    - `getApplications(userId, filters)`: Scopes queries strictly to `companyId = founder.companyId`. If `filters.jobId` is specified, verifies it belongs to the founder's company, returning 403 Forbidden on foreign jobs.
+    - `getApplicationById(userId, applicationId)`: Returns candidate application details, stage evaluations, and feedbacks. Throws 403 Forbidden if `application.companyId !== founder.companyId`. Read-only; no endpoints exist to alter evaluation records.
+  - **REST Endpoints (`founder.routes.ts` & `founder.controller.ts`):**
+    - `POST /api/founder/jobs` (`authenticateJwt`): Creates job opening (201 Created).
+    - `GET /api/founder/jobs` (`authenticateJwt`): Lists company jobs (200 OK).
+    - `PATCH /api/founder/jobs/:id/close` (`authenticateJwt`): Closes job opening (200 OK).
+    - `GET /api/founder/employees` & `GET /api/founder/company/employees` (`authenticateJwt`): Lists company employee roster & capacity (200 OK).
+    - `GET /api/founder/applications` (`authenticateJwt`): Lists company applicants with filters (200 OK).
+    - `GET /api/founder/applications/:id` (`authenticateJwt`): Views detailed applicant evaluations (200 OK).
+  - **Verification:**
+    - Verified by `server/src/tests/founder-engines-integration.test.ts` (10 tests) covering job requisition controls, multi-tenant cross-company security guards, applicant evaluation immutability, and an end-to-end integration lifecycle (job seeker hired into founder company, receives AI task via PIPELINE pool, submits solution, evaluated with score & EXP awarded).
+
+---
+
+### ADR-065: Deterministic Company Simulation Engine Architecture, Bounded Modifiers, and Insolvency State Machine (TASK P8.4)
+
+- **Status:** APPROVED
+- **Context:** Specification Sections 7.4, 8.2, 13, 14, 15, 20, 21, 22, 26 (Collections 24, 25, 26), and Decision D14 require a deterministic simulation model for founder companies:
+  1. AI Gateway (`PIPELINE` pool) generates rich business dilemma narratives and option descriptions, but under no circumstances determines numeric financial metrics or modifier magnitudes.
+  2. The backend is 100% authoritative over revenue, expenses, profit, financial health, employee satisfaction, productivity, retention, and reputation.
+  3. Modifiers are bounded by catalog ranges, and formulas are purely deterministic.
+  4. At financial health $H \le -1000$ CorpCoin, the company undergoes automatic bankruptcy liquidation: status becomes `'BANKRUPT'`, active employees are released back to `'JOB_SEEKER'`, open jobs are closed, and the founder reverts to `'JOB_SEEKER'` while retaining lifetime EXP and personal CorpCoin balance.
+- **Decision:**
+  - Designed the complete simulation engine in `docs/SIMULATION_DESIGN.md`.
+  - Core formulas locked:
+    - $\text{dailyRevenue} = \max(0, 100 + (N \times P \times 5) + (Q \times 2) + \Delta \text{rev})$
+    - $\text{dailyExpenses} = \max(0, 50 + (N \times 10) + (B \times 10) + \Delta \text{exp} + \text{immediateCost})$
+    - $\text{dailyProfit} = \text{dailyRevenue} - \text{dailyExpenses}$
+    - $H_{\text{new}} = H_{\text{prev}} + \text{dailyProfit}$
+  - Daily scenario lifecycle (`companyScenarios` & `companyDecisions`): exactly 1 dilemma per calendar day with 3–4 options; unchosen dilemmas expire naturally.
+  - Snapshot persistence in `companyFinancials` (Spec Collection 26) with UTC date idempotency.
+  - User explicitly reviewed and confirmed approval before code implementation.
+
+---
+
+### ADR-066: Deterministic Simulation Implementation, Modifier Template Binding & Automatic Insolvency Liquidation (TASK P8.5)
+
+- **Status:** ACCEPTED
+- **Context:** Following design approval in ADR-065, implement the company simulation engine adhering strictly to Spec Collections 24, 25, 26, Decision D14, and `docs/SIMULATION_DESIGN.md`:
+  1. Build `CompanyScenario` (`companyScenarios`), `CompanyDecision` (`companyDecisions`), and `CompanyFinancials` (`companyFinancials`) models.
+  2. Implement idempotent 1 scenario per founder per day based on UTC `dayKey`.
+  3. AI generates dilemma text and options where each option references a backend template ID; AI cannot invent numeric effects.
+  4. SimulationEngine executes the daily tick deterministically and writes immutable financials snapshots.
+  5. Automatic bankruptcy liquidation triggered when financial health $H \le -1000$.
+- **Decision:**
+  - **Models & Enums:**
+    - Created `CompanyScenarioModel` (Collection 24) with compound unique index `{ companyId: 1, date: 1 }`.
+    - Created `CompanyDecisionModel` (Collection 25) with unique index `{ scenarioId: 1 }`.
+    - Created `CompanyFinancialsModel` (Collection 26) with indexes `{ companyId: 1, recordedAt: -1 }` and `{ companyId: 1, date: 1 }` (unique).
+    - Updated `CompanyModel` with live simulation fields: `employeeSatisfaction`, `retentionRate`, `cumulativeRevenue`, `cumulativeProfit`, and `operatingDays`.
+    - Added enums `CompanyScenarioStatus`, `ScenarioCategory`, `ScenarioOptionId`, and `NotificationType.COMPANY_BANKRUPT`.
+  - **Modifier Template Catalog & Separation:**
+    - Defined `MODIFIER_TEMPLATES` in `server/src/schemas/simulation.schema.ts` mapping template IDs to bounded numeric modifiers.
+    - AI Gateway produces narrative texts and option descriptors with mandatory `modifierTemplateId` references; backend resolves numbers via `resolveTemplateModifiers` and rejects direct LLM numbers.
+  - **Simulation Engine & Service:**
+    - Created `simulationEngine.ts`: pure functions computing productivity $P$, revenue, expenses, profit, health, secondary metrics clamping, and insolvency checks.
+    - Created `SimulationService`:
+      - `getDailyScenario`: checks for existing dayKey scenario; generates via AI Gateway (`PIPELINE` pool) with fallback.
+      - `submitDecision`: transitions scenario to `'DECIDED'` and saves immutable decision record.
+      - `executeDailyTick`: idempotent tick per UTC dayKey; handles expired scenarios; executes pure math engine; writes `companyFinancials`; triggers `executeBankruptcyLiquidation` when $H \le -1000$.
+      - `executeBankruptcyLiquidation`: marks company `'BANKRUPT'`, reverts founder to `'JOB_SEEKER'`, terminates employees and reverts their roles to `'JOB_SEEKER'`, closes jobs, writes immutable audit log and notifications, preserving founder EXP and personal CorpCoins.
+  - **REST Endpoints & Testing:**
+    - Mounted `/api/founder/simulation` (`/scenario`, `/decision`, `/tick`, `/financials`).
+    - Added 21 unit and integration tests (`simulation-engine.test.ts` and `simulation-service.test.ts`) verifying the 3 worked examples from `docs/SIMULATION_DESIGN.md` (Good Day, Bad Day, 4-day Bankruptcy Path), template resolution, idempotency, and liquidation lifecycle.
+
+---
+
+### ADR-067: Transactional Bankruptcy Liquidation, Threshold Boundary (-999 vs -1000) & Founder Re-Entry Protocol (TASK P8.6)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Specification Section 12, 14, 21, and Decision D14 require authoritative bankruptcy execution when company financial health drops to $\le \text{bankruptcyThreshold}$ (default $-1000$ from `PlatformConfig.company.bankruptcyThreshold`).
+  - Liquidation must execute in a single atomic database transaction: company status becomes `BANKRUPT`, `isOpenForHiring = false`, `employeeCount = 0`, all open jobs closed, employees terminated and released to `JOB_SEEKER` with notifications, founder `careerRole` reverted to `JOB_SEEKER` keeping EXP and history, with notifications and immutable audit logging.
+  - Founder CorpCoin handling clarification: User explicitly confirmed that the founder's personal CorpCoin balance remains untouched (company debt is wiped with the liquidated enterprise; personal liquidity and lifelong EXP are preserved, and `founderStarterCoinGranted` stays `true` so no starter coins are re-granted upon subsequent Founder Mode re-unlocks).
+- **Decision:**
+  - **Single Transaction Execution:**
+    - Refactored `SimulationService.executeBankruptcyLiquidation` to execute within `withTransaction` session, gracefully handling replica set sessions and standalone MongoDB fallbacks.
+    - Updated `CompanyModel` (`status = 'BANKRUPT'`, `isOpenForHiring = false`, `employeeCount = 0`), `UserModel` (`careerRole = 'JOB_SEEKER'`), `FounderModel` (`status = 'BANKRUPT'`), `CompanyEmployeeModel` (`status = 'TERMINATED'`, `endedAt = now`, liquidation history entry appended), and `CompanyJobModel` (`isOpen = false`, `status = 'CLOSED'`) with session options.
+    - Dispatched `COMPANY_BANKRUPT` in-app notifications to all released employees and the founder.
+    - Wrote immutable audit log (`action = 'COMPANY_BANKRUPTCY_LIQUIDATION'`, `targetType = 'Company'`, `targetCollection = 'companies'`).
+  - **Threshold Boundary Precision:**
+    - Pure `isBankrupt(financialHealth, threshold)` and `executeDailyTick` integration tested at the exact single-integer boundary:
+      - $H = -999 \to$ not bankrupt, company remains `ACTIVE`, `isOpenForHiring = true`, liquidation not called.
+      - $H = -1000 \to$ bankrupt, company transitions to `BANKRUPT`, liquidation invoked.
+      - Dynamic threshold from `PlatformConfig` (e.g. $-500$) respected ($H = -499 \to$ not bankrupt, $H = -500 \to$ bankrupt).
+  - **Founder Re-Entry & Zero Coin Re-grant:**
+    - Bankrupt founder retains `careerRole = 'JOB_SEEKER'`, lifelong accumulated EXP (`totalExp` & `totalExpCached`), and personal CorpCoin balance untouched.
+    - Founder can immediately participate in talent market as a job seeker.
+    - `founderStarterCoinGranted` stays `true`. When the founder re-unlocks Founder Mode (`FounderService.unlockFounderMode`), `hasUnlockedBefore = true` satisfies eligibility, but `starterCoinAvailable = false` and `starterCoinsGranted = 0`. No starter CorpCoin ledger entry is created, and personal balance is not incremented.
+    - Previous bankrupt company does not block creating a new company since `status === 'BANKRUPT'` (not `ACTIVE`).
+  - **Testing Coverage:**
+    - Created dedicated test suite `server/src/tests/bankruptcy.test.ts` (11 passing tests) covering the exact boundary (-999 vs -1000), atomic session liquidation, employee releases, job closures, founder re-entry, and verification that starter coins are never re-granted across multiple bankruptcy/unlock cycles.
+
+### ADR-068: Founder Mode Frontend Architecture, Executive Design System & Simulation Telemetry (TASK P8.7)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - TASK P8.7 requires complete frontend support for Founder Mode across all 9 core operational views:
+    1. Founder Mode Unlock (`/founder/unlock`): Eligibility status, progression meter, starter capital grant banner, transition confirmation modal.
+    2. Create Company Wizard (`/founder/company/new`): Incorporation form, domain selection, live balance preview and cost breakdown (100 CC).
+    3. AI Bot Storefront (`/founder/bots`): 3 basic bots (250 CC each), owned states, live CorpCoin debit, Open for Hiring activation banner.
+    4. Executive Company Dashboard (`/founder`): Financial health gauge with insolvency danger zone, revenue/expense/profit metrics, satisfaction, productivity, retention, reputation telemetry, and employee roster table.
+    5. Daily Dilemma & Tick Execution (`/founder/simulation`): Daily scenario dilemma, 2-4 strategic options with bounded modifier tags, rationale input, decision submission, and simulation tick execution runner with feedback.
+    6. Job Requisition Manager (`/founder/jobs`): Active and archived job postings, publish requisition modal, close job action.
+    7. Applicant Pipeline (`/founder/applicants`): Multi-stage candidate intake tracker, evaluation inspection modal with bot round scores and feedback.
+    8. CorpCoin Double-Entry Ledger (`/founder/ledger`): Transaction history table tracking seed grants, company incorporation fees, and bot purchases.
+    9. Bankruptcy Outcome Screen (`/founder/bankrupt`): Liquidation hero screen displaying asset preservation (lifelong EXP, personal CorpCoin) and talent market re-entry.
+- **Decision:**
+  - **Design System:** Created `Founder.module.css` following the platform's Cyber-Corporate executive aesthetic using design tokens (`tokens.css`), dark mode glassmorphism, responsive data grids, needle gauge for financial health, and color-coded telemetry banners (emerald, cyan, gold, crimson).
+  - **Authoritative Backend Integration:** All views consume authoritative server endpoints (`/founder/*` and `/founder/simulation/*`). React code strictly displays and formats values without ever mutating or deciding economic balances, company solvency, or evaluation scores.
+  - **Navigation & Routing:** Added 9 routes in `App.tsx` guarded by `ProtectedRoute`. Configured `Sidebar.tsx` with dedicated `Executive HQ` navigation group for founders, dynamically updating active states.
+  - **Ledger Route:** Added `GET /api/founder/ledger` route and controller to `server/src/routes/founder.routes.ts` and `founder.service.ts` to power the immutable double-entry transaction history view.
+  - **Testing Coverage:** Implemented `client/src/tests/founder.test.tsx` (12 passing tests) covering eligibility checks, modal confirmation, company formation form, bot purchases, dashboard gauge and metrics, daily dilemma decision submission and tick execution, job opening lifecycle, applicant evaluation inspector, ledger display, and bankruptcy outcome screen.
+
+
+
+
 
 
 

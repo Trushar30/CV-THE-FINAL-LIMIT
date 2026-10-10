@@ -121,6 +121,12 @@ export * from './controllers/discipline.controller.js';
 export * from './models/Promotion.js';
 export * from './services/employee/promotion.service.js';
 export * from './controllers/promotion.controller.js';
+export * from './models/Founder.js';
+export * from './models/CompanyBot.js';
+export * from './schemas/founder.schema.js';
+export * from './services/founder/founder.service.js';
+export * from './controllers/founder.controller.js';
+export * from './routes/founder.routes.js';
 export * from './ai/index.js';
 
 

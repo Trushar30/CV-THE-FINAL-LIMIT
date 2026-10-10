@@ -126,7 +126,7 @@ export class ApplicationService {
       );
     }
 
-    // 6. Verify target company exists and is ACTIVE
+    // 6. Verify target company exists, is ACTIVE, is open for hiring, and has capacity
     const company = await CompanyModel.findById(job.companyId);
     if (!company) {
       throw AppError.notFound('Target company not found.');
@@ -134,6 +134,18 @@ export class ApplicationService {
     if (company.status !== 'ACTIVE') {
       throw AppError.businessRuleViolation(
         `Cannot apply to '${company.name}' because company is ${company.status.toLowerCase()}.`
+      );
+    }
+    const isPlatform = company.isPlatformCompany === true || company.type === 'PLATFORM';
+    if (!isPlatform && company.isOpenForHiring === false) {
+      throw AppError.businessRuleViolation(
+        `Cannot apply to '${company.name}' because the company is not currently open for hiring.`
+      );
+    }
+    const maxCapacity = company.maxEmployees || 20;
+    if (company.employeeCount >= maxCapacity) {
+      throw AppError.businessRuleViolation(
+        `Cannot apply to '${company.name}' because the company has reached maximum employee capacity (${maxCapacity}).`
       );
     }
 

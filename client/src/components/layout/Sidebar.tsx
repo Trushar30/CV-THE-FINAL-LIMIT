@@ -169,23 +169,54 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               <div className={styles.navGroupTitle}>Executive HQ</div>
               <NavLink
                 to="/founder"
+                end
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
                 <span className={styles.navIcon}>
                   <RocketIcon size={18} />
                 </span>
-                <span>Company Command</span>
+                <span>Command Overview</span>
               </NavLink>
               <NavLink
-                to="/bots"
+                to="/founder/simulation"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>
+                  <ZapIcon size={18} />
+                </span>
+                <span>Daily Dilemma</span>
+              </NavLink>
+              <NavLink
+                to="/founder/bots"
                 className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
                 onClick={onCloseMobile}
               >
                 <span className={styles.navIcon}>
                   <BotIcon size={18} />
                 </span>
-                <span>Bot Marketplace</span>
+                <span>Bot Fleet</span>
+              </NavLink>
+              <NavLink
+                to="/founder/jobs"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>
+                  <BriefcaseIcon size={18} />
+                </span>
+                <span>Job Openings</span>
+              </NavLink>
+              <NavLink
+                to="/founder/applicants"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>
+                  <ClipboardListIcon size={18} />
+                </span>
+                <span>Applicant Pipeline</span>
               </NavLink>
             </div>
           )}

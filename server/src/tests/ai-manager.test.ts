@@ -135,8 +135,10 @@ describe('AI Manager Console, Key Vault & RBAC Integration Suite (TASK P3.6)', (
       const encrypted = encryptSecret(plaintext);
       const parts = encrypted.split(':');
 
-      // Tamper with ciphertext
-      const corruptedCipher = parts[2].slice(0, -2) + 'ff';
+      // Tamper with ciphertext guaranteed
+      const lastTwo = parts[2].slice(-2);
+      const replacement = lastTwo === 'ff' ? '00' : 'ff';
+      const corruptedCipher = parts[2].slice(0, -2) + replacement;
       const corruptedPayload = `${parts[0]}:${parts[1]}:${corruptedCipher}`;
 
       expect(() => decryptSecret(corruptedPayload)).toThrow();

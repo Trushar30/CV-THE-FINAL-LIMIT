@@ -28,7 +28,13 @@ export interface ICompany {
   financialHealth: number;
   employeeCount: number;
   maxEmployees: number;
+  isOpenForHiring: boolean;
   aiProviderPool: 'PIPELINE' | 'DEMO';
+  employeeSatisfaction: number;
+  retentionRate: number;
+  cumulativeRevenue: number;
+  cumulativeProfit: number;
+  operatingDays: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,11 +135,48 @@ const CompanySchema = new Schema<ICompanyDocument>(
       default: 20,
       min: 1,
     },
+    isOpenForHiring: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
     aiProviderPool: {
       type: String,
       enum: ['PIPELINE', 'DEMO'],
       required: true,
       default: 'PIPELINE',
+    },
+    employeeSatisfaction: {
+      type: Number,
+      required: true,
+      default: 70,
+      min: 0,
+      max: 100,
+    },
+    retentionRate: {
+      type: Number,
+      required: true,
+      default: 100,
+      min: 0,
+      max: 100,
+    },
+    cumulativeRevenue: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+    cumulativeProfit: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    operatingDays: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
     },
   },
   {
@@ -147,6 +190,9 @@ CompanySchema.pre('save', function (next) {
   if (this.type === 'PLATFORM') {
     this.isPlatformCompany = true;
     this.ownerId = null;
+    if (this.isNew && this.isOpenForHiring === undefined) {
+      this.isOpenForHiring = true;
+    }
   } else if (this.type === 'FOUNDER') {
     this.isPlatformCompany = false;
   }
