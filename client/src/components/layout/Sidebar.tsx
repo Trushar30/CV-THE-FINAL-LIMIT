@@ -14,6 +14,7 @@ import {
   ShieldCheckIcon,
   BrainCircuitIcon,
   CloseIcon,
+  BellIcon,
 } from '../ui/Icon';
 import styles from './Sidebar.module.css';
 
@@ -70,6 +71,18 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
               </span>
               <span>Global Leaderboards</span>
             </NavLink>
+            {user && (
+              <NavLink
+                to="/notifications"
+                className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+                onClick={onCloseMobile}
+              >
+                <span className={styles.navIcon}>
+                  <BellIcon size={18} />
+                </span>
+                <span>Notifications Center</span>
+              </NavLink>
+            )}
             <NavLink
               to="/jobs"
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}

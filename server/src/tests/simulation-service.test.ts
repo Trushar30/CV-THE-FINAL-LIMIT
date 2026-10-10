@@ -86,6 +86,7 @@ describe('Company Simulation Service Integration Suite (TASK P8.5)', () => {
     } as unknown as ConfigService;
 
     simulationService = new SimulationService(mockAIGateway, mockConfigService);
+    vi.spyOn(NotificationModel, 'create').mockResolvedValue({} as unknown as never);
   });
 
   afterEach(() => {

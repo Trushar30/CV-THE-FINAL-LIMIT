@@ -198,9 +198,15 @@ export type NotificationType =
   | 'TASK_ASSIGNED'
   | 'TASK_EVALUATED'
   | 'WARNING_ISSUED'
+  | 'WARNING_EXPIRING_SOON'
   | 'PROMOTION'
+  | 'DEMOTION'
+  | 'TERMINATION'
   | 'FOUNDER_UNLOCKED'
   | 'COMPANY_BANKRUPT'
+  | 'DAILY_SCENARIO_READY'
+  | 'LOW_BALANCE_WARNING'
+  | 'AI_RESULT_READY'
   | 'SYSTEM_ANNOUNCEMENT';
 
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
@@ -212,9 +218,15 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'TASK_ASSIGNED',
   'TASK_EVALUATED',
   'WARNING_ISSUED',
+  'WARNING_EXPIRING_SOON',
   'PROMOTION',
+  'DEMOTION',
+  'TERMINATION',
   'FOUNDER_UNLOCKED',
   'COMPANY_BANKRUPT',
+  'DAILY_SCENARIO_READY',
+  'LOW_BALANCE_WARNING',
+  'AI_RESULT_READY',
   'SYSTEM_ANNOUNCEMENT',
 ] as const;
 
@@ -323,5 +335,44 @@ export const COMPANY_BOT_TIERS: readonly CompanyBotTier[] = [
   'BASIC',
   'ADVANCED',
 ] as const;
+
+// Leaderboard Categories & Periods (Spec Section 15, 22, 26 Collection 35)
+export type LeaderboardCategory =
+  | 'USER_EXP'
+  | 'USER_LEVEL'
+  | 'USER_CORPCOIN'
+  | 'USER_PERFORMANCE'
+  | 'USER_FOUNDER'
+  | 'COMPANY_PROFIT'
+  | 'COMPANY_REVENUE'
+  | 'COMPANY_WORKFORCE'
+  | 'COMPANY_RETENTION'
+  | 'COMPANY_RATING'
+  | 'COMPANY_GROWTH'
+  | 'COMPANY_LOSS_MAKING';
+
+export const LEADERBOARD_CATEGORIES: readonly LeaderboardCategory[] = [
+  'USER_EXP',
+  'USER_LEVEL',
+  'USER_CORPCOIN',
+  'USER_PERFORMANCE',
+  'USER_FOUNDER',
+  'COMPANY_PROFIT',
+  'COMPANY_REVENUE',
+  'COMPANY_WORKFORCE',
+  'COMPANY_RETENTION',
+  'COMPANY_RATING',
+  'COMPANY_GROWTH',
+  'COMPANY_LOSS_MAKING',
+] as const;
+
+export type LeaderboardPeriod = 'ALL_TIME' | 'MONTHLY' | 'WEEKLY' | 'DAILY';
+export const LEADERBOARD_PERIODS: readonly LeaderboardPeriod[] = [
+  'ALL_TIME',
+  'MONTHLY',
+  'WEEKLY',
+  'DAILY',
+] as const;
+
 
 

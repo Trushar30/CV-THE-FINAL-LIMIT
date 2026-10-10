@@ -13,13 +13,13 @@
 | **Phase 6** | **Interview Simulation Engine: Multi-Turn Stage Chat, Dynamic Evaluation, Offer Workflows & Admin Demo Console** | **COMPLETED**   |
 | **Phase 7** | **Employee System: On-Demand Daily Tasks, AI Evaluation, EXP Progression & Warning Workflows**                     | **COMPLETED**   |
 | **Phase 8** | **Founder Mode: Company Creation, AI Bot Marketplace & Deterministic Simulation Engine**                           | **COMPLETED**   |
-| Phase 9     | Consoles, Telemetry, Leaderboards & Platform Hardening                                                         | UPCOMING        |
+| **Phase 9** | **Consoles, Telemetry, Leaderboards & Platform Hardening**                                                         | **IN PROGRESS** |
 
 ---
 
 ## 2. Current Status
 
-- **Current Phase:** Phase 9 — Consoles, Telemetry, Leaderboards & Platform Hardening (Status: **UPCOMING**)
+- **Current Phase:** Phase 9 — Consoles, Telemetry, Leaderboards & Platform Hardening (Status: **IN PROGRESS**)
 - **Completed Tasks:**
   - `TASK P0.1`: Memory system and master rules (`GEMINI.md`, `.agent/rules/corpverse.md`, `PROJECT_BRIEF.md`, `ARCHITECTURE.md`, `PROGRESS.md`, `DECISIONS.md`, `OPEN_QUESTIONS.md`, `HANDOFF.md`).
   - `TASK P0.2`: 35-section `CORPVERSE_SPECIFICATION.md` initial draft.
@@ -396,8 +396,6 @@
 - **Status:** COMPLETED
 - **Completed Date:** 2026-10-10
 - **Description:** Implemented authoritative bankruptcy execution and transactional liquidation protocol when financial health drops to $\le \text{bankruptcyThreshold}$ (from `PlatformConfig.company.bankruptcyThreshold`, default $-1000$) per Spec Sections 12, 14, 21, Decisions D12, D14, and ADR-067. Wrapped `SimulationService.executeBankruptcyLiquidation` in a single atomic database transaction using `withTransaction` session management with graceful standalone fallback: marks company `BANKRUPT`, sets `isOpenForHiring: false`, `employeeCount: 0`; releases all active/probation company employees back to `careerRole: 'JOB_SEEKER'` with `status: 'TERMINATED'`, ends employment with timestamp, records liquidation history reason, and delivers `COMPANY_BANKRUPT` notification confirming career EXP is preserved; closes all open job postings (`isOpen: false, status: 'CLOSED'`); reverts founder `careerRole` back to `JOB_SEEKER`, transitions `FounderModel.status` to `'BANKRUPT'`, sends founder `COMPANY_BANKRUPT` notification; and writes immutable audit log (`COMPANY_BANKRUPTCY_LIQUIDATION`). Handled founder CorpCoin balance per user confirmation: personal balance remains untouched (company debt is liquidated with the insolvent entity; personal liquidity and lifelong EXP are preserved, and `founderStarterCoinGranted` stays `true`). Tested single-integer boundary (-999 does not trigger bankruptcy vs -1000 triggers bankruptcy), re-entry into the talent market as a job seeker, and verified that subsequent Founder Mode re-unlocks grant 0 starter coins and create no grant transactions. Added dedicated test suite `server/src/tests/bankruptcy.test.ts` (11 passing tests, 74 passing founder & simulation tests total, 100% build and lint clean).
-- **Application Code Written:** `server/src/services/simulation/simulation.service.ts`, `server/src/tests/bankruptcy.test.ts`.
-
 ### TASK P8.7: Founder Dashboard & Corporate Governance UI (Spec Sections 17, 18, 20, ADR-068)
 
 - **Status:** COMPLETED
@@ -405,13 +403,72 @@
 - **Description:** Implemented comprehensive executive frontend suite for Founder Mode across all 9 core operational views: Founder Mode Unlock (`/founder/unlock`), Create Company Wizard (`/founder/company/new`), AI Bot Storefront (`/founder/bots`), Executive Company Dashboard (`/founder`), Daily Dilemma & Tick Execution (`/founder/simulation`), Job Requisition Manager (`/founder/jobs`), Applicant Pipeline (`/founder/applicants`), CorpCoin Double-Entry Ledger (`/founder/ledger`), and Bankruptcy Outcome Screen (`/founder/bankrupt`). Designed Cyber-Corporate executive CSS system with health gauge, stat grids, and color-coded telemetry. Integrated with backend founder and simulation APIs, mounted routes with ProtectedRoute in App.tsx, updated executive navigation in Sidebar.tsx, and added `GET /api/founder/ledger` endpoint on backend. Built comprehensive client test suite `client/src/tests/founder.test.tsx` (12 passing tests, 108 client tests total, 100% build and lint clean).
 - **Application Code Written:** `client/src/pages/founder/Founder.module.css`, `client/src/pages/founder/FounderUnlockPage.tsx`, `client/src/pages/founder/CreateCompanyPage.tsx`, `client/src/pages/founder/BotShopPage.tsx`, `client/src/pages/founder/FounderDashboardPage.tsx`, `client/src/pages/founder/DailyScenarioPage.tsx`, `client/src/pages/founder/JobOpeningsPage.tsx`, `client/src/pages/founder/ApplicantPipelinePage.tsx`, `client/src/pages/founder/FounderLedgerPage.tsx`, `client/src/pages/founder/BankruptcyOutcomePage.tsx`, `client/src/App.tsx`, `client/src/components/layout/Sidebar.tsx`, `client/src/tests/founder.test.tsx`, `server/src/routes/founder.routes.ts`, `server/src/controllers/founder.controller.ts`, `server/src/services/founder/founder.service.ts`.
 
+### TASK P9.1: Global Deterministic Leaderboards, Precomputed Snapshots & Multi-Role Visibility (Spec Sections 15, 22, 26 Collection 35, ADR-069)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented authoritative ranking leaderboards strictly derived from stored backend records per Spec Sections 15, 22, 26 Collection 35, and ADR-069. Built `LeaderboardModel` (`leaderboards` collection, compound unique index on `{ category: 1, period: 1 }`). Built `RankingService` computing all 12 canonical categories: User (`USER_EXP`, `USER_LEVEL`, `USER_CORPCOIN`, `USER_PERFORMANCE`, `USER_FOUNDER`) and Company (`COMPANY_PROFIT`, `COMPANY_REVENUE`, `COMPANY_WORKFORCE`, `COMPANY_RETENTION`, `COMPANY_RATING`, `COMPANY_GROWTH`, `COMPANY_LOSS_MAKING`). Enforced non-negotiable invariant exclusions: suspended users, bankrupt companies, and demo pool simulation records are strictly omitted. Implemented precomputed snapshot caching with on-demand refresh (`POST /api/leaderboards/refresh`), automated refresh on simulation daily tick completion, pagination, and career domain filtering. Built `RankingController` and mounted routes under `/api/leaderboards` accessible to all authenticated roles. Created rich cyber-corporate `LeaderboardsPage.tsx` with segment switcher, category chips, domain filter, top 3 visual podium cards (Champion 🥇, Runner Up 🥈, Bronze 🥉), and responsive full rankings table. Added 15 Vitest server tests (`server/src/tests/ranking.test.ts`) and 4 Vitest client tests (`client/src/tests/leaderboards.test.tsx`) with 100% pass rate (112 client tests total, 0 lint warnings).
+- **Application Code Written:** `server/src/models/Leaderboard.ts`, `server/src/schemas/ranking.schema.ts`, `server/src/services/ranking/ranking.service.ts`, `server/src/controllers/ranking.controller.ts`, `server/src/routes/ranking.routes.ts`, `server/src/types/enums.ts`, `server/src/app.ts`, `server/src/index.ts`, `server/src/services/simulation/simulation.service.ts`, `server/src/tests/ranking.test.ts`, `client/src/pages/leaderboards/LeaderboardsPage.tsx`, `client/src/pages/leaderboards/Leaderboards.module.css`, `client/src/App.tsx`, `client/src/tests/leaderboards.test.tsx`.
+
+### TASK P9.2: Complete Employee & Founder Notifications Lifecycle, Unread Counters & Advance Warning Expiry (Spec Sections 24, 26 Collection 36, Section 27.8, ADR-070)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented end-to-end notification lifecycle completion across employee, founder, and candidate journeys per Spec Section 24, Section 26.36, Section 27.8, and ADR-070. Expanded canonical `NotificationType` enum with `DEMOTION`, `TERMINATION`, `WARNING_EXPIRING_SOON`, `DAILY_SCENARIO_READY`, `LOW_BALANCE_WARNING`, and `AI_RESULT_READY`. Rewired `DisciplineService.executeDemotion` and `executeTermination` to emit dedicated `DEMOTION` and `TERMINATION` notifications with return links. Built `checkAndNotifyExpiringWarnings` in `DisciplineService` providing idempotent advance notice for active warnings expiring within 3 days. Wired `DailyTaskService` to emit `TASK_ASSIGNED` (New Task Ready) upon task assignment and AI fulfillment. Wired `SimulationService` to dispatch `DAILY_SCENARIO_READY` upon daily dilemma synthesis and `LOW_BALANCE_WARNING` when operating health enters distress ($\le -500$), and equipped bankruptcy notices with actionable recovery links. Wired `ResumeAnalysisService` to dispatch `AI_RESULT_READY` upon asynchronous background parsing completion. Added dedicated `GET /api/notifications/unread-count` endpoint with dependency injection in `NotificationController`. Confirmed notification preferences are omitted as they are absent from the specification. Updated client `NotificationBell` with tailored vector iconography and links for all notification types. Added 10 Vitest server tests (`server/src/tests/notification-events.test.ts`) with 100% pass rate (100 server tests passing, 112 client tests passing, 0 lint warnings).
+- **Application Code Written:** `server/src/types/enums.ts`, `server/src/schemas/notification.schema.ts`, `server/src/services/notification/notification.service.ts`, `server/src/controllers/notification.controller.ts`, `server/src/routes/notification.routes.ts`, `server/src/services/employee/discipline.service.ts`, `server/src/services/employee/dailyTask.service.ts`, `server/src/services/simulation/simulation.service.ts`, `server/src/services/resume/resumeAnalysis.service.ts`, `server/src/tests/notification-events.test.ts`, `client/src/api/notifications.ts`, `client/src/components/notifications/NotificationBell.tsx`.
+
+---
+
+### TASK P9.3: Admin Management APIs, Confirmation Safety Mechanism & Permission Matrix Enforcement (Spec Sections 22, 25, 29, 30, 43, ADR-071)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented authoritative Admin management REST APIs, dangerous operations safety confirmation gates, PlatformConfig section oversight, and strict Permission Matrix RBAC enforcement per Spec Sections 22, 25, 29, 30, 43, and ADR-071. Built Zod schemas (`admin.schema.ts`) for query/pagination, user updating with audit reason, and dangerous operation confirmation tokens (`CONFIRM_DELETE_USER`, `CONFIRM_DELETE_COMPANY`, `CONFIRM_RESET_ECONOMY`). Built `AdminService` (`admin.service.ts`): paginates, searches, and filters users; fetches user details, profile, employment, and founder records with zero exposure of `passwordHash` or sensitive tokens (`.select('-passwordHash')`); updates user records with mandatory audit logs; suspends and restores accounts with audit reasons; safely handles dangerous account deletion, company liquidation with employee release, and economy reset; provides active PlatformConfig inspection without secret leakage; and enables granular section updates (`founder`, `employee`, `company`, `applications`, `ai`, etc.) with Zod validation, version bumping, cache updates, and audit logging. Built `AdminController` with dependency injection. Mounted routes in `admin.routes.ts` protected by `authenticateJwt` and `requirePlatformRole('ADMIN')`. Added comprehensive Vitest test suite (`server/src/tests/admin-management.test.ts`) with 31 tests covering all operations, dangerous confirmation rejections, and the complete Permission Matrix verifying 401 Unauthorized for unauthenticated requests, 403 Forbidden for `JOB_SEEKER`, `EMPLOYEE`, `FOUNDER`, and `AI_MANAGER`, and 200 OK for `ADMIN`.
+- **Application Code Written:** `server/src/schemas/admin.schema.ts`, `server/src/services/admin/admin.service.ts`, `server/src/controllers/admin.controller.ts`, `server/src/routes/admin.routes.ts`, `server/src/app.ts`, `server/src/index.ts`, `server/src/tests/admin-management.test.ts`.
+
+### TASK P9.4: Admin Analytics, Bounded Date Aggregations, Telemetry Metrics & Paginated Viewers (Spec Sections 22, 28, 30, 43, ADR-072)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented comprehensive Admin analytics and telemetry endpoints across platform operations per Spec Sections 22, 28, 30, 43, and ADR-072. Enforced date bounding with `boundedDateRangeSchema` (default past 30 days via `resolveDateRange`, maximum 90 days window to prevent unindexed table scans on large MongoDB collections, invariant `startDate <= endDate`). Built `AnalyticsService` (`analytics.service.ts`) with aggregations across 6 core operational dimensions:
+  1. User Analytics (`getUserAnalytics`): Total, active, suspended user counts, distributions by `careerRole`, `platformRole`, and profile `domain`, and registration trends over bounded date ranges.
+  2. Application Analytics (`getApplicationAnalytics`): Funnel stages, active/rejected/accepted distributions, rejection reason stages from `FeedbackModel`, and top missing skills using MongoDB `$unwind`.
+  3. Task Analytics (`getTaskAnalytics`): Task count, submissions, submission rate percentage, average score, score statistics (min, max), score bands distribution (0–39 Poor, 40–59 Needs Improvement, 60–74 Acceptable, 75–89 Good, 90–100 Excellent) matching Spec Section 11/12, and daily score trends.
+  4. Economy Analytics (`getEconomyAnalytics`): Total EXP circulation, total CorpCoin circulation from `UserModel`, and transaction volume/counts grouped by transaction type from `ExpTransactionModel` and `CorpCoinTransactionModel`.
+  5. Company Analytics (`getCompanyAnalytics`): Corporate entity status counts, active workforce headcount, and financial performance outcomes (`totalRevenue`, `totalExpenses`, `totalProfit`, `avgDailyRevenue`, `avgDailyExpenses`).
+  6. AI Analytics (`getAiAnalytics`): AI request volume by provider and task type from `AIRequestLogModel`, latency telemetry (`avgLatencyMs`, `minLatencyMs`, `maxLatencyMs`, `totalTokens`, total/success/failed call counts, failure rate percentage), error breakdowns from `AIResponseLogModel`, and live queue depth from `AIJobModel`.
+  7. Paginated Viewers (`getAuditLogsViewer`, `getAiLogsViewer`, `getAiQueueViewer`): Indexed viewers for audit logs, AI telemetry logs, and AI background queues with pagination, sorting, and multi-field filters.
+Built `AnalyticsController` and mounted 9 routes under `/api/admin/analytics/*` guarded by `authenticateJwt` and `requirePlatformRole('ADMIN')`. Added comprehensive Vitest test suite (`server/src/tests/admin-analytics.test.ts`) with 20 tests covering date validation, aggregations, viewers, and RBAC matrix (76 P9 tests passing, 100% build and lint clean).
+- **Application Code Written:** `server/src/schemas/analytics.schema.ts`, `server/src/services/admin/analytics.service.ts`, `server/src/controllers/analytics.controller.ts`, `server/src/routes/admin.routes.ts`, `server/src/app.ts`, `server/src/index.ts`, `server/src/tests/admin-analytics.test.ts`.
+
+### TASK P9.5: Frontend: Ranking Page, Notifications Center, Admin Console & Typed Confirmation Safety (Spec Sections 22, 24, 43, ADR-073)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Implemented full suite of user interfaces for rankings, notifications, administrative governance, and safety challenge modals connecting authoritatively to backend REST APIs per Spec Sections 22, 24, 43, and ADR-073:
+  1. Global Deterministic Leaderboards (`/leaderboards`): Enhanced with authenticated user's position highlighted (`myStandingBanner` showing rank and category score, plus `myRankRow` and `You` badge on the leaderboard table).
+  2. Dedicated Notifications Center (`/notifications`): Full-page notifications center with unread counters, category filter pills (`All Alerts`, `Unread`, `Career & Hiring`, `Employment Discipline`, `Corporate Operations`, `AI & Tasks`), click-to-read with automatic routing, and "Mark All as Read" batch action. Linked from `NotificationBell` popup and sidebar navigation.
+  3. Typed Confirmation Safety Modal (`TypedConfirmationModal.tsx`): Reusable security challenge modal requiring exact match of dangerous operation token (`CONFIRM_DELETE_USER`, `CONFIRM_DELETE_COMPANY`, `CONFIRM_RESET_ECONOMY`, `CONFIRM_FORCE_TERMINATE`) and minimum 10-character audit reason before unlocking destructive buttons.
+  4. Comprehensive Admin Console (`/admin`): 7 unified governance panels:
+     - Users Roster: paginated table, search query, career role and status filtering, user edit modal, suspension modal with audit justification, and hard deletion.
+     - PlatformConfig Editor: section selector (`founder`, `employee`, `company`, `applications`, `ai`, `career`, `bots`, `ats`, `security`), formatted JSON editor, version bump display, and mandatory audit justification input.
+     - Companies & Jobs: company roster with ratings, workforce and financial status; job requisition roster with status toggle and deletion.
+     - Analytics Dashboard: time window selector (7d, 30d, 90d), KPI grid (Users, Applications, Tasks, EXP, CorpCoin, AI Latency, Active Workforce), score band charts, and application stage funnel.
+     - Audit Log Explorer: append-only audit trail viewer with action filtering and JSON state diff inspection modal.
+     - AI Background Queue: live queue monitor with status filters (`PENDING`, `PROCESSING`, `COMPLETED`, `WAITING_FOR_PROVIDER`, `FAILED`) and attempt counts.
+     - Dangerous Economy Reset Tool: global vs targeted user reset selector with strict safety challenge.
+  5. Vitest Tests: Added `client/src/tests/adminConsole.test.tsx` (6 tests), `client/src/tests/notificationsCenter.test.tsx` (5 tests), and updated `client/src/tests/leaderboards.test.tsx` (5 tests). All 17 client test suites (124 tests total) pass with 100% build and lint clean.
+- **Application Code Written:** `client/src/api/admin.ts`, `client/src/components/admin/TypedConfirmationModal.tsx`, `client/src/components/admin/TypedConfirmationModal.module.css`, `client/src/pages/admin/AdminConsolePage.tsx`, `client/src/pages/admin/AdminConsole.module.css`, `client/src/pages/NotificationsPage.tsx`, `client/src/pages/NotificationsPage.module.css`, `client/src/pages/leaderboards/LeaderboardsPage.tsx`, `client/src/components/notifications/NotificationBell.tsx`, `client/src/components/notifications/NotificationBell.module.css`, `client/src/components/layout/Sidebar.tsx`, `client/src/App.tsx`, `client/src/tests/adminConsole.test.tsx`, `client/src/tests/notificationsCenter.test.tsx`, `client/src/tests/leaderboards.test.tsx`.
+
 ---
 
 ## 4. Pending / Next Immediate Tasks
 
-1. **TASK P9.1:** AI Operations Console & Provider Management (Spec Sections 28, 29, Phase 9: Real-time telemetry, provider health toggles, priority and pool routing overrides, failure rate alarms, and audit log inspection).
-2. **TASK P9.2:** Leaderboards & Global Company Rankings (Spec Section 22: Algorithmic ranking scores, domain leaderboards, founder prestige rankings).
-3. **TASK P9.3:** Platform Hardening & System E2E Verification (End-to-end multi-role flow validation, stress testing, security audits).
+1. **TASK P10.1:** End-to-End System Integration & Acceptance Verification (Full lifecycle validation across Job Seeker, Employee, Founder, AI Manager, and Admin roles).
+
+
+
+
 
 
 

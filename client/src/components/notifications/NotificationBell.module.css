@@ -239,3 +239,27 @@
   font-size: var(--cv-text-xs);
   color: var(--cv-text-secondary);
 }
+
+.footer {
+  padding: var(--cv-space-2) var(--cv-space-3);
+  border-top: 1px solid var(--cv-border-subtle);
+  background: var(--cv-bg-surface);
+  text-align: center;
+}
+
+.viewAllBtn {
+  background: none;
+  border: none;
+  color: var(--cv-brand-primary-500);
+  font-size: var(--cv-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--cv-radius-sm);
+  transition: opacity var(--cv-motion-duration-fast);
+}
+
+.viewAllBtn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}

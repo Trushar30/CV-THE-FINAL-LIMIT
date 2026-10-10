@@ -16,6 +16,7 @@ import { CompanyEmployeeModel, type ICompanyEmployeeDocument } from '../models/C
 import { CompanyModel, type ICompanyDocument } from '../models/Company.js';
 import { ConfigService } from '../services/config/config.service.js';
 import { DEFAULT_PLATFORM_CONFIG } from '../config/platformConfig.schema.js';
+import { NotificationService } from '../services/notification/notification.service.js';
 import { AIGateway, AIWorker, AIError } from '../ai/index.js';
 import { type IAIJobDocument } from '../models/AIJob.js';
 
@@ -91,7 +92,12 @@ describe('Daily Tasks Engine & Idempotent Generation Suite (TASK P7.2)', () => {
       getConfig: vi.fn().mockResolvedValue(DEFAULT_PLATFORM_CONFIG),
     } as unknown as ConfigService;
 
-    dailyTaskService = new DailyTaskService(mockAIGateway, mockAIWorker, mockConfigService);
+    const mockNotificationService = {
+      create: vi.fn().mockResolvedValue({}),
+      list: vi.fn().mockResolvedValue({ notifications: [], total: 0, unreadCount: 0, page: 1, limit: 20 }),
+    } as unknown as NotificationService;
+
+    dailyTaskService = new DailyTaskService(mockAIGateway, mockAIWorker, mockConfigService, mockNotificationService);
   });
 
   afterEach(() => {

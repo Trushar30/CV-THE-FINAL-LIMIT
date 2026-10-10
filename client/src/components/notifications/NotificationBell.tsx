@@ -11,6 +11,7 @@ import {
   TrophyIcon,
   ShieldCheckIcon,
   BriefcaseIcon,
+  SparklesIcon,
 } from '../ui/Icon';
 import styles from './NotificationBell.module.css';
 
@@ -46,6 +47,28 @@ function getNotificationIcon(type: string): ReactElement {
       return <TrophyIcon size={14} color="var(--cv-gold-500)" />;
     case 'HIRED':
       return <ShieldCheckIcon size={14} color="var(--cv-feedback-success)" />;
+    case 'PROMOTION':
+      return <TrophyIcon size={14} color="var(--cv-gold-500)" />;
+    case 'DEMOTION':
+      return <AlertCircleIcon size={14} color="var(--cv-feedback-warning)" />;
+    case 'TERMINATION':
+      return <AlertCircleIcon size={14} color="var(--cv-feedback-error)" />;
+    case 'WARNING_ISSUED':
+      return <AlertCircleIcon size={14} color="var(--cv-feedback-warning)" />;
+    case 'WARNING_EXPIRING_SOON':
+      return <ShieldCheckIcon size={14} color="var(--cv-cyan-500)" />;
+    case 'COMPANY_BANKRUPT':
+      return <AlertCircleIcon size={14} color="var(--cv-feedback-error)" />;
+    case 'LOW_BALANCE_WARNING':
+      return <AlertCircleIcon size={14} color="var(--cv-feedback-error)" />;
+    case 'TASK_ASSIGNED':
+      return <BriefcaseIcon size={14} color="var(--cv-brand-primary-500)" />;
+    case 'TASK_EVALUATED':
+      return <ZapIcon size={14} color="var(--cv-violet-500)" />;
+    case 'DAILY_SCENARIO_READY':
+      return <BriefcaseIcon size={14} color="var(--cv-brand-primary-500)" />;
+    case 'AI_RESULT_READY':
+      return <SparklesIcon size={14} color="var(--cv-cyan-500)" />;
     default:
       return <BriefcaseIcon size={14} color="var(--cv-brand-primary-500)" />;
   }
@@ -205,6 +228,20 @@ export function NotificationBell(): ReactElement {
                 </div>
               ))
             )}
+          </div>
+
+          <div className={styles.footer}>
+            <button
+              type="button"
+              className={styles.viewAllBtn}
+              onClick={() => {
+                setIsOpen(false);
+                navigate('/notifications');
+              }}
+              data-testid="view-all-notifications-btn"
+            >
+              View all in Notifications Center &rarr;
+            </button>
           </div>
         </div>
       )}

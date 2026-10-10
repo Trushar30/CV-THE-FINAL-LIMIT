@@ -6,11 +6,19 @@ export type NotificationType =
   | 'OFFER_RECEIVED'
   | 'HIRED'
   | 'APPLICATION_EXPIRED'
+  | 'TASK_ASSIGNED'
+  | 'TASK_EVALUATED'
   | 'WARNING_ISSUED'
+  | 'WARNING_EXPIRING_SOON'
   | 'PROMOTION'
   | 'DEMOTION'
   | 'TERMINATION'
-  | 'SYSTEM';
+  | 'FOUNDER_UNLOCKED'
+  | 'COMPANY_BANKRUPT'
+  | 'DAILY_SCENARIO_READY'
+  | 'LOW_BALANCE_WARNING'
+  | 'AI_RESULT_READY'
+  | 'SYSTEM_ANNOUNCEMENT';
 
 export interface NotificationItem {
   _id: string;
@@ -46,6 +54,13 @@ export const notificationsApi = {
     return apiClient.get<NotificationsResponse>('/notifications', {
       params: params as Record<string, string | number | boolean | undefined>,
     });
+  },
+
+  /**
+   * Get unread notification count.
+   */
+  async getUnreadCount(): Promise<{ unreadCount: number }> {
+    return apiClient.get<{ unreadCount: number }>('/notifications/unread-count');
   },
 
   /**

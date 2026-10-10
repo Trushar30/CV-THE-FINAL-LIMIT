@@ -1,9 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { notificationService } from '../services/notification/notification.service.js';
+import {
+  NotificationService,
+  notificationService,
+} from '../services/notification/notification.service.js';
 import { AppError } from '../utils/errors.js';
 import type { ListNotificationsQuery } from '../schemas/notification.schema.js';
 
 export class NotificationController {
+  constructor(
+    private readonly service: NotificationService = notificationService
+  ) {}
+
   /**
    * GET /api/notifications
    * List notifications for the authenticated user per Spec Section 27.8.
@@ -15,7 +22,7 @@ export class NotificationController {
       }
 
       const query = req.query as unknown as ListNotificationsQuery;
-      const result = await notificationService.list(req.user._id, {
+      const result = await this.service.list(req.user._id, {
         isRead: query.isRead,
         type: query.type,
         page: query.page,
@@ -48,7 +55,7 @@ export class NotificationController {
       }
 
       const notificationId = req.params.id as string;
-      const notification = await notificationService.markRead(notificationId, req.user._id);
+      const notification = await this.service.markRead(notificationId, req.user._id);
 
       res.status(200).json({
         success: true,
@@ -71,12 +78,35 @@ export class NotificationController {
         throw AppError.unauthorized('Authentication required');
       }
 
-      const result = await notificationService.markAllRead(req.user._id);
+      const result = await this.service.markAllRead(req.user._id);
 
       res.status(200).json({
         success: true,
         data: {
           modifiedCount: result.modifiedCount,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/notifications/unread-count
+   * Return unread notification count for current user.
+   */
+  public async getUnreadCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw AppError.unauthorized('Authentication required');
+      }
+
+      const unreadCount = await this.service.getUnreadCount(req.user._id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          unreadCount,
         },
       });
     } catch (error) {

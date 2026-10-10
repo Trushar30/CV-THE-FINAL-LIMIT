@@ -338,7 +338,7 @@ export class DisciplineService {
     try {
       await this.notificationService.create({
         userId: employee.userId,
-        type: 'SYSTEM_ANNOUNCEMENT',
+        type: 'DEMOTION',
         title: 'Employment Review Outcome: Demoted',
         message: `Following an employment review, your role was demoted from Level ${previousLevel} (${previousPositionTitle}) to Level ${newLevel} (${newPositionTitle}). Your active warnings have been reset to 0. Your career EXP is fully preserved.`,
         link: `/employee/dashboard`,
@@ -408,7 +408,7 @@ export class DisciplineService {
     try {
       await this.notificationService.create({
         userId: employee.userId,
-        type: 'SYSTEM_ANNOUNCEMENT',
+        type: 'TERMINATION',
         title: 'Employment Terminated',
         message: `Your employment has been terminated: ${reason}. Your career status has returned to Job Seeker. All your accumulated EXP, completed projects, and profile assets remain permanent.`,
         link: `/jobs`,
@@ -488,6 +488,54 @@ export class DisciplineService {
     logger.warn(
       `[DisciplineService] Admin ${adminUserId.toString()} force-terminated employee ${employeeId.toString()}`
     );
+  }
+
+  /**
+   * Checks for active warnings expiring within daysThreshold days (default: 3)
+   * and dispatches a WARNING_EXPIRING_SOON notification if not already sent.
+   */
+  public async checkAndNotifyExpiringWarnings(
+    userId?: string | Types.ObjectId,
+    daysThreshold: number = 3
+  ): Promise<number> {
+    const now = new Date();
+    const futureCutoff = new Date(now.getTime() + daysThreshold * 86400000);
+
+    const query: Record<string, unknown> = {
+      status: 'ACTIVE',
+      expiresAt: { $gt: now, $lte: futureCutoff },
+    };
+
+    if (userId) {
+      query.userId = new Types.ObjectId(userId.toString());
+    }
+
+    const expiringWarnings = await WarningModel.find(query);
+    let notifiedCount = 0;
+
+    for (const warning of expiringWarnings) {
+      const warningLink = `/employee/warnings?id=${warning._id.toString()}`;
+      const existingNotifs = await this.notificationService.list(warning.userId, {
+        type: 'WARNING_EXPIRING_SOON',
+      });
+      const alreadyNotified = existingNotifs.notifications.some(
+        (n) => n.link === warningLink
+      );
+
+      if (!alreadyNotified) {
+        const daysRemaining = Math.max(1, Math.ceil((warning.expiresAt.getTime() - now.getTime()) / 86400000));
+        await this.notificationService.create({
+          userId: warning.userId,
+          type: 'WARNING_EXPIRING_SOON',
+          title: 'Performance Warning Expiring Soon',
+          message: `Your active warning issued on ${warning.issuedAt.toLocaleDateString()} will expire in ${daysRemaining} day(s). Once expired, it no longer counts towards employment reviews.`,
+          link: warningLink,
+        });
+        notifiedCount++;
+      }
+    }
+
+    return notifiedCount;
   }
 }
 

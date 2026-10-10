@@ -1344,6 +1344,144 @@ All internal AI interactions are isolated from vendor-specific payloads through 
 - **Authoritative Backend Ledger Route:**
   - `GET /api/founder/ledger`: Retrieves user's double-entry CorpCoin transaction history with pagination.
 
+### 24.6 Rankings & Leaderboard Subsystem Architecture (ADR-069)
+
+- **Pure Deterministic Backend Calculations:**
+  - Rankings are compiled exclusively from authoritative database fields across `users`, `profiles`, `companies`, `companyFinancials`, `performanceRecords`, and `founders`. Zero AI-generated ranking claims or client self-reporting permitted.
+- **Strict Invariant Exclusions:**
+  - Users: `status: { $ne: 'SUSPENDED' }`, `careerRole: { $ne: 'NONE' }`.
+  - Companies: `status: { $nin: ['BANKRUPT', 'SUSPENDED'] }`, `aiProviderPool: { $ne: 'DEMO' }`.
+  - Loss-making category explicitly ranks active struggling companies with negative profit or lowest financial health prior to liquidation (bankrupt entities are already liquidated and excluded).
+- **12 Canonical Leaderboard Categories:**
+  - **Individual Users:**
+    1. `USER_EXP`: Highest accumulated lifetime EXP.
+    2. `USER_LEVEL`: Highest job level ($L1 \dots L10$).
+    3. `USER_CORPCOIN`: Highest liquid CorpCoin balance.
+    4. `USER_PERFORMANCE`: Highest average score across evaluated task submissions.
+    5. `USER_FOUNDER`: Top active founder based on active company cumulative profit and health.
+  - **Corporate Entities:**
+    6. `COMPANY_PROFIT`: Highest cumulative net profit.
+    7. `COMPANY_REVENUE`: Highest cumulative gross revenue.
+    8. `COMPANY_WORKFORCE`: Largest active employee roster ($N \le 20$).
+    9. `COMPANY_RETENTION`: Highest employee retention rate ($T \in [0, 100]\%$).
+    10. `COMPANY_RATING`: Highest overall reputation score ($Q \in [0, 100]$).
+    11. `COMPANY_GROWTH`: 7-day delta in revenue and workforce velocity from `companyFinancials` snapshots.
+    12. `COMPANY_LOSS_MAKING`: Active distressed companies sorted by lowest profit and health ascending.
+- **Precomputed Snapshot Caching & Event Triggers:**
+  - Stored in `leaderboards` collection (Spec Collection 35) with unique compound index `{ category: 1, period: 1 }`.
+  - Snapshot cached with `calculatedAt` timestamp; paginated via `slice((page - 1) * limit, page * limit)`.
+  - Invalidation/refresh on demand via `POST /api/leaderboards/refresh` and automatically triggered on simulation tick completion (`SimulationService.executeDailyTick`).
+- **Multi-Role REST API & Frontend Wiring:**
+  - `GET /api/leaderboards` (and alias `/api/v1/leaderboards`): Accessible to all authenticated users. Supports `category`, `period`, `page`, `limit`, and `domain` filtering.
+  - `POST /api/leaderboards/refresh`: On-demand snapshot recalculation.
+  - Client view mounted at `/leaderboards` (`LeaderboardsPage.tsx`) with segment switcher, category chips, domain filter, gold/silver/bronze podium highlights, and responsive tables.
+
+---
+
+### 24.7 Notification Lifecycle & Real-Time Event Architecture (TASK P9.2)
+
+- **Collection & Data Model (`notifications`, Spec Collection 36):**
+  - Schema: `{ userId, type, title, message, isRead, link?, createdAt }` with compound index on `{ userId: 1, isRead: 1 }` and chronological index on `{ userId: 1, createdAt: -1 }`.
+  - Canonical `NotificationType`:
+    - Hiring: `STAGE_ADVANCED`, `APPLICATION_REJECTED`, `OFFER_RECEIVED`, `HIRED`, `APPLICATION_EXPIRED`.
+    - Employee Operations: `TASK_ASSIGNED`, `TASK_EVALUATED`, `WARNING_ISSUED`, `WARNING_EXPIRING_SOON`, `PROMOTION`, `DEMOTION`, `TERMINATION`.
+    - Founder & Enterprise: `FOUNDER_UNLOCKED`, `COMPANY_BANKRUPT`, `DAILY_SCENARIO_READY`, `LOW_BALANCE_WARNING`.
+    - Platform & AI: `AI_RESULT_READY`, `SYSTEM_ANNOUNCEMENT`.
+- **Event Dispatch Invariants:**
+  - `DisciplineService`: Emits dedicated `DEMOTION` (with link to `/employee/dashboard`) and `TERMINATION` (with link to `/jobs`).
+  - Advance Warning Expiry: `checkAndNotifyExpiringWarnings` scans active warnings expiring within 3 days and dispatches idempotent `WARNING_EXPIRING_SOON` notifications preventing multiple alerts for the same warning record.
+  - `DailyTaskService`: Dispatches `TASK_ASSIGNED` upon task generation and AI fulfillment.
+  - `SimulationService`: Dispatches `DAILY_SCENARIO_READY` upon scenario creation, `LOW_BALANCE_WARNING` when operating health $\le -500$, and liquidation notices with `/jobs` and `/founder/bankrupt` recovery links.
+  - `ResumeAnalysisService`: Dispatches `AI_RESULT_READY` upon background parse completion.
+- **REST APIs & Performance:**
+  - `GET /api/notifications`: Returns paginated `{ notifications, unreadCount, total, page, limit }`.
+  - `GET /api/notifications/unread-count`: Lightweight integer endpoint for Topbar bell badge polling.
+  - `PATCH /api/notifications/:id/read` & `PATCH /api/notifications/read-all`: Mark individual or all notifications read.
+  - Preferences: Completely omitted per strict No-Invention rules, as notification preferences are undefined in `CORPVERSE_SPECIFICATION.md`.
+
+---
+
+### 24.8 Admin Management APIs, Confirmation Gates & Permission Matrix Architecture (TASK P9.3)
+
+- **System Governance & Security Invariants:**
+  - Full platform governance ("God Mode") exposed under `/api/admin` (and `/api/v1/admin`), guarded strictly by `authenticateJwt` and `requirePlatformRole('ADMIN')`.
+  - `passwordHash` is never exposed under any circumstances: user listing and retrieval queries strictly project `.select('-passwordHash')`.
+  - Internal AI API keys are stored only server-side (encrypted with AES-256-GCM in `aiProviders` or in environment); `PlatformConfig` contains only configurable parameters and never exposes provider credentials.
+- **User Management Operations (`AdminService`):**
+  - `listUsers`: Supports search (regex on `email` or `Profile.displayName`), filtering by `careerRole`, `platformRole`, `status`, `isSuspended`, `emailVerified`, and pagination (`page`, `limit`).
+  - `getUserById`: Aggregates user profile, active company employment, and founder records.
+  - `updateUser`: Modifies core attributes, synchronizes profile fields, and records immutable audit log.
+  - `suspendUser` & `restoreUser`: Toggles `status` (`ACTIVE` vs `SUSPENDED`) and `isSuspended`, recording mandatory audit logs.
+- **Dangerous Operations & Two-Step Confirmation Mechanism:**
+  - `deleteUser`: Requires exact token `confirmation: 'CONFIRM_DELETE_USER'` and `reason` ($\ge 10$ chars). Prevents admin self-deletion. Atomically removes user, profile, refresh tokens, and email verification tokens.
+  - `deleteCompany`: Requires exact token `confirmation: 'CONFIRM_DELETE_COMPANY'` and `reason` ($\ge 10$ chars). Automatically releases active employees back to `JOB_SEEKER`, closes open jobs, and suspends the company entity.
+  - `resetEconomy`: Requires exact token `confirmation: 'CONFIRM_RESET_ECONOMY'` and `reason` ($\ge 10$ chars). Supports targeted user balance rollback or global player economy reset to zero EXP and CorpCoin.
+  - `adminForceTerminate`: Requires `confirmation: 'CONFIRM_FORCE_TERMINATE'` and `reason` ($\ge 10$ chars). Reverts employee to `JOB_SEEKER` while preserving lifelong EXP and profile assets.
+- **PlatformConfig Granular Section Oversight:**
+  - `GET /api/admin/config`: Retrieves active sanitized `PlatformConfig`.
+  - `GET /api/admin/config/sections/:section`: Retrieves specific section (`founder`, `employee`, `company`, `applications`, `ai`, `career`, `bots`, `ats`, `security`).
+  - `PATCH /api/admin/config/sections/:section`: Validates section payload using dedicated section Zod schema, merges into active configuration, increments version, archives previous active version, invalidates cache, and writes audit log with reason.
+- **Permission Matrix Enforcement (Spec Section 29):**
+  - Unauthenticated requests receive HTTP 401 Unauthorized.
+  - Non-admin roles (`JOB_SEEKER`, `EMPLOYEE`, `FOUNDER`, `AI_MANAGER`) receive HTTP 403 Forbidden across all `/api/admin/*` endpoints.
+  - Only users with `platformRole === 'ADMIN'` are authorized to perform management operations.
+
+---
+
+### 24.9 Admin Analytics, Bounded Date Aggregations & Telemetry Architecture (TASK P9.4)
+
+- **Bounded Date Range Enforcer (`boundedDateRangeSchema`):**
+  - All analytical aggregation endpoints enforce date range bounding to protect MongoDB performance against unindexed table scans.
+  - Defaults to the past 30 days (`resolveDateRange`), caps date windows to a maximum of 90 days (`MAX_DATE_RANGE_MS`), and strictly validates `startDate <= endDate`.
+- **Authoritative Analytical Dimensions (`AnalyticsService`):**
+  1. `getUserAnalytics`: Aggregates total, active, and suspended user counts, distributions by `careerRole`, `platformRole`, and profile `domain`, and registration trends over bounded date ranges.
+  2. `getApplicationAnalytics`: Funnel breakdown by stage and status, rejection reasons by stage from `FeedbackModel`, and top missing skills using MongoDB `$unwind`.
+  3. `getTaskAnalytics`: Aggregates employee tasks, submissions, submission rate percentage, average score, score statistics (min, max), score bands distribution (0–39 Poor, 40–59 Needs Improvement, 60–74 Acceptable, 75–89 Good, 90–100 Excellent) matching Spec Section 11/12, and daily score trends.
+  4. `getEconomyAnalytics`: Aggregates total EXP and CorpCoin in circulation, plus volume and counts grouped by transaction type from `ExpTransactionModel` and `CorpCoinTransactionModel`.
+  5. `getCompanyAnalytics`: Corporate entity counts by status, active employee roster size, and financial aggregates (`totalRevenue`, `totalExpenses`, `totalProfit`, `avgDailyRevenue`, `avgDailyExpenses`).
+  6. `getAiAnalytics`: Aggregates AI request volume by provider and task type from `AIRequestLogModel`, latency telemetry (`avgLatencyMs`, `minLatencyMs`, `maxLatencyMs`, `totalTokens`, total/success/failed call counts, failure rate percentage), error breakdowns from `AIResponseLogModel`, and live queue depth from `AIJobModel`.
+- **Paginated Administrative Viewers:**
+  - `getAuditLogsViewer`: Paginated query over `auditLogs` with actorId, actorRole, action, targetType, and date filters.
+  - `getAiLogsViewer`: Paginated query over `aiRequests` with providerCode, taskType, pool, and date filters.
+  - `getAiQueueViewer`: Paginated query over `aiJobs` with status, pool, and taskType filters.
+- **REST Endpoints (`/api/admin/analytics/*`):**
+  - Guarded strictly by `authenticateJwt` and `requirePlatformRole('ADMIN')`.
+  - Mounted routes: `/users`, `/applications`, `/tasks`, `/economy`, `/companies`, `/ai`, `/audit-logs`, `/ai-logs`, `/ai-queue`.
+
+---
+
+### 24.10 Rankings, Notifications Center, Admin Console & Typed Confirmation Frontend Architecture (TASK P9.5)
+
+- **Global Leaderboard Standing Highlight (`/leaderboards`):**
+  - Connects to authoritative precomputed snapshots via `/api/leaderboards`.
+  - Determines active user identity matching `user.id || user.userId || user.displayName` against rankings payload.
+  - Highlights user position via `myStandingBanner` showing rank badge and category score, plus `myRankRow` and `You` badge on the rankings table.
+- **Dedicated Notifications Center (`/notifications`):**
+  - Mounted at `/notifications` with navigation links from sidebar and `NotificationBell` popup footer.
+  - Category filtering: `All Alerts`, `Unread`, `Career & Hiring`, `Employment Discipline`, `Corporate Operations`, `AI & Tasks`.
+  - Unread count badge and batch "Mark All as Read" action via `notificationsApi.markAllRead()`.
+  - Individual item interaction with optimistic state updates and navigation links.
+- **Typed Confirmation Safety Modal (`TypedConfirmationModal`):**
+  - Prevents catastrophic accidental actions by requiring the user to type the exact target token (`expectedToken`, e.g. `CONFIRM_DELETE_USER`, `CONFIRM_DELETE_COMPANY`, `CONFIRM_RESET_ECONOMY`).
+  - Enforces mandatory justification audit reason with $\ge 10$ character minimum length.
+  - Confirm button remains strictly disabled until both constraints are satisfied.
+- **Unified Admin Console (`/admin`):**
+  - Replaces stub page with 7 operational panels:
+    1. Users Roster: search, career role/status filtering, user edit modal, suspension modal with audit justification, and hard deletion.
+    2. Config Editor: section selector, formatted JSON editor, version bump display, and mandatory audit justification input.
+    3. Companies & Jobs: company roster with ratings, workforce and financial status; job requisition roster with status toggle and deletion.
+    4. Analytics Dashboard: time window selector (7d, 30d, 90d), KPI grid (Users, Applications, Tasks, EXP, CorpCoin, AI Latency, Active Workforce), score band charts, and application stage funnel.
+    5. Audit Log Explorer: append-only audit trail viewer with action filtering and JSON state diff inspection modal.
+    6. AI Background Queue: live queue monitor with status filters and attempt counts.
+    7. Dangerous Economy Reset Tool: global vs targeted user reset selector with strict typed safety challenge.
+- **Admin API Client (`api/admin.ts`):**
+  - Centralizes typed API operations for users, config, companies, jobs, bounded analytics, viewers, and economy reset.
+
+
+
+
+
+
 
 
 

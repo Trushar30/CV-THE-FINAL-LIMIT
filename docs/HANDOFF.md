@@ -1,153 +1,125 @@
-# CorpVerse — Engineering Session Handoff
+# CorpVerse Handoff & Session State
 
 ## 1. What Was Done
 
-In **TASK P8.7** (Founder Dashboard & Corporate Governance UI), we completed the full frontend implementation for Founder Mode, spanning 9 core views, dedicated navigation, an executive styling design system, and an end-to-end client test suite:
+Completed **TASK P9.5: Frontend: Ranking Page, Notifications Center, Admin Console & Typed Confirmation Safety (Spec Sections 22, 24, 43, ADR-073)**:
 
-1. **Unlock Founder Mode Page (`client/src/pages/founder/FounderUnlockPage.tsx`, `/founder/unlock`):**
-   - Displays real-time eligibility telemetry, including career EXP meter (12,000 EXP threshold for Level 9 Lead), current employment status, and starter capital grant banner (1,000 CC for first-time founders; disabled indicator if previously unlocked).
-   - Features confirmation modal disclosing executive transition invariants (prior employment termination, lifelong EXP preservation, seed capital grant, and insolvency liquidation accountability at $\le -1000$ CC).
-   - Atomic unlock handler calling `POST /api/founder/unlock` with `{ confirm: true }`.
+1. **Typed Admin API Client (`client/src/api/admin.ts`)**:
+   - Built complete typed API client interfacing with backend endpoints established in Tasks P9.1–P9.4:
+     - User management: `listUsers`, `getUserById`, `updateUser`, `suspendUser`, `restoreUser`, `deleteUser`.
+     - Configuration governance: `getConfigSection`, `updateConfigSection`.
+     - Corporate oversight: `getCompanies`, `deleteCompany`, `getJobs`, `createJob`, `updateJob`, `deleteJob`.
+     - Bounded analytics aggregations: `getUserAnalytics`, `getApplicationAnalytics`, `getTaskAnalytics`, `getEconomyAnalytics`, `getCompanyAnalytics`, `getAiAnalytics`.
+     - Paginated viewers: `getAuditLogs`, `getAiLogs`, `getAiQueue`.
+     - Economy reset tool: `resetEconomy`.
 
-2. **Create Company Wizard (`client/src/pages/founder/CreateCompanyPage.tsx`, `/founder/company/new`):**
-   - Company registration form with legal name input, primary engineering domain dropdown (`SOFTWARE_ENGINEERING`, `CLOUD_ENGINEERING`, `AI_ENGINEERING`), and optional corporate brief.
-   - Live cost preview calculating registration fee (100 CC), available personal CorpCoin balance, and remaining balance with overdraft blocking.
-   - Form submission posting to `POST /api/founder/company`.
+2. **Global Leaderboards Standing Highlight (`client/src/pages/leaderboards/LeaderboardsPage.tsx`)**:
+   - Evaluated active user identity (`user.id || user.userId || user.displayName`) against loaded leaderboard rankings.
+   - Rendered top `myStandingBanner` displaying the user's calculated rank, category score, and career role badge.
+   - Added table row highlight (`myRankRow`) and green/glow `You` badge (`myBadge`) when the user appears in the rankings table.
 
-3. **AI Bot Storefront (`client/src/pages/founder/BotShopPage.tsx`, `/founder/bots`):**
-   - Catalog featuring the 3 basic abstract AI workforce bots (`HIRING_BOT`, `TASK_BOT`, `EVALUATION_BOT`) at 250 CC each.
-   - Owned state indicators, live CorpCoin debit, and "Coming in v2" card for advanced bots (400 CC).
-   - Prominent Open for Hiring status banner: warning banner when $< 3$ bots are owned (candidate intake locked); emerald activation banner when all 3 bots are acquired.
+3. **Dedicated Notifications Center (`client/src/pages/NotificationsPage.tsx`, `NotificationsPage.module.css`)**:
+   - Mounted dedicated notifications view at `/notifications` with navigation links from `Sidebar.tsx` and `NotificationBell.tsx` popup footer.
+   - Built category filter tabs: `All Alerts`, `Unread`, `Career & Hiring`, `Employment Discipline`, `Corporate Operations`, `AI & Tasks`.
+   - Built batch "Mark All as Read" action calling `notificationsApi.markAllRead()`.
+   - Built item click handling with optimistic read state mutation, unread count decrement, and link navigation.
 
-4. **Executive Company Dashboard (`client/src/pages/founder/FounderDashboardPage.tsx`, `/founder`, `/founder/dashboard`):**
-   - Visual needle gauge displaying company financial health ($H \in [-1000, 2000]$ CC) with insolvency danger zone ($\le -1000$ CC) and solvency status pill.
-   - Revenue, Expenses, Net Profit, and cumulative financial metrics cards.
-   - Secondary corporate telemetry: employee satisfaction ($S$), productivity coefficient ($P$), retention rate ($T$), and company reputation rating ($Q$).
-   - Workforce roster table listing active engineers, seniority levels, status, and hire dates.
-   - Historical point-in-time financial snapshots table.
-   - Automatic redirect to `/founder/bankrupt` if company status is `BANKRUPT`.
+4. **Typed Confirmation Safety Modal (`client/src/components/admin/TypedConfirmationModal.tsx`, `TypedConfirmationModal.module.css`)**:
+   - Built reusable safety modal enforcing exact token match (`typedToken.trim() === expectedToken`) and mandatory audit justification reason ($\ge 10$ characters) before unlocking destructive actions (`CONFIRM_DELETE_USER`, `CONFIRM_DELETE_COMPANY`, `CONFIRM_RESET_ECONOMY`, `CONFIRM_FORCE_TERMINATE`).
 
-5. **Daily Dilemma & Tick Execution Page (`client/src/pages/founder/DailyScenarioPage.tsx`, `/founder/simulation`):**
-   - Active daily dilemma card displaying prompt, category, and date.
-   - Strategic options grid (2–4 options) rendering narrative text, template ID, and bounded modifier pills ($\pm\% \text{ Rev}$, $\pm\% \text{ Exp}$, $-\text{CC Immediate}$, $\pm S$, $\pm Q$).
-   - Executive rationale input and decision submission (`POST /api/founder/simulation/decision`).
-   - "Run Daily Tick" execution button calling `POST /api/founder/simulation/tick` with post-tick telemetry banner showing delta revenue, expenses, net profit, new health, and solvency status.
+5. **Full Admin Console (`client/src/pages/admin/AdminConsolePage.tsx`, `AdminConsole.module.css`)**:
+   - Replaced stub console with 7 operational panels:
+     - **Users Roster**: search query, career role and status filtering, user edit modal (display name, career role, platform role), suspension modal with audit justification, and delete user flow.
+     - **Config Editor**: section selector (`founder`, `employee`, `company`, `applications`, `ai`, `career`, `bots`, `ats`, `security`), editable JSON textarea, version bump tracker, and mandatory audit justification input.
+     - **Companies & Jobs**: company roster with financial status and ratings, and job listings with status toggling and deletion.
+     - **Analytics Dashboard**: time window selector (7d, 30d, 90d), KPI grid (Users, Applications, Tasks, EXP, CorpCoin, AI Latency, Active Workforce), score band distribution bars, and pipeline funnel.
+     - **Audit Log Explorer**: append-only audit trail viewer with action filtering and JSON state diff inspection modal.
+     - **AI Background Queue**: background queue monitor with status filters (`PENDING`, `PROCESSING`, `COMPLETED`, `WAITING_FOR_PROVIDER`, `FAILED`) and attempt counts.
+     - **Dangerous Economy Reset Tool**: global vs targeted user reset selector with strict typed safety challenge.
 
-6. **Job Requisitions Manager (`client/src/pages/founder/JobOpeningsPage.tsx`, `/founder/jobs`):**
-   - Active job listings table with target seniority level, required skills tags, and opening status.
-   - Create Requisition modal with title, domain, seniority level (L1–L10), required skills, and description (`POST /api/founder/jobs`).
-   - Requisition closure action (`PATCH /api/founder/jobs/:id/close`).
-
-7. **Applicant Pipeline View (`client/src/pages/founder/ApplicantPipelinePage.tsx`, `/founder/applicants`):**
-   - Candidate intake table tracking applicants across recruitment stages (`APPLIED`, `ATS_SCREENING`, `ASSESSMENT`, `INTERVIEW`, `OFFER`, `ACCEPTED`).
-   - Evaluation inspector modal displaying bot round scores, pass/fail status, and qualitative feedback generated by company bots via the AI Gateway.
-
-8. **Immutable CorpCoin Ledger Page (`client/src/pages/founder/FounderLedgerPage.tsx`, `/founder/ledger`):**
-   - Double-entry transaction history table tracking seed grants (`FOUNDER_STARTER_GRANT`), incorporation fees (`COMPANY_CREATION`), and bot purchases (`BOT_PURCHASE`).
-   - Added backend controller and route `GET /api/founder/ledger` (`server/src/routes/founder.routes.ts`, `founder.service.ts`).
-
-9. **Bankruptcy Outcome Screen (`client/src/pages/founder/BankruptcyOutcomePage.tsx`, `/founder/bankrupt`):**
-   - Insolvency liquidation hero screen explaining state transitions when health crossed $\le -1000$ CC.
-   - Stat cards highlighting preserved assets: 100% of lifelong career EXP and untouched personal CorpCoin liquidity.
-   - Clear explanation of corporate debt absorption and talent market re-entry buttons (`/jobs`, `/career`).
-
-10. **Executive Styling & Design System (`client/src/pages/founder/Founder.module.css`):**
-    - Cyber-Corporate dark mode aesthetic with glassmorphic cards, gold executive accents, responsive tables, and gauge geometry.
-
-11. **Routing & Navigation Wiring:**
-    - Mounted all 9 founder routes under `ProtectedRoute` in `client/src/App.tsx`.
-    - Updated `Sidebar.tsx` with dedicated `Executive HQ` navigation group for founders.
-
-12. **Comprehensive Test Suite (`client/src/tests/founder.test.tsx`):**
-    - 12 Vitest unit and integration tests verifying all 9 views, modal interactions, form validations, bot purchases, scenario submission, tick runner, and bankruptcy state.
+6. **Comprehensive Automated Test Suites**:
+   - `client/src/tests/adminConsole.test.tsx`: 6 Vitest tests verifying typed challenge modal validation, admin tab navigation, user listing, suspension modal with audit reason, and config patching.
+   - `client/src/tests/notificationsCenter.test.tsx`: 5 Vitest tests verifying list rendering, category filtering, unread filter, and mark-read mutations.
+   - `client/src/tests/leaderboards.test.tsx`: 5 Vitest tests verifying user position highlight, standing banner, domain filtering, and cache refresh.
+   - All 17 client test files (124 tests) passed cleanly with 0 failures, 0 lint warnings, and clean TypeScript production build.
 
 ---
 
 ## 2. Files Changed
 
-### Created
-- `client/src/pages/founder/Founder.module.css` (Executive design system styling)
-- `client/src/pages/founder/FounderUnlockPage.tsx` (Eligibility meter & unlock modal)
-- `client/src/pages/founder/CreateCompanyPage.tsx` (Company incorporation wizard)
-- `client/src/pages/founder/BotShopPage.tsx` (AI bot storefront & hiring gate)
-- `client/src/pages/founder/FounderDashboardPage.tsx` (Executive overview & health gauge)
-- `client/src/pages/founder/DailyScenarioPage.tsx` (Daily dilemma & simulation tick runner)
-- `client/src/pages/founder/JobOpeningsPage.tsx` (Job requisition manager)
-- `client/src/pages/founder/ApplicantPipelinePage.tsx` (Candidate intake pipeline)
-- `client/src/pages/founder/FounderLedgerPage.tsx` (Immutable CorpCoin ledger)
-- `client/src/pages/founder/BankruptcyOutcomePage.tsx` (Insolvency liquidation hero)
-- `client/src/tests/founder.test.tsx` (12 founder frontend tests)
+### Client Code Added / Updated:
+- `client/src/api/admin.ts`
+- `client/src/components/admin/TypedConfirmationModal.tsx`
+- `client/src/components/admin/TypedConfirmationModal.module.css`
+- `client/src/pages/admin/AdminConsolePage.tsx`
+- `client/src/pages/admin/AdminConsole.module.css`
+- `client/src/pages/NotificationsPage.tsx`
+- `client/src/pages/NotificationsPage.module.css`
+- `client/src/pages/leaderboards/LeaderboardsPage.tsx`
+- `client/src/components/notifications/NotificationBell.tsx`
+- `client/src/components/layout/Sidebar.tsx`
+- `client/src/App.tsx`
+- `client/src/tests/adminConsole.test.tsx`
+- `client/src/tests/notificationsCenter.test.tsx`
+- `client/src/tests/leaderboards.test.tsx`
 
-### Modified
-- `server/src/services/founder/founder.service.ts` (Added `getCorpCoinLedger` method)
-- `server/src/controllers/founder.controller.ts` (Added `getLedger` controller)
-- `server/src/routes/founder.routes.ts` (Added `GET /api/founder/ledger` endpoint)
-- `client/src/App.tsx` (Registered all 9 founder routes)
-- `client/src/components/layout/Sidebar.tsx` (Added Executive HQ navigation group)
-- `docs/DECISIONS.md` (Recorded ADR-068)
-- `docs/PROGRESS.md` (Marked TASK P8.7 & Phase 8 COMPLETED)
-- `docs/ARCHITECTURE.md` (Documented Section 24.5 Founder Mode Frontend Architecture)
+### Documentation Updated:
+- `docs/DECISIONS.md` (Recorded ADR-073)
+- `docs/PROGRESS.md` (Marked TASK P9.5 as COMPLETED)
+- `docs/ARCHITECTURE.md` (Added Section 24.10)
+- `docs/HANDOFF.md` (Updated state and protocol)
 
 ---
 
 ## 3. Current Repository State
 
-- **Phase 8 (Founder Mode & Corporate Simulation):** 100% COMPLETED.
-- **Client Build:** `npm run build` in `/client` passes cleanly with 0 TypeScript/Vite errors (Exit code 0).
-- **Client Tests:** 14 test files, 108 tests passing in `/client` (Exit code 0).
-- **Server Build:** `npm run build` in `/server` passes cleanly (Exit code 0).
-- **Founder Unit & Service Tests:** 40 passing tests in `/server` (`founder-service.test.ts`, `founder-company-bots.test.ts`, `simulation-service.test.ts`, `bankruptcy.test.ts`).
-- **ESLint:** `npm run lint` across entire monorepo passes with 0 errors (Exit code 0).
+- **Client Tests**: 17 test suites, 124 tests passing (`npm test` in `client`).
+- **Client Linter**: 0 errors, 0 warnings (`npm run lint` in `client`).
+- **Client Build**: Clean Vite production build (`npm run build` in `client`).
+- **Server Build**: Clean TypeScript compilation (`npm run build` in `server`).
+- **Server Unit Tests**: Passing (`npm test -- src/tests/admin-analytics.test.ts src/tests/rankings.test.ts` in `server`).
 
 ---
 
 ## 4. Exact Next Steps
 
-We are ready to begin **Phase 9: Consoles, Telemetry, Leaderboards & Platform Hardening**:
-
-1. **TASK P9.1: AI Operations Console & Provider Management:**
-   - Real-time provider health dashboard (`gemini`, `openai`, `groq`).
-   - Priority and pool routing overrides, failure rate alarms, circuit breaker controls, and audit log inspection.
-2. **TASK P9.2: Leaderboards & Global Company Rankings:**
-   - Deterministic ranking scores based on financial health, employee satisfaction, revenue, and reputation.
-   - Global company leaderboard, domain leaderboards, and founder prestige rankings.
-3. **TASK P9.3: Platform Hardening & System Verification:**
-   - End-to-end cross-role integration tests, stress tests, security validations.
+Next phase is **TASK P10.1: End-to-End System Integration & Acceptance Verification**:
+- Verify cross-role user journey transitions (`JOB_SEEKER` $\rightarrow$ `EMPLOYEE` $\rightarrow$ `FOUNDER` $\rightarrow$ `BANKRUPT` $\rightarrow$ `JOB_SEEKER`).
+- Run acceptance checks across AI operations (`AI_MANAGER`), administrative governance (`ADMIN`), and game economies.
+- Final hardening and smoke verification before release.
 
 ---
 
 ## 5. Commands to Run
 
 ```bash
-# Verify client build and test suite
+# In client:
 cd client
-npm run build
 npm test
-
-# Verify server build and founder tests
-cd ../server
-npm run build
-npx vitest run src/tests/founder-service.test.ts src/tests/founder-company-bots.test.ts src/tests/simulation-service.test.ts src/tests/bankruptcy.test.ts
-
-# Monorepo lint check
-cd ..
 npm run lint
+npm run build
+
+# In server:
+cd server
+npm run build
+npm test -- src/tests/admin-analytics.test.ts src/tests/rankings.test.ts
 ```
 
 ---
 
 ## 6. Known Bugs or Open Items
 
-- None. All founder endpoints, mathematical models, UI pages, and transactional liquidation flows conform strictly to Specification Sections 12, 14, 17, 18, 20, 21, and Decisions D12, D14, D15.
+- None. All requirements for Task P9.5 are completed, verified against schemas, and passing in Vitest.
+- Note on Server Sandbox Tests: As recorded in earlier sessions, running tests requiring live MongoDB connections in the sandbox environment may encounter TCP permission limits; mock-based unit tests and build checks run with zero issues.
 
 ---
 
-## 7. Recommended Commit Message
+## 7. Conventional Commit Message
 
-`feat(founder): implement founder mode frontend pages, executive styling and test suite (P8.7)`
+`feat(client): implement ranking highlights, notifications center, admin console, and typed safety modals (P9.5)`
 
 ---
 
-## 8. Uncertainties
+## 8. Explicit Uncertainty List
 
-- None.
+- None. All requirements strictly implemented per Spec Sections 22, 24, 43, ADR-073, and existing design tokens.

@@ -13,18 +13,21 @@ import { domainRouter } from './routes/domain.routes.js';
 import { skillRouter } from './routes/skill.routes.js';
 import { aiManagerRouter, createAIManagerRoutes } from './routes/aiManager.routes.js';
 import type { AIManagerController } from './controllers/aiManager.controller.js';
-import { adminRouter } from './routes/admin.routes.js';
+import { adminRouter, createAdminRoutes } from './routes/admin.routes.js';
+import type { AdminController } from './controllers/admin.controller.js';
 import { companyRouter, jobRouter } from './routes/company.routes.js';
 import { applicationRouter } from './routes/application.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { employeeRouter } from './routes/employee.routes.js';
 import { founderRouter } from './routes/founder.routes.js';
 import { simulationRouter } from './routes/simulation.routes.js';
+import { rankingRouter } from './routes/ranking.routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './utils/errors.js';
 
 export interface AppOptions {
   aiManagerController?: AIManagerController;
+  adminController?: AdminController;
 }
 
 export function createApp(additionalRouter?: Router, options?: AppOptions): Express {
@@ -96,6 +99,8 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use('/api/v1/founder', founderRouter);
   app.use('/api/founder/simulation', simulationRouter);
   app.use('/api/v1/founder/simulation', simulationRouter);
+  app.use('/api/leaderboards', rankingRouter);
+  app.use('/api/v1/leaderboards', rankingRouter);
 
   const activeAiManagerRouter = options?.aiManagerController
     ? createAIManagerRoutes(options.aiManagerController)
@@ -103,8 +108,13 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
 
   app.use('/api/ai-manager', activeAiManagerRouter);
   app.use('/api/v1/ai-manager', activeAiManagerRouter);
-  app.use('/api/admin', adminRouter);
-  app.use('/api/v1/admin', adminRouter);
+
+  const activeAdminRouter = options?.adminController
+    ? createAdminRoutes(options.adminController)
+    : adminRouter;
+
+  app.use('/api/admin', activeAdminRouter);
+  app.use('/api/v1/admin', activeAdminRouter);
   if (additionalRouter) {
     app.use('/api', additionalRouter);
   }

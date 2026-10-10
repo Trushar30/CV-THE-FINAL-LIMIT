@@ -127,7 +127,19 @@ export * from './schemas/founder.schema.js';
 export * from './services/founder/founder.service.js';
 export * from './controllers/founder.controller.js';
 export * from './routes/founder.routes.js';
+export * from './models/Leaderboard.js';
+export * from './schemas/ranking.schema.js';
+export * from './services/ranking/ranking.service.js';
+export * from './controllers/ranking.controller.js';
+export * from './routes/ranking.routes.js';
+export * from './schemas/admin.schema.js';
+export * from './services/admin/admin.service.js';
+export * from './controllers/admin.controller.js';
+export * from './schemas/analytics.schema.js';
+export * from './services/admin/analytics.service.js';
+export * from './controllers/analytics.controller.js';
 export * from './ai/index.js';
+
 
 
 

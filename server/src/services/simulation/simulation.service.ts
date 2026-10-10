@@ -42,6 +42,7 @@ import {
 } from './simulationEngine.js';
 import { AppError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
+import { rankingService } from '../ranking/ranking.service.js';
 
 const SCENARIO_SYSTEM_PROMPT = `You are the Executive Simulation Engine for CorpVerse.
 Generate a realistic, high-stakes corporate dilemma for an engineering startup founder.
@@ -245,7 +246,7 @@ export class SimulationService {
     }));
 
     try {
-      return await CompanyScenarioModel.create({
+      const createdScenario = await CompanyScenarioModel.create({
         companyId: company._id,
         founderId: company.ownerId!,
         date: dayKey,
@@ -254,6 +255,22 @@ export class SimulationService {
         options: optionsWithBackendModifiers,
         status: 'ACTIVE',
       });
+
+      if (company.ownerId) {
+        try {
+          await NotificationModel.create({
+            userId: company.ownerId,
+            type: 'DAILY_SCENARIO_READY',
+            title: 'Daily Business Scenario Ready',
+            message: `A new strategic business dilemma for ${company.name} is ready for executive decision.`,
+            link: '/founder/simulation',
+          });
+        } catch {
+          // Non-blocking notification
+        }
+      }
+
+      return createdScenario;
     } catch (createErr: unknown) {
       // Handle race condition: concurrent request created scenario
       if (
@@ -450,7 +467,29 @@ export class SimulationService {
       await this.executeBankruptcyLiquidation(company);
     } else {
       await company.save();
+
+      // Low balance / near bankruptcy warning if financial health <= -500
+      if (company.financialHealth <= -500 && company.ownerId) {
+        try {
+          await NotificationModel.create({
+            userId: company.ownerId,
+            type: 'LOW_BALANCE_WARNING',
+            title: 'Low Financial Health Warning',
+            message: `Warning: ${company.name} financial health has dropped to ${company.financialHealth} (Bankruptcy threshold: ${config.company.bankruptcyThreshold ?? -1000}). Increase revenue or reduce headcount to avoid insolvency.`,
+            link: '/founder',
+          });
+        } catch {
+          // Non-blocking notification
+        }
+      }
     }
+
+    // Trigger asynchronous leaderboard cache refresh on daily tick completion
+    rankingService.refreshAllLeaderboards().catch((err: unknown) => {
+      logger.warn('[SimulationService] Leaderboard auto-refresh failed:', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     return {
       financials,
@@ -546,6 +585,7 @@ export class SimulationService {
           type: 'COMPANY_BANKRUPT' as const,
           title: 'Company Liquidation Notice',
           message: `${company.name} has entered bankruptcy liquidation. You have been released back to Job Seeker status with your career EXP preserved.`,
+          link: '/jobs',
         };
         if (session) {
           await NotificationModel.create([employeeNotif], { session });
@@ -575,6 +615,7 @@ export class SimulationService {
           type: 'COMPANY_BANKRUPT' as const,
           title: 'Company Bankruptcy Notice',
           message: `Your company ${company.name} has reached insolvent financial health and entered bankruptcy liquidation. Your career role is now Job Seeker. Your lifetime accumulated EXP and CorpCoin balance remain preserved.`,
+          link: '/founder/bankrupt',
         };
         if (session) {
           await NotificationModel.create([founderNotif], { session });

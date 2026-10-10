@@ -14,17 +14,39 @@ import {
   adminCreateJobSchema,
   adminUpdateJobSchema,
   adminDeleteJobSchema,
+  listCompaniesQuerySchema,
 } from '../schemas/company.schema.js';
 import { demoHiringController } from '../controllers/demoHiring.controller.js';
 import { disciplineController } from '../controllers/discipline.controller.js';
+import { adminController, AdminController } from '../controllers/admin.controller.js';
+import { analyticsController, AnalyticsController } from '../controllers/analytics.controller.js';
+import {
+  adminQueryUsersSchema,
+  adminUserIdParamSchema,
+  adminUpdateUserSchema,
+  adminUserActionReasonSchema,
+  adminDeleteUserSchema,
+  adminDeleteCompanySchema,
+  adminResetEconomySchema,
+  adminConfigSectionParamSchema,
+  adminUpdateConfigSectionBodySchema,
+} from '../schemas/admin.schema.js';
+import {
+  boundedDateRangeSchema,
+  auditLogsViewerQuerySchema,
+  aiLogsViewerQuerySchema,
+  aiQueueViewerQuerySchema,
+} from '../schemas/analytics.schema.js';
 import {
   createDemoSessionSchema,
   demoSessionIdParamsSchema,
   demoAnswerInputSchema,
 } from '../schemas/demoHiring.schema.js';
 
-export function createAdminRoutes(): Router {
-
+export function createAdminRoutes(
+  customAdminController: AdminController = adminController,
+  customAnalyticsController: AnalyticsController = analyticsController
+): Router {
   const router = Router();
 
   router.use(authenticateJwt);
@@ -37,7 +59,48 @@ export function createAdminRoutes(): Router {
     });
   });
 
-  // Admin Domain CRUD (Spec Section 20, Collection 5; Section 27.10)
+  // =========================================================================
+  // USER MANAGEMENT ROUTES (Spec Section 22, 29, 43)
+  // =========================================================================
+  router.get(
+    '/users',
+    validate({ query: adminQueryUsersSchema }),
+    customAdminController.listUsers.bind(customAdminController)
+  );
+
+  router.get(
+    '/users/:id',
+    validate({ params: adminUserIdParamSchema }),
+    customAdminController.getUserById.bind(customAdminController)
+  );
+
+  router.patch(
+    '/users/:id',
+    validate({ params: adminUserIdParamSchema, body: adminUpdateUserSchema }),
+    customAdminController.updateUser.bind(customAdminController)
+  );
+
+  router.post(
+    '/users/:id/suspend',
+    validate({ params: adminUserIdParamSchema, body: adminUserActionReasonSchema }),
+    customAdminController.suspendUser.bind(customAdminController)
+  );
+
+  router.post(
+    '/users/:id/restore',
+    validate({ params: adminUserIdParamSchema, body: adminUserActionReasonSchema }),
+    customAdminController.restoreUser.bind(customAdminController)
+  );
+
+  router.delete(
+    '/users/:id',
+    validate({ params: adminUserIdParamSchema, body: adminDeleteUserSchema }),
+    customAdminController.deleteUser.bind(customAdminController)
+  );
+
+  // =========================================================================
+  // DOMAIN MANAGEMENT ROUTES (Spec Section 20, Collection 5; Section 27.10)
+  // =========================================================================
   router.post(
     '/domains',
     validate({ body: createDomainSchema }),
@@ -60,7 +123,20 @@ export function createAdminRoutes(): Router {
     domainController.adminDeleteDomain.bind(domainController)
   );
 
-  // Admin Company Mutation Routes (Spec Section 6 & 27.10)
+  // =========================================================================
+  // COMPANY MANAGEMENT ROUTES (Spec Section 6 & 27.10)
+  // =========================================================================
+  router.get(
+    '/companies',
+    validate({ query: listCompaniesQuerySchema }),
+    companyController.listCompanies.bind(companyController)
+  );
+
+  router.get(
+    '/companies/:id',
+    companyController.getCompany.bind(companyController)
+  );
+
   router.post(
     '/companies',
     validate({ body: adminCreateCompanySchema }),
@@ -73,7 +149,15 @@ export function createAdminRoutes(): Router {
     companyController.adminUpdateCompany.bind(companyController)
   );
 
-  // Admin Job Mutation Routes (Spec Section 6.3 & 27.10)
+  router.delete(
+    '/companies/:id',
+    validate({ body: adminDeleteCompanySchema }),
+    customAdminController.deleteCompany.bind(customAdminController)
+  );
+
+  // =========================================================================
+  // JOB MANAGEMENT ROUTES (Spec Section 6.3 & 27.10)
+  // =========================================================================
   router.post(
     '/jobs',
     validate({ body: adminCreateJobSchema }),
@@ -92,7 +176,38 @@ export function createAdminRoutes(): Router {
     companyController.adminDeleteJob.bind(companyController)
   );
 
-  // Admin Hiring Demo Simulator Routes (Spec Section 23, 27.10)
+  // =========================================================================
+  // ECONOMY GOVERNANCE ROUTES
+  // =========================================================================
+  router.post(
+    '/economy/reset',
+    validate({ body: adminResetEconomySchema }),
+    customAdminController.resetEconomy.bind(customAdminController)
+  );
+
+  // =========================================================================
+  // PLATFORMCONFIG GOVERNANCE ROUTES (Spec Section 30)
+  // =========================================================================
+  router.get('/config', customAdminController.getConfig.bind(customAdminController));
+
+  router.get(
+    '/config/sections/:section',
+    validate({ params: adminConfigSectionParamSchema }),
+    customAdminController.getConfigSection.bind(customAdminController)
+  );
+
+  router.patch(
+    '/config/sections/:section',
+    validate({
+      params: adminConfigSectionParamSchema,
+      body: adminUpdateConfigSectionBodySchema,
+    }),
+    customAdminController.updateConfigSection.bind(customAdminController)
+  );
+
+  // =========================================================================
+  // DEMO HIRING SIMULATOR ROUTES (Spec Section 23, 27.10)
+  // =========================================================================
   router.get(
     '/demo/hiring',
     demoHiringController.listDemoSessions.bind(demoHiringController)
@@ -139,14 +254,74 @@ export function createAdminRoutes(): Router {
     demoHiringController.cleanupAllDemoData.bind(demoHiringController)
   );
 
-  // Admin Force-Terminate Employee (dangerous action with confirmation & audit log)
+  // =========================================================================
+  // DISCIPLINE / FORCE-TERMINATION (Dangerous action)
+  // =========================================================================
   router.post(
     '/employees/:id/terminate',
     disciplineController.adminForceTerminate.bind(disciplineController)
+  );
+
+  // =========================================================================
+  // ANALYTICS & TELEMETRY ROUTES (Spec Section 22, 28, 43 / TASK P9.4)
+  // =========================================================================
+  router.get(
+    '/analytics/users',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getUserAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/applications',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getApplicationAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/tasks',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getTaskAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/economy',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getEconomyAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/companies',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getCompanyAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/ai',
+    validate({ query: boundedDateRangeSchema }),
+    customAnalyticsController.getAiAnalytics.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/audit-logs',
+    validate({ query: auditLogsViewerQuerySchema }),
+    customAnalyticsController.getAuditLogsViewer.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/ai-logs',
+    validate({ query: aiLogsViewerQuerySchema }),
+    customAnalyticsController.getAiLogsViewer.bind(customAnalyticsController)
+  );
+
+  router.get(
+    '/analytics/ai-queue',
+    validate({ query: aiQueueViewerQuerySchema }),
+    customAnalyticsController.getAiQueueViewer.bind(customAnalyticsController)
   );
 
   return router;
 }
 
 export const adminRouter = createAdminRoutes();
+
 

@@ -20,6 +20,7 @@ import { logger } from '../../utils/logger.js';
 import type { RequesterIdentity } from './resume.service.js';
 import type { CareerDomain } from '../../types/enums.js';
 import { env } from '../../config/env.js';
+import { notificationService as defaultNotificationService } from '../notification/notification.service.js';
 
 export const RESUME_ANALYSIS_SYSTEM_PROMPT = `You are the authoritative, strict resume parsing and entity extraction engine for CorpVerse.
 Your mission is to parse candidate resumes and convert raw text into a verified structured profile.
@@ -330,6 +331,20 @@ export class ResumeAnalysisService {
       { userId: analysis.userId },
       { $set: { resumeAnalysisId: analysis._id } }
     );
+
+    try {
+      await defaultNotificationService.create({
+        userId: analysis.userId,
+        type: 'AI_RESULT_READY',
+        title: 'AI Resume Analysis Complete',
+        message: 'Your resume analysis is complete. Skills and profile highlights have been extracted.',
+        link: '/profile/setup',
+      });
+    } catch (notifErr) {
+      logger.warn('[ResumeAnalysis] Failed to send AI result ready notification', {
+        error: notifErr instanceof Error ? notifErr.message : String(notifErr),
+      });
+    }
 
     logger.info(
       `[ResumeAnalysis] Analysis completed successfully for resume ${analysis.resumeId.toString()}`

@@ -12,10 +12,11 @@ import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { JobsPage } from './pages/JobsPage';
 import { JobDetailPage } from './pages/JobDetailPage';
 import {
-  AdminConsolePage,
   UnauthorizedPage,
   NotFoundPage,
 } from './pages/StubPages';
+import { AdminConsolePage } from './pages/admin/AdminConsolePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { FounderUnlockPage } from './pages/founder/FounderUnlockPage';
 import { CreateCompanyPage } from './pages/founder/CreateCompanyPage';
 import { BotShopPage } from './pages/founder/BotShopPage';
@@ -38,6 +39,7 @@ import { ProfileSetupPage } from './pages/ProfileSetupPage';
 import { AiManagerPage } from './pages/AiManagerPage';
 import { AdminAiHealthPage } from './pages/AdminAiHealthPage';
 import { AdminDemoPage } from './pages/admin/AdminDemoPage';
+import { LeaderboardsPage } from './pages/leaderboards/LeaderboardsPage';
 
 export function App(): ReactElement {
   return (
@@ -52,7 +54,8 @@ export function App(): ReactElement {
                   {/* Public Component Showcase */}
                   <Route path="/" element={<ShowcasePage />} />
                   <Route path="/showcase" element={<ShowcasePage />} />
-                  <Route path="/leaderboards" element={<ShowcasePage />} />
+                  <Route path="/leaderboards" element={<LeaderboardsPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
 
                   {/* Company & Job Browsing Routes */}
                   <Route path="/companies" element={<CompaniesPage />} />

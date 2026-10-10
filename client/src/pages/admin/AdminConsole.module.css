@@ -1,0 +1,319 @@
+.adminContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-6, 24px);
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: var(--cv-space-4, 16px) var(--cv-space-6, 24px) var(--cv-space-8, 32px);
+}
+
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--cv-space-4, 16px);
+}
+
+.headerTitles h1 {
+  font-size: var(--cv-font-size-2xl, 24px);
+  font-weight: 700;
+  color: var(--cv-color-text-primary, #ffffff);
+  margin: 0 0 var(--cv-space-1, 4px) 0;
+  letter-spacing: -0.02em;
+}
+
+.headerTitles p {
+  color: var(--cv-color-text-secondary, #94a3b8);
+  font-size: var(--cv-font-size-sm, 14px);
+  margin: 0;
+}
+
+.tabNavigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cv-space-2, 8px);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px;
+  border-radius: var(--cv-radius-lg, 12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navTab {
+  padding: 8px 16px;
+  font-size: var(--cv-font-size-xs, 13px);
+  font-weight: 600;
+  color: var(--cv-color-text-secondary, #94a3b8);
+  background: transparent;
+  border: none;
+  border-radius: var(--cv-radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navTab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.navTabActive {
+  background: var(--cv-color-primary, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+/* Common Card & Section */
+.contentCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--cv-radius-xl, 16px);
+  padding: var(--cv-space-5, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4, 16px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cv-space-3, 12px);
+}
+
+.cardHeader h3 {
+  margin: 0;
+  font-size: var(--cv-font-size-lg, 18px);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Filter Controls */
+.filterControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cv-space-3, 12px);
+}
+
+.searchInput {
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--cv-radius-md, 8px);
+  color: #ffffff;
+  font-size: var(--cv-font-size-xs, 13px);
+  min-width: 220px;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--cv-color-primary, #3b82f6);
+}
+
+.selectControl {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--cv-radius-md, 8px);
+  color: #ffffff;
+  font-size: var(--cv-font-size-xs, 13px);
+  cursor: pointer;
+}
+
+/* Table Styles */
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--cv-radius-md, 8px);
+}
+
+.adminTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--cv-font-size-xs, 13px);
+  text-align: left;
+}
+
+.adminTable th {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cv-color-text-secondary, #94a3b8);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.adminTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--cv-color-text-primary, #e2e8f0);
+}
+
+.adminTable tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tableActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionButton {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.actionButtonDanger {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.actionButtonDanger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Analytics KPIs Grid */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--cv-space-4, 16px);
+}
+
+.kpiCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--cv-radius-lg, 12px);
+  padding: var(--cv-space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpiValue {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.kpiSub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Distribution Bars */
+.distSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-3, 12px);
+}
+
+.distBarWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.distBarHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.distBarTrack {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.distBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* JSON / Code Editor */
+.jsonEditorArea {
+  width: 100%;
+  min-height: 280px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #020617;
+  color: #38bdf8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--cv-radius-md, 8px);
+  padding: var(--cv-space-4, 16px);
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.jsonEditorArea:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+/* Pagination Bar */
+.paginationBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--cv-space-3, 12px) 0 0;
+}
+
+.paginationInfo {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.paginationButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.pageButton {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pageButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

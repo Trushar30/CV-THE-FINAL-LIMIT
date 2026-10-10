@@ -152,6 +152,7 @@ describe('TASK P8.6: Bankruptcy Liquidation & Re-entry Suite', () => {
       mockCorpCoinService,
       mockNotificationService
     );
+    vi.spyOn(NotificationModel, 'create').mockResolvedValue({} as unknown as never);
   });
 
   afterEach(() => {

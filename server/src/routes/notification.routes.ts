@@ -18,6 +18,13 @@ export function createNotificationRoutes(): Router {
     notificationController.list.bind(notificationController)
   );
 
+  // GET /api/notifications/unread-count - Get unread notification count
+  router.get(
+    '/unread-count',
+    authenticateJwt,
+    notificationController.getUnreadCount.bind(notificationController)
+  );
+
   // PATCH /api/notifications/read-all - Mark all notifications as read
   router.patch(
     '/read-all',

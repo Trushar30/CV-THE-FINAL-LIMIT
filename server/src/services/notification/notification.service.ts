@@ -145,6 +145,19 @@ export class NotificationService {
 
     return { modifiedCount: result.modifiedCount };
   }
+
+  /**
+   * Returns the count of unread notifications for a user.
+   */
+  public async getUnreadCount(userId: Types.ObjectId | string): Promise<number> {
+    const userObjectId =
+      typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+    return await NotificationModel.countDocuments({
+      userId: userObjectId,
+      isRead: false,
+    });
+  }
 }
 
 export const notificationService = new NotificationService();
