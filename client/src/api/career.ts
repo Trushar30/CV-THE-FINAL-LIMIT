@@ -196,19 +196,25 @@ export interface RejectionFeedback {
 }
 
 export interface StageInterviewQuestion {
+  _id?: string;
+  sequenceNumber?: number;
   question: string;
+  content?: string;
   type: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   expectedPoints: string[];
 }
 
 export interface StageInterviewAnswer {
+  question?: string;
+  content?: string;
   answer: string;
   score?: number;
   strengths?: string[];
   weaknesses?: string[];
   notes?: string;
   questionSequence?: number;
+  sequenceNumber?: number;
   evaluatedAt?: string;
 }
 
@@ -217,7 +223,8 @@ export interface StageSessionData {
     _id: string;
     stage: ApplicationStage;
     status: string;
-    questionsCount: number;
+    questionsCount?: number;
+    totalQuestions?: number;
     currentQuestionIndex: number;
     passingScore?: number;
   };
@@ -352,6 +359,13 @@ export const careerApi = {
   },
 
   /**
+   * Enqueue ATS screening evaluation for an application.
+   */
+  async triggerAtsScreen(id: string): Promise<{ jobId: string; application: ApplicationListItem }> {
+    return apiClient.post<{ jobId: string; application: ApplicationListItem }>(`/applications/${id}/ats-screen`);
+  },
+
+  /**
    * Voluntarily withdraw an active application.
    */
   async withdrawApplication(id: string, reason?: string): Promise<{ application: ApplicationListItem }> {
@@ -440,5 +454,28 @@ export const careerApi = {
       { reason }
     );
   },
+
+  /**
+   * Executes the final review synthesis stage for an application.
+   */
+  async executeFinalReview(id: string): Promise<FinalReviewResult> {
+    return apiClient.post<FinalReviewResult>(`/applications/${id}/final-review`);
+  },
 };
+
+export interface FinalReviewResult {
+  applicationId: string;
+  isPassing: boolean;
+  finalScore: number;
+  stageScores: {
+    atsScore: number;
+    screeningScore: number;
+    assessmentScore: number;
+    interviewScore: number;
+  };
+  summary: string;
+  recommendations: string[];
+  offer?: ApplicationOfferData;
+}
+
 

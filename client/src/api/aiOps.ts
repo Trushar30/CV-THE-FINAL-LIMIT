@@ -125,11 +125,11 @@ export const aiOpsApi = {
    * Update existing provider settings
    */
   async updateProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     data: UpdateProviderPayload,
     pool: AIPool = 'PIPELINE'
   ): Promise<{ provider: ProviderDto }> {
-    return apiClient.patch<{ provider: ProviderDto }>(`/ai-manager/providers/${code}`, data, {
+    return apiClient.patch<{ provider: ProviderDto }>(`/ai-manager/providers/${idOrCode}`, data, {
       params: { pool },
     });
   },
@@ -138,12 +138,12 @@ export const aiOpsApi = {
    * Enable a provider
    */
   async enableProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     reason: string,
     pool: AIPool = 'PIPELINE'
   ): Promise<{ provider: ProviderDto }> {
     return apiClient.post<{ provider: ProviderDto }>(
-      `/ai-manager/providers/${code}/enable`,
+      `/ai-manager/providers/${idOrCode}/enable`,
       { reason },
       { params: { pool } }
     );
@@ -153,12 +153,12 @@ export const aiOpsApi = {
    * Disable a provider
    */
   async disableProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     reason: string,
     pool: AIPool = 'PIPELINE'
   ): Promise<{ provider: ProviderDto }> {
     return apiClient.post<{ provider: ProviderDto }>(
-      `/ai-manager/providers/${code}/disable`,
+      `/ai-manager/providers/${idOrCode}/disable`,
       { reason },
       { params: { pool } }
     );
@@ -168,12 +168,12 @@ export const aiOpsApi = {
    * Delete a provider
    */
   async removeProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     reason: string,
     pool: AIPool = 'PIPELINE'
   ): Promise<{ success: boolean; removedCode: AIProvider; pool: AIPool }> {
     return apiClient.delete<{ success: boolean; removedCode: AIProvider; pool: AIPool }>(
-      `/ai-manager/providers/${code}`,
+      `/ai-manager/providers/${idOrCode}`,
       {
         params: { pool },
         body: JSON.stringify({ reason }),
@@ -184,8 +184,8 @@ export const aiOpsApi = {
   /**
    * Diagnostic test health ping
    */
-  async testProvider(code: AIProvider, pool: AIPool = 'PIPELINE'): Promise<TestResultDto> {
-    return apiClient.post<TestResultDto>(`/ai-manager/providers/${code}/test`, undefined, {
+  async testProvider(idOrCode: string | AIProvider, pool: AIPool = 'PIPELINE'): Promise<TestResultDto> {
+    return apiClient.post<TestResultDto>(`/ai-manager/providers/${idOrCode}/test`, undefined, {
       params: { pool },
     });
   },

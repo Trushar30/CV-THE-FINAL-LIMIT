@@ -6,7 +6,9 @@ import {
   resendVerificationLimiter,
   loginLimiter,
   refreshLimiter,
+  verifyEmailLimiter,
 } from '../middleware/rateLimiter.js';
+import { verifyCsrfOrigin } from '../middleware/csrf.middleware.js';
 import { authenticateJwt } from '../middleware/auth.middleware.js';
 import {
   registerSchema,
@@ -27,6 +29,7 @@ router.post(
 
 router.post(
   '/verify-email',
+  verifyEmailLimiter,
   validate({ body: verifyEmailSchema }),
   authController.verifyEmail.bind(authController)
 );
@@ -46,9 +49,18 @@ router.post(
   authController.login.bind(authController)
 );
 
-router.post('/refresh', refreshLimiter, authController.refresh.bind(authController));
+router.post(
+  '/refresh',
+  refreshLimiter,
+  verifyCsrfOrigin,
+  authController.refresh.bind(authController)
+);
 
-router.post('/logout', authController.logout.bind(authController));
+router.post(
+  '/logout',
+  verifyCsrfOrigin,
+  authController.logout.bind(authController)
+);
 
 // Authenticated user profile endpoint
 router.get('/me', authenticateJwt, authController.getCurrentUser.bind(authController));

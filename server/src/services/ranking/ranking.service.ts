@@ -62,7 +62,7 @@ export class RankingService {
       calculatedAt: Date;
     } | null = await LeaderboardModel.findOne({ category, period }).lean();
 
-    if (!snapshot || forceRefresh) {
+    if (!snapshot || forceRefresh || snapshot.rankings.length === 0) {
       snapshot = await this.refreshLeaderboard(category, period);
     }
 
@@ -210,19 +210,20 @@ export class RankingService {
 
     return users.map((user, idx) => {
       const profile = profileMap.get(user._id.toString());
-      const level = levelForExp(user.totalExp || 0);
+      const effectiveExp = user.totalExp ?? user.totalExpCached ?? 0;
+      const level = levelForExp(effectiveExp);
       return {
         rank: idx + 1,
         entityId: user._id.toString(),
         name: profile?.displayName || 'Anonymous Engineer',
-        score: user.totalExp || 0,
+        score: effectiveExp,
         domain: profile?.domain,
         careerRole: user.careerRole,
         secondaryMetric: `Level ${level}`,
         details: {
-          totalExp: user.totalExp || 0,
+          totalExp: effectiveExp,
           level,
-          corpCoinBalance: user.corpCoinBalance || 0,
+          corpCoinBalance: user.corpCoinBalance ?? user.corpCoinBalanceCached ?? 0,
         },
       };
     });
@@ -245,17 +246,18 @@ export class RankingService {
 
     const items = users.map((user) => {
       const profile = profileMap.get(user._id.toString());
-      const level = levelForExp(user.totalExp || 0);
+      const effectiveExp = user.totalExp ?? user.totalExpCached ?? 0;
+      const level = levelForExp(effectiveExp);
       return {
         entityId: user._id.toString(),
         name: profile?.displayName || 'Anonymous Engineer',
         score: level,
         domain: profile?.domain,
         careerRole: user.careerRole,
-        secondaryMetric: `${user.totalExp || 0} EXP`,
+        secondaryMetric: `${effectiveExp} EXP`,
         details: {
           level,
-          totalExp: user.totalExp || 0,
+          totalExp: effectiveExp,
         },
       };
     });
@@ -580,9 +582,13 @@ export class RankingService {
           growthScore = Math.max(0, deltaRevenue + deltaEmployees * 20);
         } else {
           const days = Math.max(company.operatingDays || 1, 1);
-          growthScore = Math.round(
-            (company.cumulativeRevenue / days) + (company.employeeCount * 15)
-          );
+          const revenue = company.cumulativeRevenue ?? 0;
+          const employees = company.employeeCount ?? 0;
+          growthScore = Math.round((revenue / days) + (employees * 15));
+        }
+
+        if (!Number.isFinite(growthScore)) {
+          growthScore = 0;
         }
 
         return {

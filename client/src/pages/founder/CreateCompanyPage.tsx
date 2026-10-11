@@ -38,6 +38,11 @@ export function CreateCompanyPage(): ReactElement {
       return;
     }
 
+    if (description.trim() && description.trim().length < 5) {
+      warning('Corporate mission must be at least 5 characters');
+      return;
+    }
+
     try {
       setSubmitting(true);
       await apiClient.post('/founder/company', {
@@ -71,7 +76,7 @@ export function CreateCompanyPage(): ReactElement {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--cv-space-6)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 'var(--cv-space-6)' }}>
         {/* Company Creation Form */}
         <div className={styles.sectionCard}>
           <div className={styles.sectionHeader}>

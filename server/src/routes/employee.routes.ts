@@ -3,6 +3,9 @@ import { dailyTaskController } from '../controllers/dailyTask.controller.js';
 import { disciplineController } from '../controllers/discipline.controller.js';
 import { promotionController } from '../controllers/promotion.controller.js';
 import { authenticateJwt, requireCareerRole } from '../middleware/auth.middleware.js';
+import { validate } from '../middleware/validate.js';
+import { objectIdParamSchema } from '../schemas/common.schema.js';
+import { taskSubmissionInputSchema } from '../schemas/taskEvaluation.schema.js';
 
 export function createEmployeeRoutes(): Router {
   const router = Router();
@@ -57,18 +60,31 @@ export function createEmployeeRoutes(): Router {
   // GET /api/employee/tasks/:id/evaluation - Get submission evaluation and performance record
   router.get(
     '/tasks/:id/evaluation',
+    validate({ params: objectIdParamSchema }),
     dailyTaskController.getTaskEvaluation.bind(dailyTaskController)
   );
 
   // POST /api/employee/tasks/:id/submit - Submit daily task work and trigger AI evaluation
   router.post(
     '/tasks/:id/submit',
+    validate({
+      params: objectIdParamSchema,
+      body: taskSubmissionInputSchema,
+    }),
     dailyTaskController.submitTask.bind(dailyTaskController)
+  );
+
+  // POST /api/employee/tasks/:id/evaluate - Evaluate or retry evaluation for submitted daily task
+  router.post(
+    '/tasks/:id/evaluate',
+    validate({ params: objectIdParamSchema }),
+    dailyTaskController.evaluateTask.bind(dailyTaskController)
   );
 
   // GET /api/employee/tasks/:id - Get specific daily task by ID
   router.get(
     '/tasks/:id',
+    validate({ params: objectIdParamSchema }),
     dailyTaskController.getTaskById.bind(dailyTaskController)
   );
 

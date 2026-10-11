@@ -85,3 +85,42 @@ export const resumeUploadLimiter = rateLimit({
     );
   },
 });
+
+/**
+ * Rate limiter for email verification endpoint
+ * 15 verification attempts per 15 minutes per IP to prevent token enumeration/brute-force
+ */
+export const verifyEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  handler: (_req: Request, _res: Response, next) => {
+    next(
+      AppError.rateLimitExceeded(
+        'Too many email verification attempts. Please wait before trying again.'
+      )
+    );
+  },
+});
+
+/**
+ * Rate limiter for public browsing endpoints (companies, jobs, domains, skills)
+ * 120 queries per 15 minutes per IP to prevent scraping and denial-of-service
+ */
+export const publicQueryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  handler: (_req: Request, _res: Response, next) => {
+    next(
+      AppError.rateLimitExceeded(
+        'Too many requests to public endpoints. Please wait before querying again.'
+      )
+    );
+  },
+});
+

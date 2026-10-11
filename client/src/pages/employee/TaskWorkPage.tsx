@@ -9,15 +9,18 @@ import {
   fetchTaskById,
   fetchTaskEvaluation,
   submitTaskWork,
+  evaluateSubmittedTask,
   type EmployeeTask,
   type TaskSubmission,
   type PerformanceRecord,
 } from '../../api/employee';
+import { useAuth } from '../../store/AuthContext';
 import styles from './Employee.module.css';
 
 export function TaskWorkPage(): ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { fetchCurrentUser } = useAuth();
 
   const [task, setTask] = useState<EmployeeTask | null>(null);
   const [submission, setSubmission] = useState<TaskSubmission | null>(null);
@@ -53,6 +56,9 @@ export function TaskWorkPage(): ReactElement {
           if (evalData.submission) {
             setSolutionContent(evalData.submission.content);
           }
+          if (evalData.performanceRecord) {
+            void fetchCurrentUser();
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -84,10 +90,39 @@ export function TaskWorkPage(): ReactElement {
       setSubmission(result.submission);
       setPerformanceRecord(result.performanceRecord);
       if (task) {
-        setTask({ ...task, status: 'EVALUATED' });
+        setTask({
+          ...task,
+          status: result.performanceRecord ? 'EVALUATED' : 'SUBMITTED',
+        });
       }
+      void fetchCurrentUser();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit and evaluate task');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEvaluate = async () => {
+    if (!id || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const result = await evaluateSubmittedTask(id);
+
+      setSubmission(result.submission);
+      setPerformanceRecord(result.performanceRecord);
+      if (task) {
+        setTask({
+          ...task,
+          status: result.performanceRecord ? 'EVALUATED' : 'SUBMITTED',
+        });
+      }
+      void fetchCurrentUser();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to evaluate submitted task');
     } finally {
       setIsSubmitting(false);
     }
@@ -152,6 +187,24 @@ export function TaskWorkPage(): ReactElement {
             </div>
             <div className={styles.founderBannerText}>
               This scenario is currently in the background queue. It will be generated automatically as soon as an AI provider becomes healthy.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Evaluation Pending Banner */}
+      {isAlreadySubmitted && !isEvaluated && (
+        <div
+          className={styles.founderBanner}
+          style={{ borderColor: 'var(--cv-warning, #f59e0b)' }}
+          data-testid="task-evaluation-pending-banner"
+        >
+          <div>
+            <div className={styles.founderBannerTitle} style={{ color: 'var(--cv-warning, #f59e0b)' }}>
+              Evaluation Pending
+            </div>
+            <div className={styles.founderBannerText}>
+              Your technical solution has been safely recorded in the submission ledger. Click below to run AI evaluation against rubric criteria and claim your career EXP.
             </div>
           </div>
         </div>
@@ -252,7 +305,7 @@ export function TaskWorkPage(): ReactElement {
               {performanceRecord.feedback}
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
               {performanceRecord.strengths?.length > 0 && (
                 <div style={{ background: 'var(--cv-surface-subtle)', padding: '1rem', borderRadius: 'var(--cv-radius-md)' }}>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#10b981', fontSize: 'var(--cv-text-sm)' }}>
@@ -336,15 +389,27 @@ export function TaskWorkPage(): ReactElement {
                 <span>AI Evaluator Bot scoring solution and assessing rubric...</span>
               </span>
             )}
-            <Button
-              variant="primary"
-              size="md"
-              disabled={solutionContent.trim().length < 10 || isAlreadySubmitted || isSubmitting}
-              onClick={handleSubmit}
-              data-testid="submit-solution-btn"
-            >
-              {isSubmitting ? 'Evaluating...' : isAlreadySubmitted ? 'Already Submitted' : 'Submit for AI Evaluation'}
-            </Button>
+            {isAlreadySubmitted ? (
+              <Button
+                variant="primary"
+                size="md"
+                disabled={isSubmitting}
+                onClick={handleEvaluate}
+                data-testid="evaluate-solution-btn"
+              >
+                {isSubmitting ? 'Evaluating Solution...' : 'Run AI Evaluation'}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="md"
+                disabled={solutionContent.trim().length < 10 || isSubmitting}
+                onClick={handleSubmit}
+                data-testid="submit-solution-btn"
+              >
+                {isSubmitting ? 'Evaluating...' : 'Submit for AI Evaluation'}
+              </Button>
+            )}
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactElement } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { Button, Input } from '../components/ui';
+import { Button, Input, Spinner } from '../components/ui';
 import styles from './Auth.module.css';
 
 export function VerifyEmailPage(): ReactElement {
@@ -86,17 +86,9 @@ export function VerifyEmailPage(): ReactElement {
             <p style={{ color: 'var(--cv-text-secondary)', marginBottom: '1rem' }}>
               Validating security token with CorpVerse Auth Engine...
             </p>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                border: '3px solid var(--cv-border-default)',
-                borderTopColor: 'var(--cv-brand-primary-500)',
-                borderRadius: '50%',
-                margin: '0 auto',
-                animation: 'spin 0.8s linear infinite',
-              }}
-            />
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto' }}>
+              <Spinner size="lg" color="cyan" label="Validating security token with CorpVerse Auth Engine..." />
+            </div>
           </div>
         )}
 

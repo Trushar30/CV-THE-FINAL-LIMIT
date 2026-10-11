@@ -6,6 +6,7 @@ describe('Showcase Responsiveness & Viewports Suite', () => {
   it('renders correctly at desktop (1280px)', () => {
     window.innerWidth = 1280;
     window.innerHeight = 800;
+    window.history.pushState({}, '', '/showcase');
     render(<App />);
 
     expect(screen.getByRole('heading', { level: 1 })).toBeDefined();

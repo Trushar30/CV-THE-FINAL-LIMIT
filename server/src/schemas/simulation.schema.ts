@@ -223,6 +223,7 @@ export const aiScenarioGenerationJsonSchema = {
           },
         },
         required: ['optionId', 'title', 'description', 'expectedOutcome', 'modifierTemplateId'],
+        additionalProperties: false,
       },
     },
   },

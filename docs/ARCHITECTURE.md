@@ -759,11 +759,12 @@ All internal AI interactions are isolated from vendor-specific payloads through 
   - `TIMEOUT`, `RATE_LIMIT`, `PROVIDER_ERROR`, `UNAVAILABLE`, `NETWORK`: Transient faults marked `retryable: true`.
   - `AUTH_CONFIG`, `INVALID_REQUEST`: Permanent faults marked `retryable: false` (fast-fail, no retry or fallback).
 
-### 18.2 Pool-Isolated Provider Routing (`ProviderRouter`)
+### 18.2 Pool-Isolated Multi-Instance Provider Routing (`ProviderRouter`)
 
 - **Strict Pool Isolation:** Providers are registered independently to either `AIProviderPool.DEMO` or `AIProviderPool.PIPELINE`. Registration in one pool never affects or leaks into the other.
-- **Priority-Ordered Selection:** In each pool, providers are evaluated in ascending priority order. The router picks the first provider whose health state is NOT `DISABLED`. Providers in `DEGRADED`, `RATE_LIMITED`, or `TEMPORARILY_FAILED` states remain eligible for attempts until explicitly disabled by circuit breakers.
-- **Health Management:** Dynamic state tracking (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`) per pool and provider with programmatic status inspection and state transitions.
+- **Multi-Instance Support per Provider:** `ProviderEntry` supports an optional unique instance `id` (corresponding to the MongoDB document ID in `aiProviders`). Multiple API keys and configurations for the same provider platform (e.g. `gemini`, `openai`, `groq`) can be active concurrently in the same pool with distinct priorities, rate limits, and health states.
+- **Priority-Ordered Selection:** In each pool, providers are evaluated in ascending priority order. Operational providers (`HEALTHY`, `DEGRADED`) are prioritized ahead of circuit-cooldown states (`RATE_LIMITED`, `TEMPORARILY_FAILED`). Disabled providers are strictly skipped.
+- **Granular Health Management:** Dynamic state tracking (`HEALTHY`, `DEGRADED`, `RATE_LIMITED`, `TEMPORARILY_FAILED`, `DISABLED`) per pool and instance with isolated circuit breakers, ensuring a quota failure on one key immediately fails over to alternate keys or providers without platform downtime.
 
 ### 18.3 Authoritative Gateway Execution & Validation (`AIGateway`)
 
@@ -1476,6 +1477,209 @@ All internal AI interactions are isolated from vendor-specific payloads through 
     7. Dangerous Economy Reset Tool: global vs targeted user reset selector with strict typed safety challenge.
 - **Admin API Client (`api/admin.ts`):**
   - Centralizes typed API operations for users, config, companies, jobs, bounded analytics, viewers, and economy reset.
+
+---
+
+## 25. Security Architecture & Hardening Protocol (TASK P10.1, Spec Section 32, ADR-074)
+
+### 25.1 Defense-in-Depth Model
+
+CorpVerse implements a layered defense-in-depth security model adhering to Specification Section 32:
+- Network / Transport: Strict CORS whitelist, Helmet security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `HSTS`), and removal of `X-Powered-By`.
+- Rate Limiting: Multi-tiered rate limiters protecting against brute force, resource exhaustion, and scraping.
+- Request Sanitization: Universal NoSQL query operator stripping ahead of controllers.
+- Schema Validation: 100% Zod validation coverage across bodies, queries, and URL route parameters (`objectIdParamSchema`).
+- Authentication & Sessions: Argon2id password hashing, short-lived JWT access tokens, 7-day `httpOnly`, `Secure`, `SameSite: strict` refresh cookies with replay reuse detection, and CSRF Origin verification.
+- Object-Level Authorization: Authoritative backend ownership validation preventing Insecure Direct Object References (IDOR).
+- Storage Security: Binary magic-byte validation, corrupt archive rejection, and password-protected PDF/DOCX rejection for GridFS uploads.
+- Data Privacy & Telemetry: Automatic logger redaction of sensitive credentials and tokens; zero client-side secrets.
+
+### 25.2 NoSQL Injection Sanitization (`server/src/middleware/sanitize.ts`)
+
+- **Operator Stripping:** The global `sanitizeNoSql` middleware recursively traverses `req.body`, `req.query`, and `req.params`. Any object key matching `/^\$|\./` (starting with `$` or containing `.`) is deleted.
+- **Logging & Auditing:** When an operator is detected, `logger.warn` logs the sanitized key, IP address, and request path to assist intrusion detection.
+- **Placement:** Positioned immediately following `express.json()`, `express.urlencoded()`, and `cookieParser()` in `server/src/app.ts`, neutralizing injection payloads before controllers or Mongoose query builders execute.
+
+### 25.3 Tiered Rate Limiting Architecture (`server/src/middleware/rateLimiter.ts`)
+
+1. **Global Rate Limiter:** 300 requests per 15-minute sliding window per IP across all endpoints.
+2. **Authentication Limiter (`authLimiter`):** 10 requests per 15-minute sliding window on `/api/auth/login` and `/api/auth/register`. Paired with 5-attempt brute-force lockout (`UserModel.failedLoginAttempts` -> HTTP 423 Locked).
+3. **Email Verification Limiter (`verifyEmailLimiter`):** 15 requests per 15-minute window on `POST /api/auth/verify-email`, preventing token brute-forcing.
+4. **Resume Upload Limiter (`uploadLimiter`):** 5 uploads per 15-minute window on `POST /api/profile/resume`.
+5. **Public Query Limiter (`publicQueryLimiter`):** 120 requests per 15-minute window on public discovery endpoints (`/api/companies`, `/api/jobs`, `/api/domains`, `/api/skills`), guarding against scrapers and query exhaustion.
+
+### 25.4 CSRF Protection Strategy (`server/src/middleware/csrf.middleware.ts`)
+
+- **Primary Protection:** JWT access tokens are stored in memory and sent via `Authorization: Bearer <token>`, inherently immune to cross-site request forgery.
+- **Refresh Cookie Protection:** Refresh tokens are transmitted via `httpOnly`, `Secure`, `SameSite: strict` cookies.
+- **Defense-in-Depth Origin Verification:** The `verifyCsrfOrigin` middleware validates `Origin` or `Referer` headers against allowed origins (`CLIENT_ORIGIN`, `localhost`) on cookie-bearing mutation routes (`POST /api/auth/refresh`, `POST /api/auth/logout`), rejecting mismatched or untrusted origins with HTTP 403 Forbidden.
+
+### 25.5 Strict Route Parameter & Query Validation (`server/src/schemas/common.schema.ts`)
+
+- **Canonical Schemas:**
+  - `objectIdParamSchema`: Enforces standard 24-character hexadecimal MongoDB ObjectId regex (`/^[0-9a-fA-F]{24}$/`).
+  - `listSkillsQuerySchema`: Enforces typed optional query parameters (`domain`, `category`, `search`).
+- **Universal Route Parameter Protection:** Enforced across all parameterized endpoints (`/api/resumes/:id/*`, `/api/companies/:id`, `/api/companies/jobs/:id`, `/api/employee/tasks/:id/*`, `/api/founder/jobs/:id/close`, `/api/founder/applications/:id`). Invalid ObjectId parameters are rejected immediately with HTTP 400 Bad Request before hitting the database.
+
+### 25.6 Object-Level Authorization & IDOR Defenses
+
+- **Resumes:** `GET /api/resumes/:id/download` and `GET /api/resumes/:id/analysis` strictly assert `resume.userId === callerId` unless caller has `platformRole === 'ADMIN'`.
+- **Applications & ATS Screening:** `atsScreeningService.enqueueAtsScreening` asserts `application.userId === callerId || callerRole === 'ADMIN'`.
+- **Employee Tasks:** Daily task retrieval and submission endpoints verify caller employment identity against `task.employeeId`.
+- **Notifications:** Notification read and mark-all mutations filter exclusively by `userId: req.user._id`.
+- **Founder Company Operations:** Founder mutation routes verify company ownership against `company.founderId`.
+- **Demo Hiring Sessions:** Isolated strictly to `platformRole === 'ADMIN'`.
+
+---
+
+## 26. End-to-End Testing & Verification Architecture (TASK P10.2, ADR-075)
+
+### 26.1 Testing Strategy & Framework Selection
+
+- **Playwright Browser Automation (ADR-075):** Selected for high-confidence browser integration testing. Features native TypeScript execution, ESM/Vite architecture alignment, headless cross-browser rendering, network interception (`page.route`), and clean multi-user role context partitioning.
+- **Deterministic Offline Harness:** Monorepo integration and state machine tests execute deterministically offline without third-party network downloads or live cloud API dependencies by leveraging the `MockAdapter` AI gateway provider and in-memory Mongoose spies.
+
+### 26.2 State Machine & Economy Invariant Verification (`server/src/tests/state-machines-economy.test.ts`)
+
+- **Application Pipeline Invariants:** 
+  - Strictly asserts linear 8-stage forward progression (`APPLIED` -> `ATS_SCREENING` -> `SCREENING` -> `ASSESSMENT` -> `INTERVIEW` -> `FINAL_REVIEW` -> `OFFER` -> `ACCEPTED`).
+  - Asserts complete rejection of illegal forward skips (e.g., `APPLIED` -> `ASSESSMENT`).
+  - Asserts complete rejection of backward transitions (e.g., `INTERVIEW` -> `SCREENING`).
+  - Validates terminal state immutability: zero transitions allowed once reaching `REJECTED`, `WITHDRAWN`, `EXPIRED`, or `ACCEPTED`.
+- **EXP & Level Determinism:** 
+  - Verifies exact level mappings across all 10 tiers (L1 Intern at 0 EXP to L10 Principal at 16,000 EXP).
+  - Asserts non-negative EXP invariant and strict clamping of task evaluation scores $[0, 100]$ and awarded EXP $[0, \text{maxExp}]$.
+- **Economy & Ledger Invariants:** 
+  - Verifies atomic debit validation: balances cannot go negative.
+  - Verifies exact founder launch trajectory: 1,000 CorpCoin starter grant - 100 company creation - 750 (3 basic bots) = exact 150 CorpCoin buffer preserved.
+- **Simulation Math & Liquidation:** 
+  - Verifies deterministic financial calculation ($Revenue - Expenses = Profit$).
+  - Verifies bankruptcy threshold strictly at $\text{financialHealth} \le -1000$, triggering immediate corporate liquidation and resetting founder to `JOB_SEEKER` while strictly preserving personal accumulated EXP.
+
+### 26.3 Full-Lifecycle Integration Testing (`server/src/tests/full-lifecycle-e2e.test.ts`)
+
+- **Multi-Role Integration Harness:** Executes the complete 10-step corporate lifecycle in an end-to-end integration flow:
+  1. Register candidate account (Argon2id, `careerRole: 'NONE'`).
+  2. Verify email and complete onboarding profile (`careerRole: 'JOB_SEEKER'`).
+  3. Apply for corporate opening and pass ATS screening.
+  4. Complete conversational stages (`SCREENING`, `ASSESSMENT`, `INTERVIEW`) and accept offer (`careerRole: 'EMPLOYEE'`).
+  5. Perform daily engineering tasks and accumulate EXP into immutable ledger.
+  6. Attain promotion criteria (500 EXP -> Level 2).
+  7. Reach 12,000 EXP, unlock Founder Mode with atomic 1,000 CorpCoin starter grant, terminate prior employment (`careerRole: 'FOUNDER'`).
+  8. Found company (100 CorpCoin fee) in software engineering domain.
+  9. Purchase 3 basic bots (Hiring, Task, Evaluation) for 750 CorpCoin total, unlocking `isOpenForHiring: true`, and hire employee.
+  10. Advance simulation until bankruptcy threshold ($\le -1000$), liquidating company to `BANKRUPT` and resetting founder to `JOB_SEEKER` with preserved EXP.
+
+### 26.4 Client UI Lifecycle Verification (`client/src/tests/e2eLifecycle.test.tsx`)
+
+- Validates end-to-end user experience across 6 key presentation milestones:
+  1. Registration form validation and dispatch.
+  2. Employee Workplace Dashboard rendering with live tasks, level progress, and company context.
+  3. Founder Mode eligibility checking and activation modal.
+  4. Company Creation wizard with domain selection and metadata validation.
+  5. AI Bot Store acquisition workflows and hiring readiness status banner.
+  6. Post-bankruptcy liquidation dashboard reflecting talent market re-entry and preserved engineering level.
+
+---
+
+## 27. Database Integrity, Transaction Architecture & Queue Resilience (TASK P10.3, ADR-076)
+
+### 27.1 Index Strategy & Schema Optimization
+
+1. **Deduplication:** Removed redundant inline single-field indexes that overlapped with compound or partial unique indexes across Mongoose schemas:
+   - `AuditLog`: Replaced redundant single-field indexes with compound query indexes (`{ actorId: 1, createdAt: -1 }`, `{ action: 1, createdAt: -1 }`, `{ targetId: 1, createdAt: -1 }`, `{ createdAt: -1 }`).
+   - `PlatformConfig`: Preserved single partial unique index `{ isActive: 1 }` with `{ unique: true, partialFilterExpression: { isActive: true } }`.
+   - `CorpCoinTransaction`: Created compound index `{ companyId: 1, createdAt: -1 }`.
+   - `CompanyBot`: Relies on compound unique index `{ companyId: 1, botType: 1 }` for both unique constraints and company prefix queries.
+2. **Query Performance:** Startup logs show zero duplicate index warnings across all models.
+
+### 27.2 Multi-Document Transaction Protocol
+
+All workflows altering balances, roles, company headcount, or multiple relational collections MUST execute within MongoDB sessions via `withTransaction` or `runWithTransaction`:
+1. `acceptOffer`: Atomically increments company headcount, creates `companyEmployees` document, updates user career role to `EMPLOYEE`, sets application status to `ACCEPTED`, and auto-withdraws other active applications.
+2. `unlockFounderMode`: Atomically updates user role to `FOUNDER`, terminates prior employment, decrements previous employer headcount, resolves active warnings, creates `founders` document, credits 1,000 CorpCoin starter grant to ledger, and marks `founderStarterCoinGranted = true`.
+3. `createCompany`: Atomically debits 100 CorpCoin from ledger, creates company record, and links company to founder.
+4. `buyBot`: Atomically debits 250 CorpCoin from ledger, creates `companyBots` record, and sets `isOpenForHiring = true` once all 3 basic bots are acquired.
+5. `executeBankruptcyLiquidation`: Atomically liquidates company to `BANKRUPT`, resets founder role to `JOB_SEEKER`, terminates active employees, closes open job postings, and dispatches in-app notifications.
+
+### 27.3 Universal Pagination Architecture (`server/src/schemas/common.schema.ts`)
+
+- **Canonical Pagination Schema:** `paginationQuerySchema` coerces `page` (integer, min 1, default 1) and `limit` (integer, min 1, max 100, default 20).
+- **Enforcement:** Applied on all collection listing, history, and ledger endpoints (`dailyTaskController.getTaskHistory`, `dailyTaskController.getExpLedger`, `founderController.getApplications`, `founderService.getCorpCoinLedger`). Limits are clamped strictly to $[1, 100]$ to prevent unbounded memory allocation and slow database queries.
+
+### 27.4 Consistency Checker & Orphan Records Audit Engine (`server/src/utils/consistencyChecker.ts`)
+
+- **Double-Entry Reconciliation:** Computes exact sums from immutable ledger collections and compares against cached denormalized fields on `UserModel`:
+  - $\sum \text{expTransactions.amount} \equiv \text{user.totalExpCached}$
+  - $\sum \text{corpCoinTransactions.amount} \equiv \text{user.corpCoinBalanceCached}$
+- **Orphan Reference Detection:** Performs foreign key relational integrity checks across 11 collections (`profiles`, `companyEmployees`, `applications`, `employeeTasks`, `warnings`, `companyBots`, `companyJobs`, `resumeFiles`, `resumeAnalyses`, `founders`, `notifications`) ensuring every document references an existing parent (`userId`, `companyId`, `jobId`).
+- **CLI Runner (`server/src/scripts/check-consistency.ts`):** Standalone executable with formatted table output and optional `--fix` flag for automated repair of drifted balances and orphan document removal.
+
+### 27.5 AI Queue Concurrency & Worker Idempotency (`server/src/tests/queue-worker-load.test.ts`)
+
+- **Idempotency Deduplication:** Rapid submissions with identical `idempotencyKey` return existing job ID without duplicate document insertion.
+- **Concurrent Atomic Claiming:** Queue workers utilize atomic `findOneAndUpdate` with `{ sort: { createdAt: 1 }, new: true }` matching eligible states (`PENDING`, `RETRYING`, or expired `PROCESSING`). Verified with 5 simultaneous workers draining 50 queued jobs with zero double execution or lost jobs.
+- **Lease Expiration Recovery:** When workers crash without completing, locks expire naturally based on `lockedUntil < now`, allowing peer workers to recover and process jobs.
+
+---
+
+## 28. Client Presentation Architecture, Accessibility & Mobile Responsiveness (TASK P10.4, ADR-077)
+
+### 28.1 Design Tokens & WCAG AA Accessibility Compliance
+- **Design System Tokens (`client/src/styles/tokens.css` & `themes.css`):**
+  - High-contrast typography and color schemes adhering strictly to WCAG AA guidelines.
+  - `--cv-text-muted` in `.theme-light` tuned to `#596668` ensuring $\ge 5.2:1$ contrast ratio on white backgrounds.
+  - Visible keyboard focus rings (`:focus-visible`) styled with high-contrast borders and soft ambient halos (`box-shadow: 0 0 0 4px rgba(95, 138, 142, 0.22)`).
+  - Explicit suppression of focus rings on pointer clicks (`:focus:not(:focus-visible)`).
+
+### 28.2 Dynamic Document Titles & Route Synchronization
+- **Centralized Hook (`client/src/hooks/useDocumentTitle.ts`):** Enforces `<Page Title> | CorpVerse` on all route mount and transition events.
+- **AppShell Integration (`client/src/components/layout/AppShell.tsx`):** Automatically maps current location path (`/showcase`, `/leaderboards`, `/jobs`, `/companies`, `/career`, `/workplace`, `/founder/*`, `/admin/*`, `/notifications`) to synchronized Topbar and browser window titles.
+
+### 28.3 Mobile Viewport Fluidity Down to 360px
+- **Breakpoints & Fluid Layouts:**
+  - Responsive grids utilize modern auto-fit pattern (`minmax(min(100%, 300px), 1fr)`) eliminating horizontal overflow on 360px mobile viewports (iPhone SE).
+  - Horizontal tab bars, category filter chips, and data tables wrapped in hardware-accelerated touch scroll containers (`overflow-x: auto; -webkit-overflow-scrolling: touch;`).
+  - Fluid typography scaling down to 14px on ultra-compact mobile viewports (`@media (max-width: 360px)`).
+
+### 28.4 Form Feedback, Live Announcements & Recovery Views
+- **Accessible Form Feedback:** Forms utilize `role="alert"` and `aria-live="assertive"` on error summaries, `role="status"` on success notices, and automatic `aria-invalid` / `aria-describedby` linking via `Input.tsx`.
+- **404 & 403 Recovery Views:** Custom `NotFoundPage` (404) and `UnauthorizedPage` (403) providing clear navigation recovery paths, role switcher guidance, and contextual SVG icon illustrations.
+
+---
+
+## 29. Containerization Topology, Deployment & Operational Tooling (TASK P10.5, ADR-078)
+
+### 29.1 Containerization Architecture
+- **Backend Service (`server/Dockerfile`):**
+  - Base: `node:22-bookworm-slim`.
+  - Multi-stage build compiling strict TypeScript to `dist/server.js` with pruned production dependencies.
+  - Non-root user execution (`appuser:nodejs`, UID 1001) for container security.
+  - Integrated health check evaluating `/api/health`.
+- **Frontend Presentation Service (`client/Dockerfile`):**
+  - Base: Multi-stage with `nginx:alpine` serving compiled Vite assets.
+  - Custom Nginx proxy configuration (`client/nginx.conf`) enforcing SPA client-side fallback (`try_files $uri /index.html`), gzip compression, security headers, and reverse proxying `/api/` traffic directly to the backend container.
+- **Orchestration (`docker-compose.yml`):**
+  - Orchestrates 3 interconnected services: `corpverse-mongodb` (Mongo 7.0 with volume persistence & healthcheck), `corpverse-server`, and `corpverse-client`.
+  - Bridge network (`corpverse-net`) providing internal container DNS resolution.
+
+### 29.2 Automated Demo Data Seeding (`server/src/scripts/seed-demo-data.ts`)
+- **Idempotency Guarantee:** Can be run repeatedly via `npm run seed:demo` without creating duplicate accounts or corrupting ledger balances.
+- **Role Coverage:** Seeding covers all 5 principal platform personas:
+  - System Administrator (`admin@corpverse.dev`, `ADMIN`).
+  - AI Operations Manager (`aimanager@corpverse.dev`, `AI_MANAGER`).
+  - Active Candidate (`alex.chen@corpverse.dev`, `JOB_SEEKER`).
+  - Corporate Employee (`employee@corpverse.dev`, `EMPLOYEE`, L3 Junior+ with tasks & EXP ledger).
+  - Corporate Founder (`founder@corpverse.dev`, `FOUNDER`, L9 Lead with active corporation, 3 basic bots, and open job posting).
+- **Explicit Demo Flags:** Every seeded record is tagged with `[DEMO DATA]` bio markers or deterministic seed identifiers for traceability.
+
+### 29.3 Production Observability & Maintenance Tools
+- **Consistency Checker (`server/src/scripts/check-consistency.ts`):** CLI utility reconciling cached balances against double-entry ledgers and detecting orphan documents with automated `--fix` repair capabilities.
+- **Production Checklist (`docs/PRODUCTION_CHECKLIST.md`):** Complete runbook covering secret generation, TLS 1.3 termination, MongoDB replica set PITR backups, structured log redaction, and DDoS/WAF boundaries.
+
+
+
+
 
 
 

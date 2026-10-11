@@ -200,7 +200,8 @@ export class AIWorker {
     if (job.preferredProvider) {
       const preferred = availableEntries.find((e) => e.provider === job.preferredProvider);
       if (preferred) {
-        const attempts = job.attemptsPerProvider.get(preferred.provider) ?? 0;
+        const k = preferred.id || preferred.provider;
+        const attempts = job.attemptsPerProvider.get(k) ?? 0;
         if (attempts < maxAttempts) {
           selectedEntry = preferred;
         }
@@ -209,7 +210,8 @@ export class AIWorker {
 
     if (!selectedEntry) {
       for (const entry of availableEntries) {
-        const attempts = job.attemptsPerProvider.get(entry.provider) ?? 0;
+        const k = entry.id || entry.provider;
+        const attempts = job.attemptsPerProvider.get(k) ?? 0;
         if (attempts < maxAttempts) {
           selectedEntry = entry;
           break;
@@ -236,12 +238,13 @@ export class AIWorker {
     }
 
     const provider = selectedEntry.provider;
-    const previousAttemptsOnProvider = job.attemptsPerProvider.get(provider) ?? 0;
+    const providerInstanceKey = selectedEntry.id || selectedEntry.provider;
+    const previousAttemptsOnProvider = job.attemptsPerProvider.get(providerInstanceKey) ?? 0;
 
     // Update job state before attempting execution
     job.currentProvider = provider;
     job.attempts += 1;
-    job.attemptsPerProvider.set(provider, previousAttemptsOnProvider + 1);
+    job.attemptsPerProvider.set(providerInstanceKey, previousAttemptsOnProvider + 1);
     job.lockedUntil = new Date(Date.now() + this.leaseDurationMs);
     await job.save();
 
@@ -301,7 +304,13 @@ export class AIWorker {
         );
       }
 
-      await this.healthTracker.recordFailure(pool, provider, aiError.category, aiError.message);
+      await this.healthTracker.recordFailure(
+        pool,
+        provider,
+        aiError.category,
+        aiError.message,
+        selectedEntry.id
+      );
       await this.healthTracker.logResponse({
         requestId: logRequestId,
         jobId: job._id,
@@ -311,16 +320,48 @@ export class AIWorker {
         errorCode: aiError.category,
       });
 
+      // Check if any subsequent provider has attempts left
+      const nextProvidersHaveAttempts = availableEntries.some((e) => {
+        const k = e.id || e.provider;
+        if (k === providerInstanceKey) return false;
+        const a = job.attemptsPerProvider.get(k) ?? 0;
+        return a < maxAttempts;
+      });
+
       // Handle non-retryable vs retryable
       if (!aiError.retryable) {
-        // Spec: "AUTH_CONFIG and INVALID_REQUEST fail fast and mark the provider DEGRADED/needs attention without cascading."
-        job.status = 'FAILED';
         job.error = {
           category: aiError.category,
           message: aiError.message,
           provider,
           timestamp: new Date(),
         };
+
+        // If alternative providers exist in the pool with attempts remaining, cascade to them
+        if (nextProvidersHaveAttempts) {
+          logger.warn(
+            `Provider '${provider}' (${selectedEntry.id || 'primary'}) experienced error '${aiError.category}', cascading to alternative providers in pool`,
+            {
+              jobId: job._id.toString(),
+              failedProvider: provider,
+              failedInstanceId: selectedEntry.id,
+              error: aiError.message,
+            }
+          );
+          job.status = 'RETRYING';
+          job.lockedBy = null;
+          job.lockedUntil = null;
+          await job.save();
+
+          const stateHandler = this.stateChangeHandlers.get(job.taskType);
+          if (stateHandler) {
+            await stateHandler(job);
+          }
+          return;
+        }
+
+        // No alternative providers remain
+        job.status = 'FAILED';
         job.lockedBy = null;
         job.lockedUntil = null;
         await job.save();
@@ -343,13 +384,6 @@ export class AIWorker {
       // Check if more attempts remain on this provider or next providers
       const attemptsAfterThis = previousAttemptsOnProvider + 1;
       const providerHasAttemptsLeft = attemptsAfterThis < maxAttempts;
-
-      // Check if any subsequent provider has attempts left
-      const nextProvidersHaveAttempts = availableEntries.some((e) => {
-        if (e.provider === provider) return false;
-        const a = job.attemptsPerProvider.get(e.provider) ?? 0;
-        return a < maxAttempts;
-      });
 
       if (providerHasAttemptsLeft || nextProvidersHaveAttempts) {
         job.status = 'RETRYING';
@@ -377,7 +411,7 @@ export class AIWorker {
 
     // Success path
     const latencyMs = Date.now() - startTime;
-    await this.healthTracker.recordSuccess(pool, provider, latencyMs);
+    await this.healthTracker.recordSuccess(pool, provider, latencyMs, selectedEntry.id);
     await this.healthTracker.logResponse({
       requestId: logRequestId,
       jobId: job._id,
@@ -442,6 +476,9 @@ export class AIWorker {
       for (const entry of available) {
         if (entry.healthState === 'HEALTHY') {
           job.attemptsPerProvider.delete(entry.provider);
+          if (entry.id) {
+            job.attemptsPerProvider.delete(entry.id);
+          }
         }
       }
       job.status = 'PENDING';

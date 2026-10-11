@@ -29,7 +29,8 @@ export function FounderLedgerPage(): ReactElement {
     try {
       setLoading(true);
       const res = await apiClient.get<{ transactions: LedgerTransaction[] }>('/founder/ledger?limit=50');
-      setTransactions(res.transactions || []);
+      const txs = Array.isArray(res) ? res : res?.transactions || [];
+      setTransactions(txs);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch CorpCoin transaction ledger';
       error(msg);

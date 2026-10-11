@@ -466,3 +466,25 @@
   margin-left: 6px;
 }
 
+@media (max-width: 640px) {
+  .podiumGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .navTabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .navTab {
+    white-space: nowrap;
+  }
+
+  .filterBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+

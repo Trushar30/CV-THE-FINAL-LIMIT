@@ -13,6 +13,7 @@ import {
   type JobListItem,
   type JobDetails,
 } from '../api/career';
+import * as AuthContextModule from '../store/AuthContext';
 
 const baseCompany: CompanyListItem = {
   _id: 'comp-1',
@@ -366,7 +367,7 @@ describe('Career & Enterprise Browsing Suite (TASK P5.2)', () => {
   });
 
   describe('4. JobDetailPage (Job Detail & Apply CTA)', () => {
-    it('renders job requirements, company overview, and disabled Apply button with x/5 quota', async () => {
+    it('renders job requirements, company overview, and prompts unauthenticated visitor to sign in', async () => {
       vi.spyOn(careerApi, 'getJob').mockResolvedValue(mockJobDetails);
 
       render(
@@ -394,16 +395,184 @@ describe('Career & Enterprise Browsing Suite (TASK P5.2)', () => {
       expect(screen.getByTestId('application-quota-counter')).toBeInTheDocument();
       expect(screen.getByTestId('quota-count')).toHaveTextContent('0 / 5');
 
-      // Disabled Apply button
+      // Disabled Apply button prompting sign in
       const applyBtn = screen.getByTestId('apply-button');
       expect(applyBtn).toBeInTheDocument();
       expect(applyBtn).toBeDisabled();
+      expect(applyBtn).toHaveTextContent('Sign In as Job Seeker to Apply');
+    });
+
+    it('enables Apply button and submits application for authenticated JOB_SEEKER', async () => {
+      vi.spyOn(careerApi, 'getJob').mockResolvedValue(mockJobDetails);
+      vi.spyOn(careerApi, 'getApplications').mockResolvedValue({
+        applications: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+      });
+      const applyJobSpy = vi.spyOn(careerApi, 'applyJob').mockResolvedValue({
+        application: {
+          _id: 'app-new-1',
+          userId: 'user-1',
+          companyId: {
+            _id: 'comp-1',
+            name: 'Nexus Enterprise Systems',
+            type: 'PLATFORM',
+            companyRating: 4.8,
+          },
+          jobId: {
+            _id: 'job-1',
+            title: 'Distributed Systems Associate',
+            domain: 'SOFTWARE_ENGINEERING',
+            minLevel: 4,
+            maxLevel: 6,
+            openings: 2,
+            status: 'OPEN',
+          },
+          mode: 'PRODUCTION',
+          currentStage: 'APPLIED',
+          status: 'ACTIVE',
+          stageHistory: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+
+      vi.spyOn(AuthContextModule, 'useOptionalAuth').mockReturnValue({
+        user: {
+          id: 'user-1',
+          email: 'seeker@corpverse.com',
+          displayName: 'Test Seeker',
+          careerRole: 'JOB_SEEKER',
+          platformRole: 'NONE',
+          level: 1,
+          totalExpCached: 0,
+          corpCoinBalanceCached: 0,
+        },
+        isAuthenticated: true,
+        isLoading: false,
+        accessToken: 'mock-token',
+        login: vi.fn(),
+        register: vi.fn(),
+        verifyEmail: vi.fn(),
+        resendVerification: vi.fn(),
+        setupProfile: vi.fn(),
+        logout: vi.fn(),
+        refreshSession: vi.fn(),
+        fetchCurrentUser: vi.fn(),
+        loginStub: vi.fn(),
+        logoutStub: vi.fn(),
+        toggleAuth: vi.fn(),
+        switchCareerRole: vi.fn(),
+        switchPlatformRole: vi.fn(),
+        setExpStub: vi.fn(),
+        setCorpCoinStub: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/jobs/job-1']}>
+          <Routes>
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
+            <Route path="/applications" element={<div>Applications Tracker Page</div>} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Distributed Systems Associate')).toBeInTheDocument();
+      });
+
+      const applyBtn = screen.getByTestId('apply-button');
+      expect(applyBtn).toBeInTheDocument();
+      expect(applyBtn).not.toBeDisabled();
       expect(applyBtn).toHaveTextContent('Apply for Position');
 
-      // Phase 6.1 unlocking note
-      expect(screen.getByTestId('apply-notice')).toHaveTextContent(
-        'Application submission unlocks in Phase 6.1'
+      fireEvent.click(applyBtn);
+
+      await waitFor(() => {
+        expect(applyJobSpy).toHaveBeenCalledWith('job-1');
+        expect(screen.getByText('Applications Tracker Page')).toBeInTheDocument();
+      });
+    });
+
+    it('shows View Active Application if already applied to this requisition', async () => {
+      vi.spyOn(careerApi, 'getJob').mockResolvedValue(mockJobDetails);
+      vi.spyOn(careerApi, 'getApplications').mockResolvedValue({
+        applications: [
+          {
+            _id: 'app-active-1',
+            userId: 'user-1',
+            companyId: {
+              _id: 'comp-1',
+              name: 'Nexus Enterprise Systems',
+              type: 'PLATFORM',
+              companyRating: 4.8,
+            },
+            jobId: {
+              _id: 'job-1',
+              title: 'Distributed Systems Associate',
+              domain: 'SOFTWARE_ENGINEERING',
+              minLevel: 4,
+              maxLevel: 6,
+              openings: 2,
+              status: 'OPEN',
+            },
+            mode: 'PRODUCTION',
+            currentStage: 'ATS_SCREENING',
+            status: 'ACTIVE',
+            stageHistory: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 20,
+      });
+
+      vi.spyOn(AuthContextModule, 'useOptionalAuth').mockReturnValue({
+        user: {
+          id: 'user-1',
+          email: 'seeker@corpverse.com',
+          displayName: 'Test Seeker',
+          careerRole: 'JOB_SEEKER',
+          platformRole: 'NONE',
+          level: 1,
+          totalExpCached: 0,
+          corpCoinBalanceCached: 0,
+        },
+        isAuthenticated: true,
+        isLoading: false,
+        accessToken: 'mock-token',
+        login: vi.fn(),
+        register: vi.fn(),
+        verifyEmail: vi.fn(),
+        resendVerification: vi.fn(),
+        setupProfile: vi.fn(),
+        logout: vi.fn(),
+        refreshSession: vi.fn(),
+        fetchCurrentUser: vi.fn(),
+        loginStub: vi.fn(),
+        logoutStub: vi.fn(),
+        toggleAuth: vi.fn(),
+        switchCareerRole: vi.fn(),
+        switchPlatformRole: vi.fn(),
+        setExpStub: vi.fn(),
+        setCorpCoinStub: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/jobs/job-1']}>
+          <Routes>
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
+          </Routes>
+        </MemoryRouter>
       );
+
+      await waitFor(() => {
+        expect(screen.getByText('View Active Application')).toBeInTheDocument();
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
+      });
     });
 
     it('renders error state when job ID is not found', async () => {

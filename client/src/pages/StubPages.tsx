@@ -4,6 +4,8 @@ import { Badge } from '../components/ui/Badge/Badge';
 import { Button } from '../components/ui/Button/Button';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ShieldCheckIcon, FolderEmptyIcon, BriefcaseIcon } from '../components/ui/Icon/Icon';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export function CareerHubPage(): ReactElement {
   const navigate = useNavigate();
@@ -85,13 +87,13 @@ export function LoginPage(): ReactElement {
             variant="primary"
             onClick={() => {
               loginStub();
-              navigate('/showcase');
+              navigate('/career');
             }}
           >
             Sign in as Demo User (Alex Chen)
           </Button>
-          <Button variant="outline" onClick={() => navigate('/showcase')}>
-            Continue to Component Showcase
+          <Button variant="outline" onClick={() => navigate('/jobs')}>
+            Explore Career Opportunities
           </Button>
         </div>
       </Card>
@@ -101,23 +103,50 @@ export function LoginPage(): ReactElement {
 
 export function UnauthorizedPage(): ReactElement {
   const navigate = useNavigate();
+  useDocumentTitle('403 Access Restricted');
 
   return (
-    <div style={{ maxWidth: 480, margin: '3rem auto' }}>
-      <Card title="403 — Privileged Access Restricted" subtitle="Role requirements not met">
-        <p
-          style={{
-            color: 'var(--cv-text-secondary)',
-            marginBottom: '1.5rem',
-            fontSize: '0.875rem',
-          }}
-        >
-          You do not have the required <code>careerRole</code> or <code>platformRole</code> to
-          access this view. Use the role switcher in the topbar to test different permission levels.
-        </p>
-        <Button variant="primary" onClick={() => navigate('/showcase')}>
-          Return to Showcase
-        </Button>
+    <div style={{ maxWidth: 520, margin: '2.5rem auto', padding: '0 1rem' }}>
+      <Card
+        title="403 — Privileged Access Restricted"
+        subtitle="Role requirements not satisfied"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '1rem 0' }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 'var(--cv-radius-full)',
+              backgroundColor: 'rgba(235, 87, 87, 0.12)',
+              color: '#eb5757',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <ShieldCheckIcon size={28} />
+          </div>
+          <p
+            style={{
+              color: 'var(--cv-text-secondary)',
+              marginBottom: '1.25rem',
+              fontSize: '0.9375rem',
+              lineHeight: 1.6,
+            }}
+          >
+            You do not have the required <code>careerRole</code> or <code>platformRole</code> to view this section.
+            Please verify your active role credentials or test using the topbar simulation switcher.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+            <Button variant="primary" onClick={() => navigate('/career')}>
+              Return to Career Hub
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/jobs')}>
+              Explore Public Jobs
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );
@@ -125,22 +154,50 @@ export function UnauthorizedPage(): ReactElement {
 
 export function NotFoundPage(): ReactElement {
   const navigate = useNavigate();
+  useDocumentTitle('404 Page Not Found');
 
   return (
-    <div style={{ maxWidth: 480, margin: '3rem auto' }}>
-      <Card title="404 — Resource Not Found" subtitle="Page route does not exist">
-        <p
-          style={{
-            color: 'var(--cv-text-secondary)',
-            marginBottom: '1.5rem',
-            fontSize: '0.875rem',
-          }}
-        >
-          The requested path does not map to any active simulation view.
-        </p>
-        <Button variant="primary" onClick={() => navigate('/showcase')}>
-          Return to Showcase
-        </Button>
+    <div style={{ maxWidth: 520, margin: '2.5rem auto', padding: '0 1rem' }}>
+      <Card
+        title="404 — Simulation Route Not Found"
+        subtitle="The requested virtual location does not exist"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '1rem 0' }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 'var(--cv-radius-full)',
+              backgroundColor: 'rgba(39, 62, 65, 0.15)',
+              color: 'var(--cv-color-cascades)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <FolderEmptyIcon size={28} />
+          </div>
+          <p
+            style={{
+              color: 'var(--cv-text-secondary)',
+              marginBottom: '1.25rem',
+              fontSize: '0.9375rem',
+              lineHeight: 1.6,
+            }}
+          >
+            The path you requested could not be resolved in the CorpVerse directory.
+            Check the URL or return to one of our core corporate destinations below.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+            <Button variant="primary" onClick={() => navigate('/career')}>
+              Return to Career Hub
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/jobs')} leftIcon={<BriefcaseIcon size={16} />}>
+              Browse Jobs
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );

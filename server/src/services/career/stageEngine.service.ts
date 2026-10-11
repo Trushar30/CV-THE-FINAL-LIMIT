@@ -35,6 +35,7 @@ import {
 } from '../../schemas/stageChat.schema.js';
 import { AppError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
+import { finalReviewOfferService } from './finalReviewOffer.service.js';
 
 export interface StageSessionState {
   interview: IInterviewDocument;
@@ -42,10 +43,13 @@ export interface StageSessionState {
   previousAnswers: Array<{
     sequenceNumber: number;
     question: string;
+    content?: string;
     answer: string;
     score?: number;
     strengths?: string[];
     weaknesses?: string[];
+    notes?: string;
+    evaluatedAt?: Date;
   }>;
   isCompleted: boolean;
   isWaitingAI: boolean;
@@ -187,10 +191,13 @@ export class StageEngineService {
         previousAnswers.push({
           sequenceNumber: q.sequenceNumber,
           question: q.content,
+          content: q.content,
           answer: ans.candidateResponse,
           score: ans.score,
           strengths: ans.strengths,
           weaknesses: ans.weaknesses,
+          notes: ans.notes,
+          evaluatedAt: ans.evaluatedAt,
         });
       }
     }
@@ -549,6 +556,18 @@ Output JSON schema: { score: number 0-100, strengths: string[], weaknesses: stri
         result: `PASSED_${interview.stage}_SCORE_${averageScore}`,
       });
       await application.save();
+
+      if (nextStage === 'FINAL_REVIEW') {
+        // Trigger automated final review synthesis in background
+        void finalReviewOfferService
+          .executeFinalReview(application._id.toString(), application.userId.toString())
+          .catch((err) => {
+            logger.warn('[StageEngine] Auto final review execution deferred/failed', {
+              applicationId: application._id.toString(),
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+      }
 
       // Trigger stage advanced notification
       try {

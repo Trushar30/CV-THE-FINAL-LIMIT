@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
+import { sanitizeNoSql } from './middleware/sanitize.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
@@ -64,6 +65,9 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use(cookieParser());
   app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT }));
+
+  // 5.1 NoSQL Injection Protection: Sanitize MongoDB operators from body, query, and params
+  app.use(sanitizeNoSql);
 
   // 6. Request Logging
   app.use((req, _res, next) => {

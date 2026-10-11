@@ -16,6 +16,7 @@ import { AIError } from './types.js';
 import type { ProviderRouter } from './provider-router.js';
 import { HealthTracker } from './health-tracker.js';
 import { AIJobModel } from '../models/AIJob.js';
+import { logger } from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Lightweight JSON Schema Validator
@@ -182,173 +183,174 @@ export class AIGateway {
   }
 
   /**
-   * Execute a synchronous AI request through the provider pipeline.
+   * Execute a synchronous AI request through the provider pipeline with automatic fallback.
    *
-   * 1. Selects the highest-priority non-DISABLED provider for the requested pool.
-   * 2. Enforces bounded timeout (if timeoutMs specified).
-   * 3. Calls the provider adapter's `generate()` method.
-   * 4. Validates structured output against `request.outputSchema` if provided.
-   * 5. Logs request, response, and provider health metrics.
-   * 6. Returns a normalized AIResponse with gateway-generated requestId and latency.
+   * 1. Retrieves all available non-DISABLED providers for the requested pool in priority order.
+   * 2. Iterates sequentially (prioritizing preferredProvider if supplied).
+   * 3. For each provider, executes adapter.generate() with bounded timeout and validates structured output.
+   * 4. If a provider fails, records the failure, updates health state, logs diagnostics, and falls back to the next provider.
+   * 5. Returns a normalized AIResponse upon first provider success.
    *
-   * @throws AIError — UNAVAILABLE if no providers, TIMEOUT on timeout, or normalized adapter errors
+   * @throws AIError — UNAVAILABLE if no providers exist or all available providers in the pool fail
    */
   async execute(request: AIRequest, options: AIGatewayOptions): Promise<AIResponse> {
     const { pool, timeoutMs, preferredProvider } = options;
 
-    // 1. Select provider
-    const entry = this.router.selectProvider(pool, preferredProvider);
-    if (!entry) {
+    const candidates = this.router.getAvailableProviders(pool, preferredProvider);
+    if (!candidates || candidates.length === 0) {
       throw new AIError(`No available providers in pool '${pool}'`, 'UNAVAILABLE');
     }
 
     const requestId = randomUUID();
-    const startTime = Date.now();
+    let lastError: AIError | null = null;
 
-    // Log request in aiRequests (non-blocking)
-    const promptPreview = `${request.systemInstruction ? `[SYSTEM: ${request.systemInstruction}] ` : ''}${request.userInput}`;
-    const logRequestIdPromise = this.healthTracker.logRequest({
-      taskType: request.taskType,
-      pool,
-      providerCode: entry.provider,
-      modelId: 'dynamic',
-      promptSummary: promptPreview,
-    });
-
-    // 2. Call adapter with optional gateway-level timeout
-    let response: AIResponse;
-    let timerHandle: ReturnType<typeof setTimeout> | undefined;
-
-    try {
-      const adapterPromise = entry.adapter.generate(request);
-
-      if (timeoutMs && timeoutMs > 0) {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timerHandle = setTimeout(() => {
-            reject(
-              new AIError(
-                `Gateway execution timed out after ${timeoutMs}ms`,
-                'TIMEOUT',
-                entry.provider
-              )
-            );
-          }, timeoutMs);
-        });
-
-        response = await Promise.race([adapterPromise, timeoutPromise]);
-      } else {
-        response = await adapterPromise;
+    for (let i = 0; i < candidates.length; i++) {
+      const entry = candidates[i];
+      if (!entry) {
+        continue;
       }
-    } catch (err: unknown) {
-      const latencyMs = Date.now() - startTime;
-      let aiError: AIError;
+      const nextCandidate = candidates[i + 1];
+      const startTime = Date.now();
 
-      if (err instanceof AIError) {
-        aiError = err;
-      } else {
-        aiError = new AIError(
-          `Unexpected error from provider '${entry.provider}': ${err instanceof Error ? err.message : String(err)}`,
-          'PROVIDER_ERROR',
-          entry.provider
-        );
-      }
-
-      // Record failure and response log
-      const logRequestId = await logRequestIdPromise;
-      await this.healthTracker.recordFailure(
+      // Log request in aiRequests (non-blocking)
+      const promptPreview = `${request.systemInstruction ? `[SYSTEM: ${request.systemInstruction}] ` : ''}${request.userInput}`;
+      const logRequestIdPromise = this.healthTracker.logRequest({
+        taskType: request.taskType,
         pool,
-        entry.provider,
-        aiError.category,
-        aiError.message
-      );
-      await this.healthTracker.logResponse({
-        requestId: logRequestId,
         providerCode: entry.provider,
-        latencyMs,
-        success: false,
-        errorCode: aiError.category,
+        modelId: 'dynamic',
+        promptSummary: promptPreview,
       });
 
-      throw aiError;
-    } finally {
-      if (timerHandle) {
-        clearTimeout(timerHandle);
-      }
-    }
+      let response: AIResponse;
+      let timerHandle: ReturnType<typeof setTimeout> | undefined;
 
-    const latencyMs = Date.now() - startTime;
+      try {
+        const adapterPromise = entry.adapter.generate(request);
 
-    // 3. Validate structured output
-    if (request.outputSchema) {
-      if (!response.structuredData) {
-        const schemaErr = new AIError(
-          `Output schema specified but provider '${entry.provider}' returned no structured data`,
-          'PROVIDER_ERROR',
-          entry.provider
-        );
+        if (timeoutMs && timeoutMs > 0) {
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timerHandle = setTimeout(() => {
+              reject(
+                new AIError(
+                  `Gateway execution timed out after ${timeoutMs}ms`,
+                  'TIMEOUT',
+                  entry.provider
+                )
+              );
+            }, timeoutMs);
+          });
+
+          response = await Promise.race([adapterPromise, timeoutPromise]);
+        } else {
+          response = await adapterPromise;
+        }
+
+        const latencyMs = Date.now() - startTime;
+
+        // Structured output validation
+        if (request.outputSchema) {
+          if (!response.structuredData) {
+            throw new AIError(
+              `Output schema specified but provider '${entry.provider}' returned no structured data`,
+              'PROVIDER_ERROR',
+              entry.provider
+            );
+          }
+
+          const validationErrors = validateAgainstSchema(
+            response.structuredData,
+            request.outputSchema
+          );
+          if (validationErrors.length > 0) {
+            throw new AIError(
+              `Structured output validation failed: ${validationErrors.join('; ')}`,
+              'PROVIDER_ERROR',
+              entry.provider
+            );
+          }
+        }
+
+        // Record success and log response
+        const logRequestId = await logRequestIdPromise;
+        await this.healthTracker.recordSuccess(pool, entry.provider, latencyMs, entry.id);
+        await this.healthTracker.logResponse({
+          requestId: logRequestId,
+          providerCode: entry.provider,
+          latencyMs,
+          usage: response.usage,
+          success: true,
+        });
+
+        // Return normalized response
+        return {
+          success: true,
+          provider: entry.provider,
+          model: response.model,
+          requestId,
+          content: response.content,
+          structuredData: response.structuredData,
+          usage: response.usage,
+          latencyMs,
+        };
+      } catch (err: unknown) {
+        const latencyMs = Date.now() - startTime;
+        let aiError: AIError;
+
+        if (err instanceof AIError) {
+          aiError = err;
+        } else {
+          aiError = new AIError(
+            `Unexpected error from provider '${entry.provider}': ${err instanceof Error ? err.message : String(err)}`,
+            'PROVIDER_ERROR',
+            entry.provider
+          );
+        }
+
+        lastError = aiError;
+
+        // Record failure and response log
         const logRequestId = await logRequestIdPromise;
         await this.healthTracker.recordFailure(
           pool,
           entry.provider,
-          schemaErr.category,
-          schemaErr.message
+          aiError.category,
+          aiError.message,
+          entry.id
         );
         await this.healthTracker.logResponse({
           requestId: logRequestId,
           providerCode: entry.provider,
           latencyMs,
           success: false,
-          errorCode: schemaErr.category,
+          errorCode: aiError.category,
         });
-        throw schemaErr;
-      }
 
-      const validationErrors = validateAgainstSchema(response.structuredData, request.outputSchema);
-      if (validationErrors.length > 0) {
-        const valErr = new AIError(
-          `Structured output validation failed: ${validationErrors.join('; ')}`,
-          'PROVIDER_ERROR',
-          entry.provider
-        );
-        const logRequestId = await logRequestIdPromise;
-        await this.healthTracker.recordFailure(
-          pool,
-          entry.provider,
-          valErr.category,
-          valErr.message
-        );
-        await this.healthTracker.logResponse({
-          requestId: logRequestId,
-          providerCode: entry.provider,
-          latencyMs,
-          success: false,
-          errorCode: valErr.category,
-        });
-        throw valErr;
+        if (nextCandidate) {
+          logger.warn(
+            `AI provider '${entry.provider}' (${entry.id || 'primary'}) failed during execute; falling back to next provider '${nextCandidate.provider}' (${nextCandidate.id || 'backup'})`,
+            {
+              pool,
+              failedProvider: entry.provider,
+              failedInstanceId: entry.id,
+              nextProvider: nextCandidate.provider,
+              nextInstanceId: nextCandidate.id,
+              error: aiError.message,
+              category: aiError.category,
+            }
+          );
+        }
+      } finally {
+        if (timerHandle) {
+          clearTimeout(timerHandle);
+        }
       }
     }
 
-    // 4. Record success and log response
-    const logRequestId = await logRequestIdPromise;
-    await this.healthTracker.recordSuccess(pool, entry.provider, latencyMs);
-    await this.healthTracker.logResponse({
-      requestId: logRequestId,
-      providerCode: entry.provider,
-      latencyMs,
-      usage: response.usage,
-      success: true,
-    });
-
-    // 5. Return normalized response
-    return {
-      success: true,
-      provider: entry.provider,
-      model: response.model,
-      requestId,
-      content: response.content,
-      structuredData: response.structuredData,
-      usage: response.usage,
-      latencyMs,
-    };
+    // All available providers in pool failed
+    throw (
+      lastError ??
+      new AIError(`All available providers in pool '${pool}' failed`, 'UNAVAILABLE')
+    );
   }
 }

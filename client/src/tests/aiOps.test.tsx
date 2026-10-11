@@ -257,7 +257,7 @@ describe('AI Operations Frontend Suite (TASK P3.7)', () => {
 
       await waitFor(() => {
         expect(updateSpy).toHaveBeenCalledWith(
-          'openai',
+          'prov-2',
           expect.objectContaining({
             priority: 1,
             reason: 'Promoting OpenAI to primary due to Gemini maintenance',
@@ -286,7 +286,7 @@ describe('AI Operations Frontend Suite (TASK P3.7)', () => {
       fireEvent.click(pingButtons[0]!);
 
       await waitFor(() => {
-        expect(testSpy).toHaveBeenCalledWith('gemini', 'PIPELINE');
+        expect(testSpy).toHaveBeenCalledWith('prov-1', 'PIPELINE');
         expect(screen.getByText('Diagnostic Health Ping Result')).toBeDefined();
         expect(screen.getByText('Round-trip latency: 98ms')).toBeDefined();
       });

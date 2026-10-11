@@ -34,7 +34,10 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   accessToken: string | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; user?: UserStub; error?: string }>;
   register: (
     email: string,
     password: string
@@ -129,6 +132,16 @@ export const DEFAULT_MOCK_USER: UserStub = {
   status: 'ACTIVE',
 };
 
+export function getPostLoginRedirect(user?: Partial<UserStub> | null): string {
+  if (!user) return '/jobs';
+  if (user.platformRole === 'ADMIN') return '/admin';
+  if (user.platformRole === 'AI_MANAGER') return '/ai-ops';
+  if (user.careerRole === 'NONE') return '/profile/setup';
+  if (user.careerRole === 'EMPLOYEE') return '/workplace';
+  if (user.careerRole === 'FOUNDER') return '/founder/dashboard';
+  return '/career';
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export interface AuthProviderProps {
@@ -197,7 +210,10 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
   }, [initialUser, refreshSession]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    async (
+      email: string,
+      password: string
+    ): Promise<{ success: boolean; user?: UserStub; error?: string }> => {
       try {
         const response = await apiClient.post<{
           user: Parameters<typeof toUserStub>[0];
@@ -205,9 +221,10 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
         }>('/auth/login', { email, password });
 
         if (response && response.accessToken) {
+          const loggedInUser = toUserStub(response.user);
           updateAccessToken(response.accessToken);
-          setUser(toUserStub(response.user));
-          return { success: true };
+          setUser(loggedInUser);
+          return { success: true, user: loggedInUser };
         }
         return { success: false, error: 'Login response missing credentials' };
       } catch (err: unknown) {
@@ -365,10 +382,17 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
       if (response && response.user) {
         setUser(toUserStub(response.user));
       }
-    } catch {
-      // If /me fails, session is expired or invalid
-      updateAccessToken(null);
-      setUser(null);
+    } catch (err: unknown) {
+      // Only clear credentials if server explicitly rejected session (HTTP 401)
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'status' in err &&
+        (err as { status: number }).status === 401
+      ) {
+        updateAccessToken(null);
+        setUser(null);
+      }
     }
   }, [updateAccessToken]);
 
@@ -468,4 +492,9 @@ export function useAuth(): AuthContextValue {
   return context;
 }
 
+export function useOptionalAuth(): AuthContextValue | null {
+  return useContext(AuthContext);
+}
+
 export default AuthProvider;
+

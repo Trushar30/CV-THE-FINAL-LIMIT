@@ -27,6 +27,8 @@ vi.mock('../api/career', async (importOriginal) => {
       negotiateOffer: vi.fn(),
       acceptOffer: vi.fn(),
       declineOffer: vi.fn(),
+      triggerAtsScreen: vi.fn(),
+      executeFinalReview: vi.fn(),
     },
   };
 });
@@ -209,6 +211,45 @@ describe('Hiring Journey Frontend Suite (TASK P6.7)', () => {
         expect(screen.getByTestId('feedback-missing-skills')).toBeInTheDocument();
         expect(screen.getByText('Terraform')).toBeInTheDocument();
         expect(screen.getByText(/Strong Go concurrency background/)).toBeInTheDocument();
+      });
+    });
+
+    it('auto-synthesizes and displays manual run button for applications in FINAL_REVIEW stage', async () => {
+      const mockFinalReviewApp: ApplicationListItem = {
+        ...mockActiveApp,
+        _id: 'app-review-3',
+        currentStage: 'FINAL_REVIEW',
+        status: 'ACTIVE',
+      };
+
+      vi.mocked(careerApi.getApplications).mockResolvedValue({
+        applications: [mockFinalReviewApp],
+        total: 1,
+        page: 1,
+        limit: 50,
+      });
+      vi.mocked(careerApi.executeFinalReview).mockResolvedValueOnce({
+        applicationId: 'app-review-3',
+        isPassing: true,
+        finalScore: 88,
+        stageScores: { atsScore: 85, screeningScore: 90, assessmentScore: 85, interviewScore: 92 },
+        summary: 'Excellent candidate profile.',
+        recommendations: ['Extend offer'],
+      });
+
+      render(
+        <MemoryRouter>
+          <ApplicationsTrackerPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Executive Review in Progress...')).toBeInTheDocument();
+        expect(screen.getByTestId('run-final-review-btn')).toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(careerApi.executeFinalReview).toHaveBeenCalledWith('app-review-3');
       });
     });
   });

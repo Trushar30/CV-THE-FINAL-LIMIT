@@ -64,13 +64,13 @@ export function Topbar({
           <div className={styles.balancePills}>
             <div className={`${styles.pill} ${styles.pillExp}`} title="Total EXP">
               <ZapIcon size={13} color="var(--cv-violet-400)" />
-              <span>L{user.level}</span>
+              <span>L{user.level ?? 1}</span>
               <span>•</span>
-              <span>{user.totalExpCached.toLocaleString()} EXP</span>
+              <span>{(user.totalExpCached ?? 0).toLocaleString()} EXP</span>
             </div>
             <div className={`${styles.pill} ${styles.pillCoin}`} title="CorpCoin Balance">
               <CoinIcon size={13} color="var(--cv-gold-400)" />
-              <span>{user.corpCoinBalanceCached.toLocaleString()} CC</span>
+              <span>{(user.corpCoinBalanceCached ?? 0).toLocaleString()} CC</span>
             </div>
           </div>
         )}

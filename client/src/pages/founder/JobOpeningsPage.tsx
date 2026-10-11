@@ -54,7 +54,10 @@ export function JobOpeningsPage(): ReactElement {
         apiClient.get<CompanyData>('/founder/company'),
       ]);
       setJobs(jobsRes.jobs || []);
-      setCompany(companyRes);
+      const companyData = companyRes && typeof companyRes === 'object' && 'company' in companyRes
+        ? (companyRes as { company: CompanyData | null }).company
+        : (companyRes as CompanyData | null);
+      setCompany(companyData);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load job openings';
       error(msg);
@@ -135,7 +138,7 @@ export function JobOpeningsPage(): ReactElement {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontWeight: 700, color: 'var(--cv-text-primary)' }}>{job.title}</span>
           <span style={{ fontSize: 'var(--cv-text-xs)', color: 'var(--cv-text-tertiary)' }}>
-            Domain: {job.domain.replace('_', ' ')}
+            Domain: {(job.domain || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')}
           </span>
         </div>
       ),
@@ -150,7 +153,7 @@ export function JobOpeningsPage(): ReactElement {
       header: 'Required Skills',
       render: (job) => (
         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-          {job.requiredSkills.map((s, idx) => (
+          {Array.isArray(job.requiredSkills) && job.requiredSkills.map((s, idx) => (
             <span key={idx} className={styles.modifierTag}>
               {s}
             </span>

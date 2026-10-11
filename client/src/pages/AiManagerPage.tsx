@@ -48,16 +48,16 @@ export function AiManagerPage(): ReactElement {
   const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
 
   // Testing provider state
-  const [testingCode, setTestingCode] = useState<AIProvider | null>(null);
+  const [testingTarget, setTestingTarget] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<TestResultDto | null>(null);
 
   // Add Provider form state
   const [addForm, setAddForm] = useState<CreateProviderPayload>({
     code: 'gemini',
-    name: 'Google Gemini Pro',
+    name: 'Google Gemini Flash',
     priority: 1,
     pool: 'PIPELINE',
-    modelId: 'gemini-1.5-pro',
+    modelId: 'gemini-3.8-flash',
     apiKey: '',
     rateLimitRpm: 60,
     dailyLimit: 5000,
@@ -132,10 +132,10 @@ export function AiManagerPage(): ReactElement {
       setIsAddOpen(false);
       setAddForm({
         code: 'gemini',
-        name: 'Google Gemini Pro',
+        name: 'Google Gemini Flash',
         priority: 1,
         pool,
-        modelId: 'gemini-1.5-pro',
+        modelId: 'gemini-3.8-flash',
         apiKey: '',
         rateLimitRpm: 60,
         dailyLimit: 5000,
@@ -148,6 +148,25 @@ export function AiManagerPage(): ReactElement {
     } finally {
       setIsSubmittingAction(false);
     }
+  };
+
+  // Open Add Modal with sensible auto-named default
+  const handleOpenAdd = (): void => {
+    const defaultPlatform: AIProvider = 'gemini';
+    const countPlatform = providers.filter((p) => p.code === defaultPlatform).length;
+    setAddForm({
+      code: defaultPlatform,
+      name:
+        countPlatform > 0 ? `Google Gemini Flash (Key ${countPlatform + 1})` : 'Google Gemini Flash',
+      priority: 1,
+      pool,
+      modelId: 'gemini-3.8-flash',
+      apiKey: '',
+      rateLimitRpm: 60,
+      dailyLimit: 5000,
+      reason: '',
+    });
+    setIsAddOpen(true);
   };
 
   // Submit Edit Provider
@@ -175,9 +194,10 @@ export function AiManagerPage(): ReactElement {
         payload.apiKey = editForm.apiKey.trim();
       }
 
-      await aiOpsApi.updateProvider(selectedProvider.code, payload, selectedProvider.pool);
+      const target = selectedProvider.id || selectedProvider.code;
+      await aiOpsApi.updateProvider(target, payload, selectedProvider.pool);
       toastSuccess(
-        `Successfully updated configuration for ${selectedProvider.code.toUpperCase()}`,
+        `Successfully updated configuration for ${selectedProvider.name || selectedProvider.code.toUpperCase()}`,
         'Provider Updated'
       );
       setIsEditOpen(false);
@@ -222,28 +242,29 @@ export function AiManagerPage(): ReactElement {
     }
 
     setIsSubmittingAction(true);
+    const target = selectedProvider.id || selectedProvider.code;
     try {
       if (confirmAction === 'ENABLE') {
-        await aiOpsApi.enableProvider(selectedProvider.code, confirmReason, selectedProvider.pool);
+        await aiOpsApi.enableProvider(target, confirmReason, selectedProvider.pool);
         toastSuccess(
           `${selectedProvider.name} is now ACTIVE and eligible for routing`,
           'Provider Enabled'
         );
       } else if (confirmAction === 'DISABLE') {
-        await aiOpsApi.disableProvider(selectedProvider.code, confirmReason, selectedProvider.pool);
+        await aiOpsApi.disableProvider(target, confirmReason, selectedProvider.pool);
         toastWarning(
           `${selectedProvider.name} is now DISABLED and will be skipped in routing`,
           'Provider Disabled'
         );
       } else if (confirmAction === 'DELETE') {
-        await aiOpsApi.removeProvider(selectedProvider.code, confirmReason, selectedProvider.pool);
+        await aiOpsApi.removeProvider(target, confirmReason, selectedProvider.pool);
         toastInfo(
           `${selectedProvider.name} was cleanly removed from ${selectedProvider.pool} pool`,
           'Provider Removed'
         );
       } else if (confirmAction === 'REORDER') {
         await aiOpsApi.updateProvider(
-          selectedProvider.code,
+          target,
           {
             priority: newPriorityValue,
             reason: confirmReason,
@@ -268,14 +289,15 @@ export function AiManagerPage(): ReactElement {
 
   // Run live diagnostic test ping
   const handleTestProvider = async (provider: ProviderDto): Promise<void> => {
-    setTestingCode(provider.code);
+    const target = provider.id || provider.code;
+    setTestingTarget(target);
     try {
-      const res = await aiOpsApi.testProvider(provider.code, provider.pool);
+      const res = await aiOpsApi.testProvider(target, provider.pool);
       setTestResult(res);
       setIsTestResultOpen(true);
       if (res.success) {
         toastSuccess(
-          `${provider.code.toUpperCase()} responded in ${res.latencyMs}ms (${res.status})`,
+          `${provider.name || provider.code.toUpperCase()} responded in ${res.latencyMs}ms (${res.status})`,
           'Health Ping Successful'
         );
       } else {
@@ -286,7 +308,7 @@ export function AiManagerPage(): ReactElement {
       const msg = err instanceof Error ? err.message : 'Test request failed';
       toastError(msg, 'Test Failed');
     } finally {
-      setTestingCode(null);
+      setTestingTarget(null);
     }
   };
 
@@ -359,7 +381,7 @@ export function AiManagerPage(): ReactElement {
             {isLoading ? 'Refreshing...' : '🔄 Refresh'}
           </Button>
 
-          <Button variant="primary" size="sm" onClick={() => setIsAddOpen(true)}>
+          <Button variant="primary" size="sm" onClick={handleOpenAdd}>
             + Add Provider
           </Button>
         </div>
@@ -477,7 +499,7 @@ export function AiManagerPage(): ReactElement {
                 title={`No providers configured in ${pool} pool`}
                 description="Add an external LLM provider adapter to activate generative pipelines."
                 action={
-                  <Button variant="primary" size="sm" onClick={() => setIsAddOpen(true)}>
+                  <Button variant="primary" size="sm" onClick={handleOpenAdd}>
                     Add First Provider
                   </Button>
                 }
@@ -584,10 +606,10 @@ export function AiManagerPage(): ReactElement {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={testingCode === p.code}
+                                disabled={testingTarget === (p.id || p.code)}
                                 onClick={() => handleTestProvider(p)}
                               >
-                                {testingCode === p.code ? 'Testing...' : 'Ping Test'}
+                                {testingTarget === (p.id || p.code) ? 'Testing...' : 'Ping Test'}
                               </Button>
 
                               <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(p)}>
@@ -739,21 +761,25 @@ export function AiManagerPage(): ReactElement {
                 value={addForm.code}
                 onChange={(e) => {
                   const code = e.target.value as AIProvider;
+                  const countSame = providers.filter((p) => p.code === code).length;
+                  const defaultNames: Record<AIProvider, string> = {
+                    gemini: 'Google Gemini Flash',
+                    openai: 'OpenAI GPT-4o Mini',
+                    groq: 'Groq LPU Engine',
+                  };
+                  const baseName = defaultNames[code] || code.toUpperCase();
+                  const suggestedName =
+                    countSame > 0 ? `${baseName} (Key ${countSame + 1})` : baseName;
                   setAddForm((prev) => ({
                     ...prev,
                     code,
-                    name:
-                      code === 'gemini'
-                        ? 'Google Gemini Pro'
-                        : code === 'openai'
-                          ? 'OpenAI GPT-4o'
-                          : 'Groq LPU Engine',
+                    name: suggestedName,
                     modelId:
                       code === 'gemini'
-                        ? 'gemini-1.5-pro'
+                        ? 'gemini-3.8-flash'
                         : code === 'openai'
                           ? 'gpt-4o-mini'
-                          : 'llama-3.3-70b-versatile',
+                          : 'openai/gpt-oss-120b',
                   }));
                 }}
               >
@@ -779,6 +805,7 @@ export function AiManagerPage(): ReactElement {
               max={100}
               value={addForm.priority}
               onChange={(e) => setAddForm({ ...addForm, priority: Number(e.target.value) })}
+              helperText="Equal priority keys share traffic via round-robin. Higher numbers act as fallback."
               required
             />
 
@@ -786,7 +813,7 @@ export function AiManagerPage(): ReactElement {
               label="Model ID"
               value={addForm.modelId || ''}
               onChange={(e) => setAddForm({ ...addForm, modelId: e.target.value })}
-              helperText="e.g. gemini-1.5-pro, gpt-4o-mini, llama-3.3-70b-versatile"
+              helperText="e.g. gemini-3.8-flash, gpt-4o-mini, openai/gpt-oss-120b"
             />
           </div>
 

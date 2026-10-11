@@ -32,34 +32,38 @@ export function createAIManagerRoutes(controller: AIManagerController): Router {
   );
 
   router.patch(
-    '/providers/:code',
+    '/providers/:idOrCode',
     requirePlatformRole('AI_MANAGER'),
     validate({ body: updateProviderSchema }),
     controller.updateProvider
   );
 
   router.post(
-    '/providers/:code/enable',
+    '/providers/:idOrCode/enable',
     requirePlatformRole('AI_MANAGER'),
     validate({ body: statusActionSchema }),
     controller.enableProvider
   );
 
   router.post(
-    '/providers/:code/disable',
+    '/providers/:idOrCode/disable',
     requirePlatformRole('AI_MANAGER'),
     validate({ body: statusActionSchema }),
     controller.disableProvider
   );
 
   router.delete(
-    '/providers/:code',
+    '/providers/:idOrCode',
     requirePlatformRole('AI_MANAGER'),
     validate({ body: statusActionSchema }),
     controller.removeProvider
   );
 
-  router.post('/providers/:code/test', requirePlatformRole('AI_MANAGER'), controller.testProvider);
+  router.post(
+    '/providers/:idOrCode/test',
+    requirePlatformRole('AI_MANAGER'),
+    controller.testProvider
+  );
 
   return router;
 }

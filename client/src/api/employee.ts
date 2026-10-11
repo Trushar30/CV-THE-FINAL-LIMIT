@@ -185,6 +185,10 @@ export async function fetchTaskEvaluation(taskId: string): Promise<TaskEvaluatio
   return await apiClient.get<TaskEvaluationResponse>(`/employee/tasks/${taskId}/evaluation`);
 }
 
+export async function evaluateSubmittedTask(taskId: string): Promise<TaskEvaluationResponse> {
+  return await apiClient.post<TaskEvaluationResponse>(`/employee/tasks/${taskId}/evaluate`);
+}
+
 export async function fetchPromotionProgress(): Promise<PromotionProgress> {
   return await apiClient.get<PromotionProgress>('/employee/promotion/progress');
 }

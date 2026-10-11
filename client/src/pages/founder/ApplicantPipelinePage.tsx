@@ -59,7 +59,8 @@ export function ApplicantPipelinePage(): ReactElement {
     try {
       setLoading(true);
       const res = await apiClient.get<{ applications: ApplicantSummary[] }>('/founder/applications');
-      setApplications(res.applications || []);
+      const list = Array.isArray(res) ? res : res?.applications || [];
+      setApplications(list);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch candidate pipeline';
       error(msg);
@@ -121,7 +122,7 @@ export function ApplicantPipelinePage(): ReactElement {
     {
       key: 'stage',
       header: 'Current Stage',
-      render: (app) => <Badge variant="cyan">{app.currentStage.replace('_', ' ')}</Badge>,
+      render: (app) => <Badge variant="cyan">{(app.currentStage || 'ATS_SCREENING').replace(/_/g, ' ')}</Badge>,
     },
     {
       key: 'status',

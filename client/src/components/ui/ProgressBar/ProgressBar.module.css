@@ -93,6 +93,15 @@
   box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
 }
 
+@keyframes cv-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 /* Shimmer animation */
 .animated .bar::after {
   content: '';

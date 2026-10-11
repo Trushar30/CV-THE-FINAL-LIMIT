@@ -17,6 +17,7 @@ export class RankingController {
       page: query.page,
       limit: query.limit,
       domain: query.domain,
+      forceRefresh: query.forceRefresh,
     });
 
     res.status(200).json({

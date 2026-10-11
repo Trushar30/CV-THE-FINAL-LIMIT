@@ -11,6 +11,7 @@ import {
   Tabs,
   EmptyState,
   Spinner,
+  Skeleton,
   BriefcaseIcon,
   ZapIcon,
 } from '../components/ui';
@@ -222,6 +223,23 @@ describe('Reusable UI Components Suite', () => {
       render(<Spinner label="Processing..." />);
       expect(screen.getByRole('status')).toBeDefined();
       expect(screen.getByLabelText('Processing...')).toBeDefined();
+    });
+  });
+
+  describe('Skeleton Component', () => {
+    it('renders single-line skeleton with accessible role and custom dimensions', () => {
+      render(<Skeleton width={200} height={20} variant="rectangular" />);
+      const el = screen.getByRole('status');
+      expect(el).toBeDefined();
+      expect(el.style.width).toBe('200px');
+      expect(el.style.height).toBe('20px');
+    });
+
+    it('renders multi-line text skeleton stack with multiple lines', () => {
+      render(<Skeleton variant="text" lines={3} />);
+      const stack = screen.getByRole('status');
+      expect(stack).toBeDefined();
+      expect(stack.children.length).toBe(3);
     });
   });
 

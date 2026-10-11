@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import apiClient from '../../api/client';
 import { Button } from '../../components/ui/Button/Button';
@@ -50,6 +50,7 @@ interface TickOutcome {
 }
 
 export function DailyScenarioPage(): ReactElement {
+  const navigate = useNavigate();
   const { success, error, warning, info } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -63,14 +64,20 @@ export function DailyScenarioPage(): ReactElement {
   const loadScenario = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const res = await apiClient.get<ScenarioData>('/founder/simulation/scenario');
-      setScenario(res);
-      if (res.status === 'DECIDED' && res.chosenOptionId) {
-        setSelectedOptionId(res.chosenOptionId);
+      const res = await apiClient.get<ScenarioData | { scenario: ScenarioData }>('/founder/simulation/scenario');
+      const scenarioData =
+        res && typeof res === 'object' && 'scenario' in res
+          ? (res as { scenario: ScenarioData | null }).scenario
+          : (res as ScenarioData | null);
+
+      setScenario(scenarioData);
+      if (scenarioData?.status === 'DECIDED' && scenarioData?.chosenOptionId) {
+        setSelectedOptionId(scenarioData.chosenOptionId);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch daily dilemma';
       error(msg);
+      setScenario(null);
     } finally {
       setLoading(false);
     }
@@ -219,7 +226,7 @@ export function DailyScenarioPage(): ReactElement {
       )}
 
       {/* Options Selection Grid */}
-      {scenario && (
+      {scenario && Array.isArray(scenario.options) && scenario.options.length > 0 && (
         <div className={styles.scenarioGrid}>
           {scenario.options.map((opt) => {
             const isSelected = selectedOptionId === opt.optionId;
@@ -316,6 +323,20 @@ export function DailyScenarioPage(): ReactElement {
               Submit Strategic Decision ({selectedOptionId || 'Select Option'})
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* No active scenario empty state */}
+      {!scenario && (
+        <div className={styles.sectionCard} style={{ textAlign: 'center', padding: 'var(--cv-space-8) var(--cv-space-4)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+          <h2 style={{ margin: 0, fontSize: 'var(--cv-text-xl)', color: 'var(--cv-text-primary)' }}>No Daily Dilemma Available</h2>
+          <p style={{ maxWidth: 540, margin: '0.5rem auto 1.5rem', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
+            Daily dilemmas are generated for active operating companies. Please make sure your company is incorporated and active in Executive HQ.
+          </p>
+          <Button variant="gold" size="md" onClick={() => navigate('/founder/company/new')}>
+            Establish Company 🏢
+          </Button>
         </div>
       )}
     </div>

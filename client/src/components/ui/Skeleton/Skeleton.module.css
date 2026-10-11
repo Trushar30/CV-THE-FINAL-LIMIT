@@ -1,0 +1,62 @@
+@keyframes cv-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  display: block;
+  background-color: var(--cv-bg-surface-elevated);
+  border-radius: var(--cv-radius-md);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.animated {
+  background: linear-gradient(
+    90deg,
+    var(--cv-bg-surface-elevated) 25%,
+    var(--cv-bg-surface-hover) 37%,
+    var(--cv-bg-surface-elevated) 63%
+  );
+  background-size: 400% 100%;
+  animation: cv-shimmer 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Variants */
+.variant-text {
+  height: 1em;
+  border-radius: var(--cv-radius-xs);
+  margin-bottom: var(--cv-space-2);
+}
+
+.variant-text:last-child {
+  margin-bottom: 0;
+}
+
+.variant-circular {
+  border-radius: var(--cv-radius-full);
+}
+
+.variant-rectangular {
+  border-radius: var(--cv-radius-lg);
+}
+
+.variant-card {
+  border-radius: var(--cv-radius-xl);
+  border: 1px solid var(--cv-border-default);
+  padding: var(--cv-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cv-space-4);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

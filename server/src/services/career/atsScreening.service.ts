@@ -96,13 +96,24 @@ export class AtsScreeningService {
    * If application is in APPLIED stage, advances to ATS_SCREENING first.
    */
   public async enqueueAtsScreening(
-    applicationId: string | Types.ObjectId
+    applicationId: string | Types.ObjectId,
+    requestingUserId?: string | Types.ObjectId,
+    platformRole?: string
   ): Promise<{ jobId: string; application: IApplicationDocument }> {
     const appObjectId = typeof applicationId === 'string' ? new Types.ObjectId(applicationId) : applicationId;
 
     const application = await ApplicationModel.findById(appObjectId);
     if (!application) {
       throw AppError.notFound('Application not found.');
+    }
+
+    // IDOR Protection: Caller must own the application or hold ADMIN platformRole
+    if (
+      requestingUserId &&
+      platformRole !== 'ADMIN' &&
+      application.userId.toString() !== requestingUserId.toString()
+    ) {
+      throw AppError.forbidden('You do not have permission to initiate screening for this application.');
     }
 
     if (application.status !== 'ACTIVE') {

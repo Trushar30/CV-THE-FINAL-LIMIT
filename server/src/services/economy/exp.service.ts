@@ -95,6 +95,18 @@ export class ExpService {
       }
     );
 
+    // Proactively refresh USER_EXP and USER_LEVEL leaderboards in background
+    try {
+      void import('../ranking/ranking.service.js')
+        .then(({ rankingService }) => {
+          void rankingService.refreshLeaderboard('USER_EXP').catch(() => {});
+          void rankingService.refreshLeaderboard('USER_LEVEL').catch(() => {});
+        })
+        .catch(() => {});
+    } catch {
+      // Non-blocking
+    }
+
     return { transaction, balanceAfter };
   }
 
@@ -168,6 +180,18 @@ export class ExpService {
         sourceId: sourceObjectId.toString(),
       }
     );
+
+    // Proactively refresh USER_EXP and USER_LEVEL leaderboards in background
+    try {
+      void import('../ranking/ranking.service.js')
+        .then(({ rankingService }) => {
+          void rankingService.refreshLeaderboard('USER_EXP').catch(() => {});
+          void rankingService.refreshLeaderboard('USER_LEVEL').catch(() => {});
+        })
+        .catch(() => {});
+    } catch {
+      // Non-blocking
+    }
 
     return { transaction, balanceAfter };
   }

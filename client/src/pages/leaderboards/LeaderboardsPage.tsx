@@ -62,7 +62,7 @@ const COMPANY_CATEGORIES: { id: LeaderboardCategory; label: string; icon: string
 ];
 
 export const LeaderboardsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, fetchCurrentUser } = useAuth();
   const { error: toastError, success: toastSuccess } = useToast();
   const [activeTab, setActiveTab] = useState<'USERS' | 'COMPANIES'>('USERS');
   const [category, setCategory] = useState<LeaderboardCategory>('USER_EXP');
@@ -86,20 +86,26 @@ export const LeaderboardsPage: React.FC = () => {
         params.domain = selectedDomain;
       }
 
-      const res = await apiClient.get<{ success: boolean; data: LeaderboardResponse }>('/leaderboards', {
+      const res = await apiClient.get<LeaderboardResponse | { data: LeaderboardResponse }>('/leaderboards', {
         params,
       });
 
-      if (res && res.data) {
-        setData(res.data);
+      const leaderboardData =
+        res && 'rankings' in res
+          ? (res as LeaderboardResponse)
+          : (res as { data?: LeaderboardResponse })?.data;
+
+      if (leaderboardData) {
+        setData(leaderboardData);
       }
+      void fetchCurrentUser();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load leaderboards';
       toastError(message);
     } finally {
       setLoading(false);
     }
-  }, [category, page, limit, selectedDomain, toastError]);
+  }, [category, page, limit, selectedDomain, toastError, fetchCurrentUser]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -126,6 +132,7 @@ export const LeaderboardsPage: React.FC = () => {
       await apiClient.post('/leaderboards/refresh', { category });
       toastSuccess('Leaderboard snapshot refreshed from authoritative backend records');
       await fetchLeaderboard();
+      await fetchCurrentUser();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Refresh failed';
       toastError(message);

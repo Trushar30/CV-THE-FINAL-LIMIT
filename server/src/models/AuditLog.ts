@@ -21,7 +21,6 @@ export const auditLogSchema = new Schema<IAuditLogDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     actorRole: {
       type: String,
@@ -31,7 +30,6 @@ export const auditLogSchema = new Schema<IAuditLogDocument>(
     action: {
       type: String,
       required: true,
-      index: true,
     },
     targetType: {
       type: String,
@@ -62,7 +60,6 @@ export const auditLogSchema = new Schema<IAuditLogDocument>(
       type: Date,
       required: true,
       default: Date.now,
-      index: true,
     },
   },
   {
@@ -72,9 +69,10 @@ export const auditLogSchema = new Schema<IAuditLogDocument>(
   }
 );
 
-// Composite & lookup indexes per Spec Section 26 Collection 37
-auditLogSchema.index({ actorId: 1 });
-auditLogSchema.index({ action: 1 });
+// Composite & lookup indexes per Spec Section 26 Collection 37 & admin query patterns
+auditLogSchema.index({ actorId: 1, createdAt: -1 });
+auditLogSchema.index({ action: 1, createdAt: -1 });
+auditLogSchema.index({ targetId: 1, createdAt: -1 });
 auditLogSchema.index({ createdAt: -1 });
 
 // Strict Append-Only Protection Hooks: Ledger entries cannot be modified or deleted

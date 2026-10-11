@@ -128,15 +128,11 @@ describe('AI Reliability Layer Integration Suite (TASK P3.5)', () => {
 
       const jobId = await gateway.submit(sampleRequest, { pool: 'PIPELINE' });
 
-      // Fail Gemini 3 times
-      for (let i = 0; i < 3; i++) {
-        geminiAdapter.setError('RATE_LIMIT');
-        await worker.processNextJob('PIPELINE');
-      }
+      // Fail both providers persistently
+      geminiAdapter.setPersistentError('RATE_LIMIT');
+      openaiAdapter.setPersistentError('PROVIDER_ERROR');
 
-      // Fail OpenAI 3 times
-      for (let i = 0; i < 3; i++) {
-        openaiAdapter.setError('PROVIDER_ERROR');
+      for (let i = 0; i < 6; i++) {
         await worker.processNextJob('PIPELINE');
       }
 
@@ -161,6 +157,49 @@ describe('AI Reliability Layer Integration Suite (TASK P3.5)', () => {
       job = await AIJobModel.findById(jobId);
       expect(job?.status).toBe('COMPLETED');
       expect(job?.result?.success).toBe(true);
+    });
+
+    it('should resume WAITING_FOR_PROVIDER jobs correctly when provider entries have unique instance IDs', async () => {
+      const router = new ProviderRouter();
+      const tracker = new HealthTracker(router);
+      const gateway = new AIGateway(router, tracker);
+
+      const geminiAdapter = new MockAdapter({ provider: 'gemini', id: 'inst-gemini-1' });
+      router.registerAdapter('PIPELINE', geminiAdapter, 1, 'inst-gemini-1');
+
+      const worker = new AIWorker(router, tracker, {
+        pools: ['PIPELINE'],
+        maxAttemptsPerProvider: 2,
+      });
+
+      const jobId = await gateway.submit(sampleRequest, { pool: 'PIPELINE' });
+
+      // Fail 2 times to exhaust instance
+      geminiAdapter.setPersistentError('RATE_LIMIT');
+      await worker.processNextJob('PIPELINE');
+      await worker.processNextJob('PIPELINE');
+
+      // 3rd call should transition to WAITING_FOR_PROVIDER
+      await worker.processNextJob('PIPELINE');
+      let job = await AIJobModel.findById(jobId);
+      expect(job?.status).toBe('WAITING_FOR_PROVIDER');
+      expect(job?.attemptsPerProvider.get('inst-gemini-1')).toBe(3);
+
+      // Now recover
+      geminiAdapter.reset();
+      await tracker.recordSuccess('PIPELINE', 'gemini', 120, 'inst-gemini-1');
+
+      const resumedCount = await worker.checkAndResumeWaitingJobs('PIPELINE');
+      expect(resumedCount).toBe(1);
+
+      job = await AIJobModel.findById(jobId);
+      expect(job?.status).toBe('PENDING');
+      expect(job?.attemptsPerProvider.get('inst-gemini-1')).toBeUndefined();
+
+      // Process and complete cleanly
+      await worker.processNextJob('PIPELINE');
+      job = await AIJobModel.findById(jobId);
+      expect(job?.status).toBe('COMPLETED');
     });
   });
 
@@ -258,17 +297,18 @@ describe('AI Reliability Layer Integration Suite (TASK P3.5)', () => {
       await worker.processNextJob('PIPELINE');
 
       const job = await AIJobModel.findById(jobId);
-      expect(job?.status).toBe('FAILED');
+      // Per ADR-083, cascades to alternative providers with attempts remaining
+      expect(job?.status).toBe('RETRYING');
       expect(job?.error?.category).toBe('AUTH_CONFIG');
       expect(job?.attempts).toBe(1);
-      // OpenAI was NOT called
+      // OpenAI was NOT called synchronously on first attempt
       expect(openaiAdapter.callHistory.length).toBe(0);
 
       // Gemini marked DEGRADED
       expect(router.getHealthState('PIPELINE', 'gemini')).toBe('DEGRADED');
     });
 
-    it('should immediately fail job on INVALID_REQUEST without attempting provider 2', async () => {
+    it('should set job to RETRYING on INVALID_REQUEST to cascade to alternative providers in pool', async () => {
       const router = new ProviderRouter();
       const tracker = new HealthTracker(router);
       const gateway = new AIGateway(router, tracker);
@@ -287,7 +327,7 @@ describe('AI Reliability Layer Integration Suite (TASK P3.5)', () => {
       await worker.processNextJob('PIPELINE');
 
       const job = await AIJobModel.findById(jobId);
-      expect(job?.status).toBe('FAILED');
+      expect(job?.status).toBe('RETRYING');
       expect(job?.error?.category).toBe('INVALID_REQUEST');
       expect(openaiAdapter.callHistory.length).toBe(0);
     });

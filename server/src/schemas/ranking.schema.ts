@@ -28,6 +28,11 @@ export const getLeaderboardQuerySchema = z.object({
   domain: z
     .enum(CAREER_DOMAINS as unknown as [CareerDomain, ...CareerDomain[]])
     .optional(),
+  forceRefresh: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true')
+    .pipe(z.boolean().optional()),
 });
 
 export const refreshLeaderboardSchema = z.object({

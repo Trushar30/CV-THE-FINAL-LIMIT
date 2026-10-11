@@ -3,6 +3,8 @@ import { resumeController } from '../controllers/resume.controller.js';
 import { authenticateJwt } from '../middleware/auth.middleware.js';
 import { uploadResumeMiddleware } from '../middleware/upload.middleware.js';
 import { resumeUploadLimiter } from '../middleware/rateLimiter.js';
+import { validate } from '../middleware/validate.js';
+import { objectIdParamSchema } from '../schemas/common.schema.js';
 
 const router = Router();
 
@@ -31,6 +33,7 @@ router.get(
 router.get(
   '/:id/download',
   authenticateJwt,
+  validate({ params: objectIdParamSchema }),
   resumeController.downloadResume.bind(resumeController)
 );
 
@@ -38,10 +41,16 @@ router.get(
 router.get(
   '/:id/analysis',
   authenticateJwt,
+  validate({ params: objectIdParamSchema }),
   resumeController.getResumeAnalysisById.bind(resumeController)
 );
 
 // Get specific resume metadata (Owner or ADMIN only)
-router.get('/:id', authenticateJwt, resumeController.getResumeMetadata.bind(resumeController));
+router.get(
+  '/:id',
+  authenticateJwt,
+  validate({ params: objectIdParamSchema }),
+  resumeController.getResumeMetadata.bind(resumeController)
+);
 
 export const resumeRouter = router;

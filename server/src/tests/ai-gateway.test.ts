@@ -18,6 +18,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   AIError,
   AIGateway,
+  HealthTracker,
   MockAdapter,
   ProviderRouter,
   validateAgainstSchema,
@@ -588,8 +589,11 @@ describe('AIGateway', () => {
     }
   });
 
-  it('should throw on schema validation failure', async () => {
+  it('should throw on schema validation failure when all providers fail validation', async () => {
     geminiAdapter.simulateResponse({
+      structuredData: { score: 'not-a-number' },
+    });
+    openaiAdapter.simulateResponse({
       structuredData: { score: 'not-a-number' },
     });
 
@@ -609,6 +613,9 @@ describe('AIGateway', () => {
     geminiAdapter.simulateResponse({
       structuredData: { score: 'not-a-number' },
     });
+    openaiAdapter.simulateResponse({
+      structuredData: { score: 'not-a-number' },
+    });
 
     try {
       await gateway.execute(request, { pool: 'PIPELINE' });
@@ -617,7 +624,6 @@ describe('AIGateway', () => {
       const aiErr = err as AIError;
       expect(aiErr.category).toBe('PROVIDER_ERROR');
       expect(aiErr.message).toContain('validation failed');
-      expect(aiErr.provider).toBe('gemini');
     }
   });
 
@@ -646,8 +652,51 @@ describe('AIGateway', () => {
     }
   });
 
-  it('should propagate AIError from adapter', async () => {
+  it('should fallback to second provider when first provider encounters an error', async () => {
     geminiAdapter.simulateError('RATE_LIMIT');
+
+    const response = await gateway.execute(baseRequest(), { pool: 'PIPELINE' });
+    expect(response.success).toBe(true);
+    expect(response.provider).toBe('openai');
+    expect(geminiAdapter.getCallCount()).toBe(1);
+    expect(openaiAdapter.getCallCount()).toBe(1);
+  });
+
+  it('should support multiple instances of the same provider code and failover between them', async () => {
+    const multiRouter = new ProviderRouter();
+    const multiTracker = new HealthTracker(multiRouter);
+    const multiGateway = new AIGateway(multiRouter, multiTracker);
+
+    const geminiPrimary = new MockAdapter({ provider: 'gemini', defaultModel: 'gemini-1.5-pro' });
+    const geminiSecondary = new MockAdapter({ provider: 'gemini', defaultModel: 'gemini-1.5-flash' });
+
+    multiRouter.registerAdapter('PIPELINE', geminiPrimary, 1, 'gemini-key-1');
+    multiRouter.registerAdapter('PIPELINE', geminiSecondary, 2, 'gemini-key-2');
+
+    // Both instances exist simultaneously in the pool
+    const all = multiRouter.getAllProviders('PIPELINE');
+    expect(all).toHaveLength(2);
+    expect(all[0].id).toBe('gemini-key-1');
+    expect(all[1].id).toBe('gemini-key-2');
+
+    // Primary Gemini hits rate limit (RPM/TPM exhausted)
+    geminiPrimary.simulateError('RATE_LIMIT');
+
+    // Gateway executes and cleanly falls over to secondary Gemini without crash
+    const response = await multiGateway.execute(baseRequest(), { pool: 'PIPELINE' });
+    expect(response.success).toBe(true);
+    expect(response.provider).toBe('gemini');
+    expect(geminiPrimary.getCallCount()).toBe(1);
+    expect(geminiSecondary.getCallCount()).toBe(1);
+
+    // Primary instance transitioned to circuit-breaker cooldown, while secondary remains HEALTHY
+    expect(multiRouter.getHealthState('PIPELINE', 'gemini-key-1')).toBe('RATE_LIMITED');
+    expect(multiRouter.getHealthState('PIPELINE', 'gemini-key-2')).toBe('HEALTHY');
+  });
+
+  it('should propagate AIError when all providers fail', async () => {
+    geminiAdapter.simulateError('RATE_LIMIT');
+    openaiAdapter.simulateError('RATE_LIMIT');
 
     try {
       await gateway.execute(baseRequest(), { pool: 'PIPELINE' });
@@ -657,15 +706,17 @@ describe('AIGateway', () => {
       const aiErr = err as AIError;
       expect(aiErr.category).toBe('RATE_LIMIT');
       expect(aiErr.retryable).toBe(true);
-      expect(aiErr.provider).toBe('gemini');
     }
   });
 
-  it('should wrap unexpected non-AIError exceptions as PROVIDER_ERROR', async () => {
-    // Monkey-patch generate to throw a plain Error
-    const originalGenerate = geminiAdapter.generate.bind(geminiAdapter);
+  it('should wrap unexpected non-AIError exceptions as PROVIDER_ERROR when all providers fail', async () => {
+    const originalGemini = geminiAdapter.generate.bind(geminiAdapter);
+    const originalOpenAI = openaiAdapter.generate.bind(openaiAdapter);
     geminiAdapter.generate = async () => {
-      throw new TypeError('Unexpected internal crash');
+      throw new TypeError('Unexpected internal crash 1');
+    };
+    openaiAdapter.generate = async () => {
+      throw new TypeError('Unexpected internal crash 2');
     };
 
     try {
@@ -676,11 +727,10 @@ describe('AIGateway', () => {
       const aiErr = err as AIError;
       expect(aiErr.category).toBe('PROVIDER_ERROR');
       expect(aiErr.message).toContain('Unexpected error');
-      expect(aiErr.message).toContain('Unexpected internal crash');
-      expect(aiErr.provider).toBe('gemini');
+    } finally {
+      geminiAdapter.generate = originalGemini;
+      openaiAdapter.generate = originalOpenAI;
     }
-
-    geminiAdapter.generate = originalGenerate;
   });
 
   it('should route to second provider when first is DISABLED', async () => {

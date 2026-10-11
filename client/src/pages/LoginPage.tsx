@@ -1,6 +1,6 @@
 import { useState, type ReactElement, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../store/AuthContext';
+import { useAuth, getPostLoginRedirect } from '../store/AuthContext';
 import { Input, Button } from '../components/ui';
 import styles from './Auth.module.css';
 
@@ -30,7 +30,8 @@ export function LoginPage(): ReactElement {
     setIsLoading(false);
 
     if (result.success) {
-      navigate('/showcase');
+      const destination = getPostLoginRedirect(result.user);
+      navigate(destination);
     } else {
       setErrorMessage(result.error || 'Invalid email or password');
     }
@@ -68,6 +69,8 @@ export function LoginPage(): ReactElement {
 
         {errorMessage && (
           <div
+            role="alert"
+            aria-live="assertive"
             className={`${styles.alertBox} ${
               isLocked ? styles.alertWarning : isSuspended ? styles.alertError : styles.alertError
             }`}
@@ -96,6 +99,8 @@ export function LoginPage(): ReactElement {
 
         {resendStatus && (
           <div
+            role="status"
+            aria-live="polite"
             className={`${styles.alertBox} ${styles.alertSuccess}`}
             style={{ marginBottom: '1.25rem' }}
           >
@@ -151,7 +156,7 @@ export function LoginPage(): ReactElement {
             variant="outline"
             onClick={() => {
               loginStub();
-              navigate('/showcase');
+              navigate('/career');
             }}
             style={{ width: '100%' }}
           >

@@ -151,7 +151,8 @@ export const aiProviderSchema = new Schema<IAIProviderDocument>(
   }
 );
 
-aiProviderSchema.index({ code: 1, pool: 1 }, { unique: true });
+aiProviderSchema.index({ name: 1, pool: 1 }, { unique: true });
 aiProviderSchema.index({ pool: 1, priority: 1 });
+aiProviderSchema.index({ pool: 1, code: 1 });
 
 export const AIProviderModel = mongoose.model<IAIProviderDocument>('AIProvider', aiProviderSchema);

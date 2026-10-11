@@ -204,3 +204,31 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+@media (max-width: 600px) {
+  .headerSection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filterBar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .filterChip {
+    white-space: nowrap;
+  }
+
+  .notificationCard {
+    padding: var(--cv-space-3, 12px);
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}

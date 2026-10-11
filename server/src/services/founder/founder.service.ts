@@ -1003,7 +1003,14 @@ export class FounderService {
       query.currentStage = filters.stage;
     }
 
-    return await ApplicationModel.find(query).sort({ createdAt: -1 });
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    return await ApplicationModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
   }
 
   /**

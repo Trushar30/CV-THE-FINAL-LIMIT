@@ -19,7 +19,7 @@ import {
 import styles from './Employee.module.css';
 
 export function WorkplaceDashboardPage(): ReactElement {
-  const { user } = useAuth();
+  const { user, fetchCurrentUser } = useAuth();
   const navigate = useNavigate();
 
   const [tasks, setTasks] = useState<EmployeeTask[]>([]);
@@ -42,6 +42,7 @@ export function WorkplaceDashboardPage(): ReactElement {
           fetchPromotionProgress().catch(() => null),
           fetchActiveWarnings().catch(() => ({ activeCount: 0, warnings: [] })),
           fetchEmployeeCompany().catch(() => null),
+          fetchCurrentUser().catch(() => {}),
         ]);
 
         if (isMounted) {
@@ -149,7 +150,18 @@ export function WorkplaceDashboardPage(): ReactElement {
             )}
           </div>
         </div>
-        {!isFounderUnlocked && (
+        {isFounderUnlocked ? (
+          <div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate('/founder/unlock')}
+              data-testid="enter-founder-hq-btn"
+            >
+              Enter Founder HQ 🚀
+            </Button>
+          </div>
+        ) : (
           <div style={{ minWidth: 160 }}>
             <ProgressBar
               value={userExp}

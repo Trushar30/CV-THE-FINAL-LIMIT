@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactElement } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { careerApi, type JobDetails, type CareerDomain } from '../api/career';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { careerApi, type JobDetails, type CareerDomain, type ApplicationListItem } from '../api/career';
+import { useOptionalAuth } from '../store/AuthContext';
 import { Badge } from '../components/ui/Badge/Badge';
 import { Button } from '../components/ui/Button/Button';
 import { Spinner } from '../components/ui/Spinner/Spinner';
@@ -10,6 +11,7 @@ import {
   BuildingIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  CheckCircle2Icon,
 } from '../components/ui/Icon';
 import styles from './Career.module.css';
 
@@ -45,13 +47,17 @@ function getLevelTitle(level: number): string {
 
 export function JobDetailPage(): ReactElement {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
   const [job, setJob] = useState<JobDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Active applications count (0/5 default for candidate until P6.1 application engine integration)
-  const activeApplicationsCount = 0;
-  const maxApplicationsQuota = 5;
+  // Active applications state and application submission handling
+  const [activeApplications, setActiveApplications] = useState<ApplicationListItem[]>([]);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchJobDetails() {
@@ -70,6 +76,44 @@ export function JobDetailPage(): ReactElement {
 
     fetchJobDetails();
   }, [id]);
+
+  useEffect(() => {
+    async function fetchActiveApplications() {
+      if (user?.careerRole === 'JOB_SEEKER') {
+        try {
+          const res = await careerApi.getApplications({ status: 'ACTIVE', limit: 20 });
+          setActiveApplications(res.applications || []);
+        } catch {
+          // Graceful fallback for unauthenticated or non-candidate contexts
+        }
+      }
+    }
+
+    fetchActiveApplications();
+  }, [user?.careerRole]);
+
+  const activeApplicationsCount = activeApplications.length;
+  const maxApplicationsQuota = 5;
+  const isQuotaReached = activeApplicationsCount >= maxApplicationsQuota;
+  const existingApplication = activeApplications.find(
+    (app) => (typeof app.jobId === 'string' ? app.jobId : app.jobId?._id) === id
+  );
+  const isAlreadyApplied = Boolean(existingApplication);
+  const isJobSeeker = user?.careerRole === 'JOB_SEEKER';
+
+  const handleApply = async () => {
+    if (!id || applying || isAlreadyApplied || isQuotaReached || !isJobSeeker) return;
+    try {
+      setApplying(true);
+      setApplyError(null);
+      await careerApi.applyJob(id);
+      navigate('/applications');
+    } catch (err) {
+      setApplyError(err instanceof Error ? err.message : 'Failed to submit application');
+    } finally {
+      setApplying(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -244,28 +288,123 @@ export function JobDetailPage(): ReactElement {
               </span>
             </div>
 
-            {/* Apply Button (Disabled until P6.1) */}
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              disabled={true}
-              data-testid="apply-button"
-            >
-              <SparklesIcon size={18} />
-              Apply for Position
-            </Button>
-
-            <div className={styles.applyDisabledNotice} data-testid="apply-notice">
-              <p
-                style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--cv-text-secondary)' }}
+            {/* Apply Error Alert */}
+            {applyError && (
+              <div
+                role="alert"
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--cv-radius-md)',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid var(--cv-feedback-error)',
+                  color: 'var(--cv-feedback-error)',
+                  fontSize: 'var(--cv-text-xs)',
+                  lineHeight: 1.4,
+                }}
               >
-                Application submission unlocks in Phase 6.1
-              </p>
-              <p style={{ margin: 0 }}>
-                Candidates may maintain up to 5 concurrent active applications across the platform.
-              </p>
-            </div>
+                {applyError}
+              </div>
+            )}
+
+            {/* Apply Button & Dynamic Status CTA */}
+            {isAlreadyApplied ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  onClick={() => navigate('/applications')}
+                  data-testid="apply-button"
+                >
+                  <CheckCircle2Icon size={18} color="var(--cv-feedback-success)" />
+                  View Active Application
+                </Button>
+                <div className={styles.applyDisabledNotice} data-testid="apply-notice">
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--cv-feedback-success)' }}>
+                    Application In Progress ({existingApplication?.currentStage || 'APPLIED'})
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    You already have an active application for this role in your pipeline.
+                  </p>
+                </div>
+              </>
+            ) : !isJobSeeker ? (
+              <>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={true}
+                  data-testid="apply-button"
+                >
+                  <BriefcaseIcon size={18} />
+                  {user?.careerRole === 'EMPLOYEE'
+                    ? 'Currently Employed'
+                    : user?.careerRole === 'FOUNDER'
+                      ? 'Founder Mode Active'
+                      : 'Sign In as Job Seeker to Apply'}
+                </Button>
+                <div className={styles.applyDisabledNotice} data-testid="apply-notice">
+                  <p style={{ margin: 0 }}>
+                    {user?.careerRole === 'EMPLOYEE' || user?.careerRole === 'FOUNDER'
+                      ? `Users with career role '${user.careerRole}' cannot submit new job applications.`
+                      : 'Candidates must be registered with career role JOB_SEEKER to apply.'}
+                  </p>
+                </div>
+              </>
+            ) : isQuotaReached ? (
+              <>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={true}
+                  data-testid="apply-button"
+                >
+                  <SparklesIcon size={18} />
+                  Apply for Position
+                </Button>
+                <div className={styles.applyDisabledNotice} data-testid="apply-notice">
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--cv-feedback-warning)' }}>
+                    Active Application Quota Reached (5/5)
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Withdraw or conclude an existing application in your tracker to free a slot.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={applying}
+                  onClick={handleApply}
+                  data-testid="apply-button"
+                >
+                  {applying ? (
+                    <>
+                      <Spinner size="sm" />
+                      Submitting Application...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon size={18} />
+                      Apply for Position
+                    </>
+                  )}
+                </Button>
+                <div className={styles.applyDisabledNotice} data-testid="apply-notice">
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--cv-text-secondary)' }}>
+                    One-Click Application Submission
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Candidates may maintain up to 5 concurrent active applications across the platform.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Company Summary Card */}

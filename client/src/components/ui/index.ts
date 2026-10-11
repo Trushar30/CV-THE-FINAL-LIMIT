@@ -9,4 +9,5 @@ export * from './Spinner/Spinner';
 export * from './EmptyState/EmptyState';
 export * from './ProgressBar/ProgressBar';
 export * from './Tabs/Tabs';
+export * from './Skeleton/Skeleton';
 export * from './Icon';

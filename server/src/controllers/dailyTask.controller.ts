@@ -144,6 +144,28 @@ export class DailyTaskController {
   }
 
   /**
+   * POST /api/employee/tasks/:id/evaluate
+   * Evaluates or retries evaluation for an already-submitted daily task.
+   */
+  public async evaluateTask(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        throw AppError.unauthorized('Authentication required');
+      }
+
+      const taskId = req.params.id as string;
+      const result = await this.taskEvaluationService.evaluateTaskById(taskId, req.user._id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/employee/performance/stats
    * Retrieves aggregated performance stats (completed count, average score, score bands) for promotion checks.
    */
@@ -210,9 +232,17 @@ export class DailyTaskController {
         throw AppError.unauthorized('Authentication required');
       }
 
+      const page = req.query.page ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1;
+      const limit = req.query.limit ? Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20)) : 20;
+      const skip = (page - 1) * limit;
+
+      const total = await PerformanceRecordModel.countDocuments({ userId: req.user._id });
       const records = await PerformanceRecordModel.find({
         userId: req.user._id,
-      }).sort({ createdAt: -1 });
+      })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
 
       const taskIds = records.map((r) => r.taskId);
       const tasks = await EmployeeTaskModel.find({ _id: { $in: taskIds } });
@@ -227,6 +257,12 @@ export class DailyTaskController {
         success: true,
         data: {
           history,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
         },
       });
     } catch (error) {
@@ -244,16 +280,28 @@ export class DailyTaskController {
         throw AppError.unauthorized('Authentication required');
       }
 
+      const page = req.query.page ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1;
+      const limit = req.query.limit ? Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 50)) : 50;
+      const skip = (page - 1) * limit;
+
+      const total = await ExpTransactionModel.countDocuments({ userId: req.user._id });
       const transactions = await ExpTransactionModel.find({
         userId: req.user._id,
       })
         .sort({ createdAt: -1 })
-        .limit(50);
+        .skip(skip)
+        .limit(limit);
 
       res.status(200).json({
         success: true,
         data: {
           transactions,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
         },
       });
     } catch (error) {

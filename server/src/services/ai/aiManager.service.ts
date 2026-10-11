@@ -22,7 +22,7 @@ export function createDefaultAdapter(
 ): ProviderAdapter {
   switch (code) {
     case 'gemini':
-      return new GeminiAdapter({ modelId: modelId || 'gemini-3.5-flash', apiKey });
+      return new GeminiAdapter({ modelId: modelId || 'gemini-3.8-flash', apiKey });
     case 'openai':
       return new OpenAIAdapter({ modelId: modelId || 'gpt-4o-mini', apiKey });
     case 'groq':
@@ -108,6 +108,17 @@ export class AIManagerService {
     return docs.map((d) => this.toDto(d));
   }
 
+  private async findProviderDoc(
+    idOrCode: string | Types.ObjectId,
+    pool: AIPool
+  ): Promise<IAIProviderDocument | null> {
+    if (typeof idOrCode === 'object' || Types.ObjectId.isValid(idOrCode)) {
+      const byId = await AIProviderModel.findById(idOrCode);
+      if (byId) return byId;
+    }
+    return AIProviderModel.findOne({ code: idOrCode, pool });
+  }
+
   /**
    * Add a new runtime AI provider
    */
@@ -116,13 +127,16 @@ export class AIManagerService {
     actorId: string | Types.ObjectId,
     adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter
   ): Promise<ProviderResponseDto> {
+    const trimmedName = input.name.trim();
     const existing = await AIProviderModel.findOne({
-      code: input.code as AIProvider,
+      name: trimmedName,
       pool: input.pool as AIPool,
     });
 
     if (existing) {
-      throw AppError.conflict(`Provider '${input.code}' already exists in pool '${input.pool}'`);
+      throw AppError.conflict(
+        `Provider with name '${trimmedName}' already exists in pool '${input.pool}'`
+      );
     }
 
     let encryptedApiKey: string | null = null;
@@ -135,7 +149,7 @@ export class AIManagerService {
 
     const doc = await AIProviderModel.create({
       code: input.code as AIProvider,
-      name: input.name,
+      name: trimmedName,
       priority: input.priority,
       pool: input.pool as AIPool,
       status: 'HEALTHY',
@@ -155,7 +169,7 @@ export class AIManagerService {
     const effectiveFactory = adapterFactory ?? createDefaultAdapter;
     try {
       const adapter = effectiveFactory(input.code as AIProvider, input.apiKey, input.modelId);
-      this.router.registerAdapter(input.pool as AIPool, adapter, input.priority);
+      this.router.registerAdapter(input.pool as AIPool, adapter, input.priority, doc._id.toString());
     } catch (err) {
       logger.warn(
         `[AIManager] Could not register adapter in router for '${input.code}': ${(err as Error).message}`
@@ -187,14 +201,14 @@ export class AIManagerService {
    * Update an existing AI provider (priority, model, rate limits, status, api key)
    */
   async updateProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     pool: AIPool,
     input: UpdateProviderInput,
     actorId: string | Types.ObjectId
   ): Promise<ProviderResponseDto> {
-    const doc = await AIProviderModel.findOne({ code, pool });
+    const doc = await this.findProviderDoc(idOrCode, pool);
     if (!doc) {
-      throw AppError.notFound(`Provider '${code}' not found in pool '${pool}'`);
+      throw AppError.notFound(`Provider '${idOrCode}' not found in pool '${pool}'`);
     }
 
     const oldValue = {
@@ -206,9 +220,13 @@ export class AIManagerService {
       maskedApiKey: doc.maskedApiKey,
     };
 
+    const routerKey = this.router.getAdapter(pool, doc._id.toString())
+      ? doc._id.toString()
+      : doc.code;
+
     if (input.priority !== undefined) {
       doc.priority = input.priority;
-      this.router.setPriority(pool, code, input.priority);
+      this.router.setPriority(pool, routerKey, input.priority);
     }
 
     if (input.modelId !== undefined) {
@@ -217,7 +235,7 @@ export class AIManagerService {
 
     if (input.status !== undefined) {
       doc.status = input.status;
-      this.router.setHealthState(pool, code, input.status);
+      this.router.setHealthState(pool, routerKey, input.status);
     }
 
     if (input.rateLimitRpm !== undefined) {
@@ -231,6 +249,15 @@ export class AIManagerService {
     if (input.apiKey) {
       doc.encryptedApiKey = encryptSecret(input.apiKey);
       doc.maskedApiKey = maskApiKey(input.apiKey);
+
+      try {
+        const adapter = createDefaultAdapter(doc.code, input.apiKey, doc.modelId || undefined);
+        this.router.registerAdapter(pool, adapter, doc.priority, doc._id.toString());
+      } catch (err) {
+        logger.warn(
+          `[AIManager] Failed to update adapter key for '${doc.name}': ${(err as Error).message}`
+        );
+      }
     }
 
     await doc.save();
@@ -263,38 +290,38 @@ export class AIManagerService {
    * Enable a provider
    */
   async enableProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     pool: AIPool,
     actorId: string | Types.ObjectId,
     reason: string
   ): Promise<ProviderResponseDto> {
-    return this.updateProvider(code, pool, { status: 'HEALTHY', reason }, actorId);
+    return this.updateProvider(idOrCode, pool, { status: 'HEALTHY', reason }, actorId);
   }
 
   /**
    * Disable a provider
    */
   async disableProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     pool: AIPool,
     actorId: string | Types.ObjectId,
     reason: string
   ): Promise<ProviderResponseDto> {
-    return this.updateProvider(code, pool, { status: 'DISABLED', reason }, actorId);
+    return this.updateProvider(idOrCode, pool, { status: 'DISABLED', reason }, actorId);
   }
 
   /**
    * Remove a provider
    */
   async removeProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     pool: AIPool,
     actorId: string | Types.ObjectId,
     reason: string
-  ): Promise<{ success: boolean; removedCode: AIProvider; pool: AIPool }> {
-    const doc = await AIProviderModel.findOne({ code, pool });
+  ): Promise<{ success: boolean; removedCode: AIProvider; removedId: string; pool: AIPool }> {
+    const doc = await this.findProviderDoc(idOrCode, pool);
     if (!doc) {
-      throw AppError.notFound(`Provider '${code}' not found in pool '${pool}'`);
+      throw AppError.notFound(`Provider '${idOrCode}' not found in pool '${pool}'`);
     }
 
     const oldValue = {
@@ -306,7 +333,8 @@ export class AIManagerService {
     };
 
     await AIProviderModel.deleteOne({ _id: doc._id });
-    this.router.removeAdapter(pool, code);
+    this.router.removeAdapter(pool, doc._id.toString());
+    this.router.removeAdapter(pool, doc.code);
 
     await this.auditService.record({
       actorId,
@@ -319,33 +347,40 @@ export class AIManagerService {
       reason,
     });
 
-    return { success: true, removedCode: code, pool };
+    return {
+      success: true,
+      removedCode: doc.code,
+      removedId: doc._id.toString(),
+      pool,
+    };
   }
 
   /**
    * Diagnostic test / health ping of a provider
    */
   async testProvider(
-    code: AIProvider,
+    idOrCode: string | AIProvider,
     pool: AIPool
   ): Promise<{ success: boolean; latencyMs: number; status: string; errorMessage?: string }> {
-    let adapter = this.router.getAdapter(pool, code);
-    if (!adapter) {
-      const doc = await AIProviderModel.findOne({ code, pool }).select('+encryptedApiKey');
-      if (doc) {
-        const apiKey = doc.encryptedApiKey ? decryptSecret(doc.encryptedApiKey) : undefined;
-        try {
-          adapter = createDefaultAdapter(code, apiKey, doc.modelId || undefined);
-          this.router.registerAdapter(pool, adapter, doc.priority);
-        } catch (err) {
-          logger.warn(
-            `[AIManager] Failed to instantiate adapter on-the-fly for '${code}': ${(err as Error).message}`
-          );
-        }
+    let doc = await this.findProviderDoc(idOrCode, pool);
+    if (doc) {
+      doc = await AIProviderModel.findById(doc._id).select('+encryptedApiKey');
+    }
+    const instanceKey = doc ? doc._id.toString() : (idOrCode as string);
+    let adapter = this.router.getAdapter(pool, instanceKey);
+    if (!adapter && doc) {
+      const apiKey = doc.encryptedApiKey ? decryptSecret(doc.encryptedApiKey) : undefined;
+      try {
+        adapter = createDefaultAdapter(doc.code, apiKey, doc.modelId || undefined);
+        this.router.registerAdapter(pool, adapter, doc.priority, doc._id.toString());
+      } catch (err) {
+        logger.warn(
+          `[AIManager] Failed to instantiate adapter on-the-fly for '${doc.code}': ${(err as Error).message}`
+        );
       }
     }
     if (!adapter) {
-      throw AppError.notFound(`Adapter for provider '${code}' not found in pool '${pool}'`);
+      throw AppError.notFound(`Adapter for provider '${idOrCode}' not found in pool '${pool}'`);
     }
 
     const startTime = Date.now();
@@ -353,10 +388,32 @@ export class AIManagerService {
     let errorMessage: string | undefined;
 
     try {
-      isHealthy = await this.healthTracker.probeAndRecover(pool, adapter);
+      isHealthy = await adapter.healthCheck();
+      const latencyMs = Date.now() - startTime;
+      await this.healthTracker.logHealthCheck({
+        providerCode: doc?.code || adapter.name,
+        pool,
+        status: isHealthy ? 'HEALTHY' : 'UNHEALTHY',
+        latencyMs,
+        errorMessage: isHealthy ? null : 'Health check probe failed',
+      });
+
+      if (isHealthy) {
+        await this.healthTracker.recordSuccess(pool, doc?.code || adapter.name, latencyMs, doc?._id.toString());
+      } else {
+        errorMessage = 'Health check probe failed or returned non-200';
+      }
     } catch (err) {
       isHealthy = false;
       errorMessage = err instanceof Error ? err.message : String(err);
+      const latencyMs = Date.now() - startTime;
+      await this.healthTracker.logHealthCheck({
+        providerCode: doc?.code || adapter.name,
+        pool,
+        status: 'UNHEALTHY',
+        latencyMs,
+        errorMessage,
+      });
     }
 
     const latencyMs = Date.now() - startTime;
@@ -428,6 +485,21 @@ export class AIManagerService {
     adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter,
     poolsToSeed: AIPool[] = ['DEMO', 'PIPELINE']
   ): Promise<ProviderResponseDto[]> {
+    // Self-healing migration: Ensure legacy unique index on { code, pool } is dropped
+    try {
+      const collection = AIProviderModel.collection;
+      const indexes = await collection.indexes();
+      const legacyCodeIdx = indexes.find((i) => i.name === 'code_1_pool_1');
+      if (legacyCodeIdx && legacyCodeIdx.unique) {
+        await collection.dropIndex('code_1_pool_1');
+        logger.info(
+          '[AIManager] Automatically dropped legacy unique index code_1_pool_1 from aiProviders collection'
+        );
+      }
+    } catch {
+      // Collection may not exist yet or index already dropped
+    }
+
     const defaultConfigs: Array<{
       code: AIProvider;
       name: string;
@@ -440,7 +512,7 @@ export class AIManagerService {
       {
         code: 'gemini',
         name: 'Google Gemini Pro',
-        modelId: 'gemini-3.5-flash',
+        modelId: 'gemini-3.8-flash',
         priority: 1,
         rateLimitRpm: 60,
         dailyLimit: 10000,
@@ -507,7 +579,7 @@ export class AIManagerService {
         } else {
           let updated = false;
           // Auto-upgrade deprecated/unavailable models from earlier sessions
-          if (doc.code === 'gemini' && (doc.modelId === 'gemini-2.5-flash' || doc.modelId === 'gemini-1.5-flash')) {
+          if (doc.code === 'gemini' && (doc.modelId === 'gemini-2.5-flash' || doc.modelId === 'gemini-3.5-flash' || doc.modelId === 'gemini-1.5-flash')) {
             doc.modelId = config.modelId;
             updated = true;
           }
@@ -527,10 +599,10 @@ export class AIManagerService {
           }
         }
 
-        // Always register adapter into ProviderRouter
+        // Always register adapter into ProviderRouter with instance ID
         try {
           const adapter = factory(config.code, trimmedKey, doc.modelId || config.modelId);
-          this.router.registerAdapter(pool, adapter, doc.priority);
+          this.router.registerAdapter(pool, adapter, doc.priority, doc._id.toString());
         } catch (err) {
           logger.warn(
             `[AIManager] Failed to register adapter for '${config.code}' in ${pool} pool: ${(err as Error).message}`
@@ -541,6 +613,49 @@ export class AIManagerService {
       }
     }
 
+    // Load any additional user-configured providers from the database into ProviderRouter
+    await this.loadAllProvidersFromDb(adapterFactory);
+
     return seeded;
+  }
+
+  /**
+   * Loads all configured providers from the database into ProviderRouter.
+   * Ensures that any custom provider instances survive server restarts.
+   */
+  async loadAllProvidersFromDb(
+    adapterFactory?: (code: AIProvider, apiKey?: string, modelId?: string) => ProviderAdapter
+  ): Promise<void> {
+    const factory = adapterFactory ?? createDefaultAdapter;
+    const docs = await AIProviderModel.find({}).select('+encryptedApiKey');
+    for (const doc of docs) {
+      try {
+        let updated = false;
+        if (doc.code === 'gemini' && (doc.modelId === 'gemini-1.5-flash' || doc.modelId === 'gemini-2.5-flash' || doc.modelId === 'gemini-3.5-flash')) {
+          doc.modelId = 'gemini-3.8-flash';
+          updated = true;
+        }
+        if (doc.code === 'groq' && doc.modelId === 'llama-3.3-70b-versatile') {
+          doc.modelId = 'openai/gpt-oss-120b';
+          updated = true;
+        }
+        if (updated) {
+          if (doc.status === 'TEMPORARILY_FAILED') {
+            doc.status = 'HEALTHY';
+            doc.consecutiveFailures = 0;
+          }
+          await doc.save();
+        }
+
+        const apiKey = doc.encryptedApiKey ? decryptSecret(doc.encryptedApiKey) : undefined;
+        const adapter = factory(doc.code, apiKey, doc.modelId || undefined);
+        this.router.registerAdapter(doc.pool, adapter, doc.priority, doc._id.toString());
+        this.router.setHealthState(doc.pool, doc._id.toString(), doc.status);
+      } catch (err) {
+        logger.warn(
+          `[AIManager] Failed to load provider '${doc.name}' (${doc._id.toString()}) from DB: ${(err as Error).message}`
+        );
+      }
+    }
   }
 }

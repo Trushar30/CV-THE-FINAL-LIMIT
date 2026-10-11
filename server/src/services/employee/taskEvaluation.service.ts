@@ -434,6 +434,46 @@ export class TaskEvaluationService {
   }
 
   /**
+   * Evaluates or re-evaluates a previously submitted task by task ID and owner user ID.
+   * Ensures ownership, verifies that submission exists, and evaluates via AI Gateway.
+   */
+  public async evaluateTaskById(
+    taskId: string | Types.ObjectId,
+    userId: string | Types.ObjectId
+  ): Promise<{
+    task: IEmployeeTaskDocument;
+    submission: ITaskSubmissionDocument;
+    performanceRecord: IPerformanceRecordDocument;
+  }> {
+    if (!Types.ObjectId.isValid(taskId.toString())) {
+      throw AppError.badRequest('Invalid task ID');
+    }
+
+    const task = await EmployeeTaskModel.findById(taskId);
+    if (!task) {
+      throw AppError.notFound('Task not found');
+    }
+
+    if (task.userId.toString() !== userId.toString()) {
+      throw AppError.forbidden('Access denied: You do not own this task');
+    }
+
+    const submission = await TaskSubmissionModel.findOne({ taskId: task._id });
+    if (!submission) {
+      throw AppError.badRequest('Task has not been submitted yet');
+    }
+
+    const performanceRecord = await this.evaluateSubmission({
+      submissionId: submission._id,
+    });
+
+    task.status = 'EVALUATED';
+    await task.save();
+
+    return { task, submission, performanceRecord };
+  }
+
+  /**
    * Computes running average score, completed task count, and score bands distribution
    * for promotion criteria checks per Spec Section 11.3
    */

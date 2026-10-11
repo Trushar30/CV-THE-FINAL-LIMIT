@@ -67,7 +67,7 @@
   /* Text Colors — Crisp Vantablack (#020101) Hierarchy */
   --cv-text-primary: #020101; /* Vantablack */
   --cv-text-secondary: #515c5e;
-  --cv-text-muted: #798788;
+  --cv-text-muted: #596668; /* Enhanced WCAG AA Contrast Ratio (>4.5:1 on #ffffff) */
   --cv-text-inverse: #eff4f8; /* Child of Light */
 
   /* Borders & Specular Highlights */

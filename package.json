@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w @corpverse/server\" \"npm run dev -w @corpverse/client\"",
     "build": "npm run build --workspaces",
+    "seed:demo": "npm run seed:demo -w @corpverse/server",
     "lint": "eslint .",
     "test": "npm run test --workspaces",
     "format": "prettier --write .",

@@ -65,10 +65,18 @@ export function FounderDashboardPage(): ReactElement {
   const loadDashboard = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const companyRes = await apiClient.get<CompanyData>('/founder/company');
-      setCompany(companyRes);
+      const companyRes = await apiClient.get<CompanyData | { company: CompanyData | null }>('/founder/company');
+      const companyData = companyRes && typeof companyRes === 'object' && 'company' in companyRes
+        ? (companyRes as { company: CompanyData | null }).company
+        : (companyRes as CompanyData | null);
 
-      if (companyRes.status === 'BANKRUPT') {
+      setCompany(companyData);
+
+      if (!companyData) {
+        return;
+      }
+
+      if (companyData.status === 'BANKRUPT') {
         navigate('/founder/bankrupt');
         return;
       }
@@ -80,7 +88,10 @@ export function FounderDashboardPage(): ReactElement {
       ]);
 
       if (finRes.status === 'fulfilled') {
-        setFinancials(finRes.value);
+        const finData = Array.isArray(finRes.value)
+          ? finRes.value
+          : (finRes.value as unknown as { history?: FinancialSnapshot[] })?.history || [];
+        setFinancials(finData);
       }
       if (empRes.status === 'fulfilled') {
         setEmployees(empRes.value.employees || []);
@@ -214,7 +225,9 @@ export function FounderDashboardPage(): ReactElement {
             <h1 className={styles.title}>
               <span>🏛️</span> {company.name}
             </h1>
-            <Badge variant="cyan">{company.domain.replace('_', ' ')}</Badge>
+            <Badge variant="cyan">
+              {(company.domain || (company as unknown as { domainsHired?: string[] }).domainsHired?.[0] || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')}
+            </Badge>
             {company.isOpenForHiring ? (
               <Badge variant="success">Open for Hiring</Badge>
             ) : (
@@ -388,7 +401,7 @@ export function FounderDashboardPage(): ReactElement {
                 </tr>
               </thead>
               <tbody>
-                {financials.map((snap) => (
+                {Array.isArray(financials) && financials.map((snap) => (
                   <tr key={snap._id} style={{ borderBottom: '1px solid var(--cv-border-subtle)' }}>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--cv-text-primary)' }}>{snap.date}</td>
                     <td style={{ padding: '0.75rem 1rem', color: 'var(--cv-accent-emerald-400)' }}>+{snap.revenue} CC</td>

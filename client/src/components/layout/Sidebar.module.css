@@ -196,6 +196,15 @@
     display: inline-flex;
   }
 
+@keyframes cv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
   .mobileOverlay {
     display: block;
     position: fixed;

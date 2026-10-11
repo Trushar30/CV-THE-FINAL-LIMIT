@@ -3,6 +3,17 @@ import { stageEngineService } from '../services/career/stageEngine.service.js';
 import { AppError } from '../utils/errors.js';
 import type { PostAnswerInput } from '../schemas/stageChat.schema.js';
 
+function formatQuestionPayload(q: unknown): Record<string, unknown> | null {
+  if (!q) return null;
+  const doc = q as { toObject?: () => Record<string, unknown>; question?: string; content?: string };
+  const raw = typeof doc.toObject === 'function' ? doc.toObject() : (doc as Record<string, unknown>);
+  return {
+    ...raw,
+    question: (raw['question'] as string) || (raw['content'] as string) || '',
+    content: (raw['content'] as string) || (raw['question'] as string) || '',
+  };
+}
+
 export class StageEngineController {
   /**
    * GET /api/applications/:id/stage
@@ -24,7 +35,7 @@ export class StageEngineController {
         success: true,
         data: {
           interview: session.interview,
-          currentQuestion: session.currentQuestion,
+          currentQuestion: formatQuestionPayload(session.currentQuestion),
           previousAnswers: session.previousAnswers,
           isCompleted: session.isCompleted,
           isWaitingAI: session.isWaitingAI,
@@ -59,7 +70,10 @@ export class StageEngineController {
 
       res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          nextQuestion: formatQuestionPayload(result.nextQuestion),
+        },
       });
     } catch (error) {
       next(error);

@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { RoleRoute } from './components/guards/RoleRoute';
 import { ShowcasePage } from './pages/ShowcasePage';
+import { LandingPage } from './pages/LandingPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyDetailPage } from './pages/CompanyDetailPage';
 import { JobsPage } from './pages/JobsPage';
@@ -51,8 +52,9 @@ export function App(): ReactElement {
               <Routes>
                 {/* Main App Layout */}
                 <Route element={<AppShell />}>
-                  {/* Public Component Showcase */}
-                  <Route path="/" element={<ShowcasePage />} />
+                  {/* Platform Landing & Root Routes */}
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/landing" element={<LandingPage />} />
                   <Route path="/showcase" element={<ShowcasePage />} />
                   <Route path="/leaderboards" element={<LeaderboardsPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />

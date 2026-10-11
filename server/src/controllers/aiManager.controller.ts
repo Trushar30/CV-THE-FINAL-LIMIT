@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AIManagerService } from '../services/ai/aiManager.service.js';
-import type { AIPool, AIProvider } from '../ai/types.js';
+import type { AIPool } from '../ai/types.js';
 import { AppError } from '../utils/errors.js';
 
 export class AIManagerController {
@@ -40,10 +40,10 @@ export class AIManagerController {
       if (!req.user) {
         return next(AppError.unauthorized('Authentication required'));
       }
-      const code = req.params.code as AIProvider;
+      const target = (req.params.idOrCode || req.params.code) as string;
       const pool = (req.query.pool as AIPool) || 'PIPELINE';
       const provider = await this.aiManagerService.updateProvider(
-        code,
+        target,
         pool,
         req.body,
         req.user._id
@@ -63,13 +63,13 @@ export class AIManagerController {
       if (!req.user) {
         return next(AppError.unauthorized('Authentication required'));
       }
-      const code = req.params.code as AIProvider;
+      const target = (req.params.idOrCode || req.params.code) as string;
       const pool = (req.query.pool as AIPool) || 'PIPELINE';
       const { reason } = req.body;
-      const provider = await this.aiManagerService.enableProvider(code, pool, req.user._id, reason);
+      const provider = await this.aiManagerService.enableProvider(target, pool, req.user._id, reason);
       res.status(200).json({
         success: true,
-        message: `Provider '${code}' enabled`,
+        message: `Provider '${target}' enabled`,
         data: { provider },
       });
     } catch (err) {
@@ -82,18 +82,18 @@ export class AIManagerController {
       if (!req.user) {
         return next(AppError.unauthorized('Authentication required'));
       }
-      const code = req.params.code as AIProvider;
+      const target = (req.params.idOrCode || req.params.code) as string;
       const pool = (req.query.pool as AIPool) || 'PIPELINE';
       const { reason } = req.body;
       const provider = await this.aiManagerService.disableProvider(
-        code,
+        target,
         pool,
         req.user._id,
         reason
       );
       res.status(200).json({
         success: true,
-        message: `Provider '${code}' disabled`,
+        message: `Provider '${target}' disabled`,
         data: { provider },
       });
     } catch (err) {
@@ -106,13 +106,13 @@ export class AIManagerController {
       if (!req.user) {
         return next(AppError.unauthorized('Authentication required'));
       }
-      const code = req.params.code as AIProvider;
+      const target = (req.params.idOrCode || req.params.code) as string;
       const pool = (req.query.pool as AIPool) || 'PIPELINE';
       const { reason } = req.body;
-      const result = await this.aiManagerService.removeProvider(code, pool, req.user._id, reason);
+      const result = await this.aiManagerService.removeProvider(target, pool, req.user._id, reason);
       res.status(200).json({
         success: true,
-        message: `Provider '${code}' removed`,
+        message: `Provider '${target}' removed`,
         data: result,
       });
     } catch (err) {
@@ -125,9 +125,9 @@ export class AIManagerController {
       if (!req.user) {
         return next(AppError.unauthorized('Authentication required'));
       }
-      const code = req.params.code as AIProvider;
+      const target = (req.params.idOrCode || req.params.code) as string;
       const pool = (req.query.pool as AIPool) || 'PIPELINE';
-      const result = await this.aiManagerService.testProvider(code, pool);
+      const result = await this.aiManagerService.testProvider(target, pool);
       res.status(200).json({
         success: true,
         data: result,

@@ -307,7 +307,6 @@ export const platformConfigMongoSchema = new Schema<IPlatformConfigDocument>(
       type: Boolean,
       required: true,
       default: true,
-      index: true,
     },
     updatedBy: {
       type: Schema.Types.ObjectId,

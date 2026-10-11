@@ -80,6 +80,7 @@ export const taskEvaluationJsonSchema: Record<string, unknown> = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         required: ['criterion', 'score', 'comment'],
         properties: {
           criterion: { type: 'string' },

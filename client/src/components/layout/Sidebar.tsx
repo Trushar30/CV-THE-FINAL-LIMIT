@@ -52,16 +52,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps): ReactEleme
           <div className={styles.navGroup}>
             <div className={styles.navGroupTitle}>Core Foundation</div>
             <NavLink
-              to="/showcase"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-              onClick={onCloseMobile}
-            >
-              <span className={styles.navIcon}>
-                <SparklesIcon size={18} />
-              </span>
-              <span>Component Showcase</span>
-            </NavLink>
-            <NavLink
               to="/leaderboards"
               className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
               onClick={onCloseMobile}

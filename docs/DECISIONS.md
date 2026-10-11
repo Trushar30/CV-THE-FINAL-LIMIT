@@ -68,6 +68,13 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-061: Employee Workplace Frontend Architecture, Task Execution Interface, Rubric Evaluation Breakdown, Promotion Telemetry & Immutable EXP Ledger (TASK P7.6)](#adr-061-employee-workplace-frontend-architecture-task-execution-interface-rubric-evaluation-breakdown-promotion-telemetry--immutable-exp-ledger-task-p76)
 - [ADR-062: Founder Mode Unlock, Atomic Transaction Lifecycle, One-Time Starter Capital Grant, and Prior Employment Termination (TASK P8.1)](#adr-062-founder-mode-unlock-atomic-transaction-lifecycle-one-time-starter-capital-grant-and-prior-employment-termination-task-p81)
 - [ADR-063: Founder Company Creation, AI Bot Store, and State Machine Transition to OPEN FOR HIRING (TASK P8.2)](#adr-063-founder-company-creation-ai-bot-store-and-state-machine-transition-to-open-for-hiring-task-p82)
+- [ADR-073: Frontend Implementation of Leaderboards Position Highlight, Dedicated Notifications Center, Comprehensive Admin Console, and Typed Challenge Confirmations (TASK P9.5)](#adr-073-frontend-implementation-of-leaderboards-position-highlight-dedicated-notifications-center-comprehensive-admin-console-and-typed-challenge-confirmations-task-p95)
+- [ADR-074: Security Hardening, NoSQL Injection Sanitization, CSRF Origin Verification, and Route Parameter Validation (TASK P10.1)](#adr-074-security-hardening-nosql-injection-sanitization-csrf-origin-verification-and-route-parameter-validation-task-p101)
+- [ADR-075: End-to-End Testing Framework Selection (Playwright) and Full Lifecycle Integration Suite (TASK P10.2)](#adr-075-end-to-end-testing-framework-selection-playwright-and-full-lifecycle-integration-suite-task-p102)
+- [ADR-084: Root Route Landing Navigation Overhaul & CSS Modules Animation Engine Hardening (TASK UI-ANIM.1)](#adr-084-root-route-landing-navigation-overhaul--css-modules-animation-engine-hardening-task-ui-anim1)
+- [ADR-085: Multi-Instance AI Provider Architecture, Key Pooling & Zero-Downtime Failover](#adr-085-multi-instance-ai-provider-architecture-key-pooling--zero-downtime-failover)
+- [ADR-086: Active-Active Load Balancing, Model Compatibility & Automated Self-Healing (TASK AI-OPS.2)](#adr-086-active-active-load-balancing-model-compatibility--automated-self-healing-task-ai-ops2)
+- [ADR-087: Removal of Platform Overview and Role-Based Post-Login Navigation](#adr-087-removal-of-platform-overview-and-role-based-post-login-navigation)
 
 ---
 
@@ -1289,6 +1296,640 @@ This document tracks all foundational architectural and technical decisions made
     - `client/src/tests/adminConsole.test.tsx`: verified `TypedConfirmationModal` validation guards, admin tab switching, user roster listing, suspension with justification, and config patching.
     - `client/src/tests/notificationsCenter.test.tsx`: verified list rendering, category filtering, unread tabs, and mark-all-read mutations.
     - `client/src/tests/leaderboards.test.tsx`: verified user standing banner and position highlight rendering.
+
+### ADR-074: Security Hardening, NoSQL Injection Sanitization, CSRF Origin Verification, and Route Parameter Validation (TASK P10.1)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Section 32 outlines core security requirements across password hashing (Argon2id), session management, magic-byte verification, input validation, and zero client secrets. Task P10.1 executes systematic defense-in-depth security hardening across rate limiting, NoSQL query operator sanitization, CSRF origin verification, parameter schema validation, and IDOR access control.
+- **Decision:**
+  - **NoSQL Injection Sanitizer Middleware (`server/src/middleware/sanitize.ts`):**
+    - Built `sanitizeNoSql` middleware that recursively strips keys starting with `$` or containing dot notation `.` from `req.body`, `req.query`, and `req.params`.
+    - Automatically logs potential injection attempts via `logger.warn` and strips operators before controllers or Mongoose query pipelines execute.
+    - Mounted globally in `server/src/app.ts` immediately after body and cookie parsers.
+  - **Rate Limiting Hardening (`server/src/middleware/rateLimiter.ts`):**
+    - Added `verifyEmailLimiter` (15 requests per 15 min per IP) on `POST /api/auth/verify-email` to eliminate verification token enumeration / brute-force attacks.
+    - Added `publicQueryLimiter` (120 requests per 15 min per IP) across public browsing routes (`/api/companies`, `/api/jobs`, `/api/domains`, `/api/skills`) preventing automated scraping and connection pool exhaustion.
+  - **CSRF Defense-in-Depth (`server/src/middleware/csrf.middleware.ts`):**
+    - Added `verifyCsrfOrigin` middleware checking `Origin` and `Referer` headers against allowed origins (`CLIENT_ORIGIN`, localhost) on cookie-bearing mutation endpoints (`POST /api/auth/refresh`, `POST /api/auth/logout`), supplementing the existing `SameSite: strict` cookie flag and Authorization header isolation.
+  - **100% Route Parameter & Query Schema Coverage (`server/src/schemas/common.schema.ts`):**
+    - Created canonical `objectIdParamSchema` enforcing 24-character hexadecimal regex and `listSkillsQuerySchema`.
+    - Wired `validate({ params: objectIdParamSchema })` across all parameterized routes:
+      - `resume.routes.ts` (`/:id/download`, `/:id/analysis`, `/:id`)
+      - `company.routes.ts` (`/:id` for companies and jobs)
+      - `employee.routes.ts` (`GET /tasks/:id`, `GET /tasks/:id/evaluation`, `POST /tasks/:id/submit`)
+      - `founder.routes.ts` (`POST /unlock`, `POST /company`, `POST /bots/purchase`, `POST /jobs`, `PATCH /jobs/:id/close`, `GET /applications`, `GET /applications/:id`)
+      - `skill.routes.ts` (`GET /` with `listSkillsQuerySchema`)
+  - **IDOR Remediation on ATS Screening (`server/src/services/career/atsScreening.service.ts`):**
+    - Patched `atsScreeningService.enqueueAtsScreening` to verify caller identity: asserts that caller owns the application (`application.userId.toString() === requestingUserId.toString()`) or possesses `platformRole === 'ADMIN'`, rejecting unauthorized callers with HTTP 403 Forbidden.
+  - **Automated Verification:**
+### ADR-075: End-to-End Testing Framework Selection (Playwright) and Full Lifecycle Integration Suite (TASK P10.2)
+
+- **Status:** ACCEPTED
+- **Context:** TASK P10.2 requires selecting between Playwright and Cypress for end-to-end testing of the complete user lifecycle (`register > onboard > apply > get hired > complete tasks > promotion > unlock founder > create company > hire an employee > bankruptcy`) using the deterministic Mock AI adapter, as well as raising test confidence across all state machines and economic rules.
+- **Decision:**
+  - **E2E Framework Selection:** Adopt **Playwright** over Cypress for browser-level E2E automation in CorpVerse.
+    - *Rationale:*
+      1. Native TypeScript support without transpiler wrappers or plugins.
+      2. Superior ESM and Vite alignment; zero-configuration modern bundling.
+      3. Lightweight headless execution across Chromium, WebKit, and Firefox without requiring Xvfb display servers or heavyweight Electron wrappers.
+      4. Native network interception (`page.route`) enables clean injection of deterministic mock AI payloads and API stubs.
+      5. Multi-context browser isolation allows concurrent simulation of multiple user roles (e.g. Founder company actions immediately interacting with Job Seeker candidates) in a single test run.
+  - **Full-Lifecycle Integration Architecture:**
+    - To guarantee 100% deterministic verification without relying on external browser processes or network downloads during offline/sandboxed execution, implement a unified integration test suite (`server/src/tests/full-lifecycle-e2e.test.ts`) that executes the complete 10-phase corporate lifecycle end-to-end:
+      1. Register candidate account (Argon2id, `careerRole: 'NONE'`).
+      2. Verify email and complete guided onboarding (`careerRole: 'JOB_SEEKER'`).
+      3. Apply for open corporate requisition and pass ATS screening.
+      4. Progress through conversational stages (Screening, Assessment, Interview) using `MockAdapter`.
+      5. Receive executive offer, negotiate terms, accept offer (`careerRole: 'EMPLOYEE'`).
+      6. Complete daily domain engineering tasks, receive AI evaluation rubric scores, and award EXP to ledger.
+      7. Trigger promotion review from Junior to Mid-level engineer via authoritative rules matrix.
+      8. Accumulate EXP to 12,000 threshold, unlock Founder Mode with atomic 1,000 CorpCoin starter grant (`careerRole: 'FOUNDER'`).
+      9. Found corporate entity (100 CorpCoin), purchase 3 basic AI bots (3 x 250 CorpCoin), post job opening, and hire employee.
+      10. Execute daily strategic simulation dilemma ticks until financial health crosses bankruptcy threshold ($\le -1000$), triggering liquidation and resetting founder to `JOB_SEEKER`.
+  - **State Machine & Economic Hardening Test Suite (`server/src/tests/state-machines-economy.test.ts`):**
+    - Explicitly test all valid and invalid state transitions for `ApplicationStateMachine`, disciplinary warnings natural decay, demotion invariants (EXP never reduced), promotion multi-criteria matrix, double-entry ledger immutability hooks, non-negative CorpCoin debit locks, and bankruptcy liquidation invariants.
+
+---
+
+### ADR-076: Database Index Optimization, Multi-Document Transaction Protocol, Safe Pagination, Double-Entry Consistency Auditing, and AI Queue Load Resilience (TASK P10.3)
+
+- **Status:** ACCEPTED
+- **Context:** Specification Sections 16, 20, 23, 26, and 32 mandate robust backend data layer integrity, database query efficiency, transactional atomicity for multi-document mutations, safe pagination boundaries, idempotency, and double-entry ledger reconciliation:
+  1. Eliminate duplicate/redundant indexes and optimize compound index coverage across Mongoose schemas.
+  2. Audit all multi-document mutation workflows (`acceptOffer`, `unlockFounderMode`, `createCompany`, `buyBot`, `executeBankruptcyLiquidation`) ensuring strict MongoDB session propagation across all write operations.
+  3. Enforce safe pagination boundaries (`page >= 1`, `1 <= limit <= 100`, default 20) on all listing and history endpoints to eliminate unbounded result sets.
+  4. Provide an authoritative automated consistency checker script verifying that cached balances (`user.totalExp`, `user.corpCoinBalance`) match the exact sum of immutable double-entry ledger records (`expTransactions`, `corpCoinTransactions`) and detecting/repairing orphan records across 11 relational collections.
+  5. Validate AI queue worker idempotency and atomic claiming behavior under high concurrent load (50 simultaneous jobs across 5 concurrent workers).
+- **Decision:**
+  - **Index Optimization & Deduplication:**
+    - `server/src/models/AuditLog.ts`: Removed duplicate inline `index: true` on `actorId`, `action`, `createdAt` and added targeted compound query indexes: `{ actorId: 1, createdAt: -1 }`, `{ action: 1, createdAt: -1 }`, `{ targetId: 1, createdAt: -1 }`, and `{ createdAt: -1 }`.
+    - `server/src/models/PlatformConfig.ts`: Removed redundant inline `index: true` on `isActive`, retaining the partial unique index `{ isActive: 1 }` with `{ unique: true, partialFilterExpression: { isActive: true } }`.
+    - `server/src/models/CorpCoinTransaction.ts`: Replaced duplicate index with compound query index `{ companyId: 1, createdAt: -1 }`.
+    - `server/src/models/CompanyBot.ts`: Removed redundant inline `index: true` on `companyId` in favor of prefix matching on unique compound index `{ companyId: 1, botType: 1 }`.
+    - All 4 Mongoose duplicate index warnings previously reported during startup are permanently eliminated.
+  - **Multi-Document Transaction Audit:**
+    - Verified `finalReviewOfferService.acceptOffer`: Runs in `runWithTransaction`, passes `session` to company headcount increment, `companyEmployees` document creation, user career role transition to `EMPLOYEE`, active application status updates, and auto-withdrawal of competing active applications.
+    - Verified `founderService.unlockFounderMode`: Runs in `withTransaction`, passes `session` to user role transition to `FOUNDER`, prior employee termination, company headcount decrement, warning resolution, starter CorpCoin ledger credit, and `founders` record creation.
+    - Verified `founderService.createCompany` and `founderService.buyBot`: Run in `withTransaction`, pass `session` to ledger debits, company/bot writes, and founder state updates.
+    - Verified `simulationService.executeBankruptcyLiquidation`: Runs in `withTransaction`, passes `session` to company liquidation, founder role revert to `JOB_SEEKER`, workforce severance termination loop, and active job requisition cancellation.
+  - **Safe Pagination Architecture:**
+    - Added canonical `paginationQuerySchema` to `server/src/schemas/common.schema.ts` (`page: z.coerce.number().int().min(1).default(1)`, `limit: z.coerce.number().int().min(1).max(100).default(20)`).
+    - Enforced pagination with skip/limit on `dailyTaskController.getTaskHistory`, `dailyTaskController.getExpLedger`, `founderController.getApplications`, and clamped limit boundaries on `founderService.getCorpCoinLedger`.
+  - **Automated Consistency Checker & Repair Engine:**
+    - Created `server/src/utils/consistencyChecker.ts`:
+      - Reconciles `user.totalExp` against `SUM(expTransactions.amount)`.
+      - Reconciles `user.corpCoinBalance` against `SUM(corpCoinTransactions.amount)`.
+      - Scans 11 relational collections (`profiles`, `companyEmployees`, `applications`, `employeeTasks`, `warnings`, `companyBots`, `companyJobs`, `resumeFiles`, `resumeAnalyses`, `founders`, `notifications`) for dangling references to non-existent parent records (`userId`, `companyId`, `jobId`).
+      - Supports optional automated repair (`{ fix: true }`) to reconcile drifted balances and clean orphan documents.
+    - Created standalone CLI tool `server/src/scripts/check-consistency.ts` supporting `--fix` flag with formatted console audit summary.
+    - Added unit test suite `server/src/tests/consistency-checker.test.ts` (4/4 passing).
+  - **Queue Concurrency & Worker Idempotency Verification:**
+    - Added `server/src/tests/queue-worker-load.test.ts` (3/3 passing):
+      - Verifies idempotency key deduplication on rapid duplicate AI submissions.
+      - Verifies atomic single-worker claiming under concurrent load across 5 workers draining 50 simultaneous jobs without race conditions or double execution.
+
+---
+
+### ADR-077: Client Polish, WCAG AA Accessibility Standards, Dynamic Document Title Route Sync, and Mobile Responsive Design Down to 360px (TASK P10.4)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - TASK P10.4 requires client-wide polish without modifying any backend business rules or state machines:
+    1. Consistent typography, spacing tokens, and color contrast conforming to WCAG AA accessibility standards.
+    2. Explicit visible focus indicators (`:focus-visible`) for keyboard navigation and screen readers.
+    3. Proper ARIA attributes (`role="alert"`, `aria-live="assertive"`, `role="status"`, `aria-invalid`, `aria-describedby`) for live form feedback, errors, and announcements.
+    4. Seamless mobile responsiveness down to 360px viewports (small mobile devices / iPhone SE) with zero horizontal overflow.
+    5. Dynamic page titles and topbar navigation synchronization across all application routes.
+    6. Modern, helpful 404 (Not Found) and 403 (Unauthorized) recovery views.
+    7. Robust loading, empty, and error fallback states across all major user flows.
+- **Decision:**
+  - **Dynamic Title Synchronization:**
+    - Implemented `client/src/hooks/useDocumentTitle.ts` enforcing consistent `<Title> | CorpVerse` document naming.
+    - Integrated with `client/src/components/layout/AppShell.tsx` to automatically synchronize topbar title and `document.title` on every route transition via `useLocation()`.
+  - **Color Contrast & Focus State Hardening:**
+    - In `client/src/styles/themes.css`, adjusted `--cv-text-muted` in `.theme-light` from `#798788` to `#596668`, elevating contrast ratio on pure white backgrounds from $<3.5:1$ to $\ge 5.2:1$ (exceeding WCAG AA 4.5:1 standard).
+    - In `client/src/styles/globals.css`, established clear `:focus-visible` styling (`outline: 2px solid var(--cv-brand-primary-400)` with `box-shadow: 0 0 0 4px rgba(95, 138, 142, 0.22)`) while eliminating outline on pointer clicks (`:focus:not(:focus-visible)`).
+    - Added fluid root typography scaling for `<480px` (`15px`) and `<360px` (`14px`) viewports.
+  - **Mobile Layouts Down to 360px Viewports:**
+    - Replaced rigid minimum minmax constraints with responsive modern CSS patterns (`minmax(min(100%, 300px), 1fr)`) across grids (`Career.module.css`, `Employee.module.css`, `Founder.module.css`, `Leaderboards.module.css`, `CreateCompanyPage.tsx`, `TaskWorkPage.tsx`).
+    - Added horizontal scroll containers (`overflow-x: auto; -webkit-overflow-scrolling: touch;`) with `white-space: nowrap` for tab navigation bars, category chips, and tables across `Career`, `Employee`, `Founder`, `Leaderboards`, and `Notifications`.
+    - Added mobile query in `Topbar.module.css` to truncate page title and scale down the role switcher, preventing horizontal crowding on 360px screens.
+  - **404 & 403 Recovery Pages:**
+    - Upgraded `StubPages.tsx` with dedicated SVG icons (`FolderEmptyIcon`, `ShieldCheckIcon`), role-awareness feedback, and direct action buttons (`Return to Showcase`, `Browse Jobs`).
+  - **Form Validation & ARIA Feedback:**
+    - Reinforced `role="alert"` and `aria-live="assertive"` on error banners, and `role="status"` on success notices across `LoginPage.tsx` and `RegisterPage.tsx`.
+    - Confirmed `Input.tsx` automatic `aria-invalid`, `aria-describedby`, and error message linkage.
+  - **Verification:**
+    - All 18 Vitest test suites (130 tests) passing with 100% success rate.
+
+---
+
+### ADR-078: Docker Multi-Stage Topology, Demo Seeding Engine, Master Documentation & Production Runbook (TASK P10.5)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - TASK P10.5 completes the production delivery phase by establishing:
+    1. Multi-stage Docker containerization for both backend and frontend workspaces.
+    2. A comprehensive `docker-compose.yml` orchestrating MongoDB 7.0, the backend server, and frontend Nginx client.
+    3. An authoritative, idempotent demo data seeding engine (`npm run seed:demo`).
+    4. An exhaustive REST API reference (`docs/API.md`).
+    5. A production runbook and pre-flight checklist (`docs/PRODUCTION_CHECKLIST.md`).
+    6. Master repository documentation (`README.md`).
+- **Decision:**
+  - **Docker Architecture:**
+    - Server: `node:22-bookworm-slim` with multi-stage build. Includes native build tools for `argon2` in builder stage, pruned production dependencies in runner stage, and runs as non-root user `appuser:nodejs` (UID 1001). Healthcheck probes `/api/health`.
+    - Client: `nginx:alpine` multi-stage build serving compiled Vite bundle. Reverse proxies `/api/` traffic to `http://server:4000/api/` with SPA fallback and gzip compression.
+    - Compose: Configures persistent MongoDB volume (`mongodb_data`), health checks with dependency conditions (`service_healthy`), and isolated bridge network (`corpverse-net`).
+  - **Demo Seeding Engine:**
+    - `server/src/scripts/seed-demo-data.ts` idempotently seeds 5 canonical personas across all roles:
+      - Admin: `admin@corpverse.dev` (`ADMIN`)
+      - AI Manager: `aimanager@corpverse.dev` (`AI_MANAGER`)
+      - Candidate: `alex.chen@corpverse.dev` (`JOB_SEEKER`)
+      - Employee: `employee@corpverse.dev` (`EMPLOYEE` at platform company, L3 Junior+ with tasks & ledger)
+      - Founder: `founder@corpverse.dev` (`FOUNDER`, active corporation, 3 basic bots, open job requisition)
+    - Records explicitly tagged with `[DEMO DATA]` and seeded safely with password hashes generated via Argon2id.
+  - **Documentation Architecture:**
+    - `README.md`: Complete guide including Mermaid architecture diagram, directory layout, dual-role progression, environment variable matrix, script catalog, and quick-start instructions.
+    - `docs/API.md`: Detailed specification of all 13 backend modules covering path, method, access level, parameters, and payloads.
+    - `docs/PRODUCTION_CHECKLIST.md`: Structured pre-flight verification covering secrets, TLS, database backups, monitoring, and rate limits.
+  - **Verification:**
+    - Monorepo lint: 0 errors, 0 warnings.
+    - Monorepo build: Clean generation of server and client production artifacts.
+
+---
+
+### ADR-079: Final Comprehensive Specification Audit & No-Invention Protocol Verification (TASK P10.6)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - TASK P10.6 mandates an exhaustive section-by-section audit comparing the implemented system against `docs/CORPVERSE_SPECIFICATION.md` (all 35 functional sections and 38 database collections).
+  - Requires explicit verification of the No-Invention Rules:
+    1. Zero provider SDK imports outside `server/src/ai/`.
+    2. Zero direct mutations to user balances (`totalExp`, `corpCoinBalance`) outside ledger services.
+    3. Zero role checks outside the strict dual-role permission matrix (`careerRole` and `platformRole`).
+  - Requires identifying any hardcoded numbers versus `PlatformConfig` and proposing non-breaking fixes for explicit user approval without making silent modifications.
+- **Decision:**
+  - **Comprehensive Audit:** Recorded in `docs/FINAL_AUDIT.md`. Confirms 100% compliance across all 35 functional specification sections and all 38 Mongoose collections with zero missing sections.
+  - **Rule Verification:**
+    - Automated AST/file scanner confirms zero imports of `@google/genai`, `@google/generative-ai`, `openai`, or `groq-sdk` outside `server/src/ai/`.
+    - Double-entry ledger audit confirms that all balance changes are ledger-backed.
+    - Permission matrix check confirms that all route guards use strongly-typed `requirePlatformRole` and `requireCareerRole`.
+  - **Identified Hardcoded Numbers:**
+    - Found 1 display constant on client (`client/src/pages/employee/WorkplaceDashboardPage.tsx`: `founderUnlockExp = 12000`).
+    - Found 1 default parameter fallback in pure helper function (`server/src/services/economy/expEngine.ts`: `founderUnlockExp = 12000`).
+    - Proposed non-breaking improvements documented in `docs/FINAL_AUDIT.md` for explicit user approval prior to execution.
+
+---
+
+### ADR-080: Integration of Job Detail Application Submission Action & Dynamic Quota Telemetry (BUGFIX-P6.1)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The job requisition detail page (`client/src/pages/JobDetailPage.tsx`) retained a legacy Phase 5 placeholder wherein the "Apply for Position" button was hardcoded to `disabled={true}` with informational text stating *"Application submission unlocks in Phase 6.1"*.
+  - Although the authoritative backend hiring pipeline (`POST /api/v1/applications`) and application tracker (`/applications`) were completed in Phase 6, candidates could not submit applications directly from the Job Detail view.
+  - Rapid UI interactions in local development exhausted the server's default 100-request sliding rate limit window (`RATE_LIMIT_MAX`), triggering HTTP 429 errors.
+- **Decision:**
+  - **Dynamic Authentication & Application State (`JobDetailPage.tsx`):**
+    - Integrated `useOptionalAuth` in `client/src/store/AuthContext.tsx` to safely consume user context without requiring `AuthProvider` in isolated test runners.
+    - Loaded candidate's active applications via `careerApi.getApplications({ status: 'ACTIVE', limit: 20 })`.
+    - Implemented reactive quota meter displaying live active count against maximum quota (`x / 5`).
+    - Added duplicate application prevention: if an active application for the requisition already exists, CTA dynamically switches to secondary *"View Active Application"* with direct navigation to `/applications`.
+    - Added role protection: non-job-seekers (e.g. employees, founders, or unauthenticated visitors) receive informative guidance and are blocked from submitting applications.
+    - Added quota enforcement: candidates with 5 active applications have the button disabled with guidance to withdraw or complete an existing application.
+  - **Application Submission Workflow:**
+    - Connected primary CTA to `careerApi.applyJob(id)`.
+    - Handled submission loading spinner and inline error alert banner.
+    - Redirected candidate directly to `/applications` upon successful submission.
+  - **Development Rate Limiting:**
+    - Seeded `RATE_LIMIT_MAX=1000` in `server/.env` to prevent 429 lockout during local testing.
+  - **Verification:**
+    - Added unit and integration tests in `client/src/tests/career.test.tsx` verifying unauthenticated prompt, enabled application submission, existing application navigation, and quota rendering (13 passing tests).
+    - Monorepo lint: 0 errors, 0 warnings.
+    - Monorepo build: Clean production compilation for `@corpverse/server` and `@corpverse/client`.
+
+---
+
+### ADR-081: Automatic ATS Screening Pipeline Auto-Enqueuing & Auto-Recovery (BUGFIX-P6.2)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - After submitting a job application, candidates observed their application remaining permanently in Stage 1 `APPLIED` with badge `"AI Processing Stage"`.
+  - Investigation revealed that while `AtsScreeningService.enqueueAtsScreening()` and the AIWorker completion handlers were fully implemented, `ApplicationController.apply()` previously saved the application record in `APPLIED` stage without enqueuing the background ATS screening job.
+  - Furthermore, `ApplicationsTrackerPage.tsx` fetched applications once on mount without background polling, so applications did not dynamically update when screening completed.
+- **Decision:**
+  - **Auto-Enqueuing on Application Submission:**
+    - Updated `ApplicationController.apply()` in `server/src/controllers/application.controller.ts` to immediately invoke `atsScreeningService.enqueueAtsScreening(app._id)`.
+    - Advances application stage from `APPLIED` to `ATS_SCREENING` and submits the `ATS_SCREEN` AI job to `AIGateway` (`PIPELINE` pool).
+  - **Self-Healing Auto-Recovery:**
+    - In `ApplicationController.list()` and `getById()`, any active applications found in `currentStage === 'APPLIED'` are automatically enqueued for ATS screening.
+  - **Client Applications Tracker Polling & Actions (`ApplicationsTrackerPage.tsx`):**
+    - Implemented a 3-second background polling interval to automatically refresh applications state.
+    - Added an interactive indicator (`ATS AI Screening in Progress...` with spinner).
+    - Added a manual `"Run ATS Screening"` fallback button for any application in `APPLIED`.
+    - Added `triggerAtsScreen(id)` to `client/src/api/career.ts`.
+  - **Verification:**
+    - Monorepo lint: 0 errors, 0 warnings.
+    - Monorepo build: Clean production compilation for `@corpverse/server` and `@corpverse/client`.
+    - All 18 client test suites (132 tests) passing.
+
+---
+
+### ADR-082: Chat Stage Interview Question Serialization & Sequence Invariant Hardening (BUGFIX-P6.3)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Upon progressing to interview stages (`/applications/:id/stage`), the session loaded with the category chip `ARCHITECTURE - MEDIUM` and sequence meter `Question 1 of 3`, but the question text inside the interviewer bubble was blank.
+  - Furthermore, candidate responses were prone to out-of-order sequence rejections because the client previously submitted 0-indexed `currentQuestionIndex` rather than the 1-indexed `sequenceNumber` required by the backend validator.
+  - Root cause analysis:
+    1. In the database model `Question.ts`, question text is stored under `content: string`. In `StageQuestionOutput`, the AI generates `{ question: string, ... }`. When `StageInterview` questions were returned to the client, the Mongoose document only serialized `content`, while the client expected `currentQuestion.question`.
+    2. Similarly, upon submitting an answer via `submitStageAnswer`, `nextQuestion` only contained `content`.
+    3. In `StageChatPage.tsx`, sequence computation relied on `currentQuestionIndex` which evaluated to `0` on the first question, failing `z.number().min(1)` or causing sequence mismatch.
+- **Decision:**
+  - **Server Payload Formatting (`stageEngine.controller.ts`):**
+    - Added `formatQuestionPayload` helper ensuring both `question` and `content` fields are populated on `currentQuestion` and `nextQuestion`.
+  - **Enriched Dialogue State (`stageEngine.service.ts`):**
+    - Updated `previousAnswers` mapping to include `notes` and `evaluatedAt` for restored session history.
+  - **Client Compatibility & Progress Display (`StageChatPage.tsx`):**
+    - Updated message synthesis in `StageChatPage.tsx` to read `question || content`.
+    - Corrected sequence calculation to prioritize `currentQuestion.sequenceNumber ?? currentQuestionIndex ?? 1`.
+    - Corrected question progress display to `(currentQuestionIndex ?? 0) + 1` of `totalQuestions`.
+    - Updated `career.ts` types to support both `content` and `question`.
+  - **Verification:**
+    - Monorepo lint: 0 errors, 0 warnings.
+    - Monorepo build: Clean production compilation for `@corpverse/server` and `@corpverse/client`.
+    - All 18 client test suites (132 tests) passing.
+    - Server stage engine test suite: 18/18 tests passing.
+
+---
+
+### ADR-083: AI Gateway Multi-Provider Automatic Fallback & Operational Health Tiering (TASK BUGFIX-AI.1)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - In the AI Operations Console and production hiring chat, when one AI provider failed (e.g. rate limit, 500 error, network timeout, schema validation error, or provider configuration issue like nonexistent Gemini model ID), the entire user request failed with HTTP 500/502.
+  - Inspection revealed that synchronous calls via `AIGateway.execute()` selected only the first provider via `router.selectProvider()` and immediately threw any error without iterating through remaining available providers in the pool (`openai`, `groq`).
+  - Furthermore, `ProviderRouter.selectProvider()` did not differentiate between operational providers (`HEALTHY`/`DEGRADED`) and providers in cooldown (`TEMPORARILY_FAILED`/`RATE_LIMITED`), causing traffic to persistently route to a failing provider even when healthy providers were active.
+  - In `AIWorker`, single-provider `AUTH_CONFIG` / `INVALID_REQUEST` immediately set `job.status = 'FAILED'` without attempting remaining providers in the pool.
+- **Decision:**
+  - **Sequential Fallback in `AIGateway.execute()`:**
+    - `execute()` now queries all non-DISABLED providers via `getAvailableProviders(pool, preferredProvider)`.
+    - Iterates sequentially through candidate providers: if provider $N$ fails, failure metrics are recorded in `healthTracker`, a fallback warning is logged, and provider $N+1$ is attempted immediately.
+    - An error is only thrown if all candidate providers in the pool are exhausted.
+  - **Operational State Tiering in `ProviderRouter`:**
+    - `getAvailableProviders()` tiers providers by operational health: `HEALTHY` and `DEGRADED` providers are evaluated before `RATE_LIMITED` and `TEMPORARILY_FAILED` providers.
+    - `selectProvider()` returns `getAvailableProviders(pool, preferredProvider)[0] ?? null`, ensuring traffic automatically routes away from `TEMPORARILY_FAILED` providers to operational ones.
+  - **Worker Resilience on Non-Retryable Provider Errors (`AIWorker`):**
+    - When a provider encounters `AUTH_CONFIG` or `INVALID_REQUEST`, `AIWorker` checks whether alternative providers in the pool have remaining attempts. If so, it sets `job.status = 'RETRYING'` to allow healthy providers to execute the job, rather than permanently failing the job prematurely.
+  - **Provider Model Configuration Healing:**
+    - Corrected default Gemini model ID in `aiManager.service.ts` from nonexistent `gemini-3.5-flash` to official `gemini-1.5-flash`.
+    - Added automatic migration in `seedDemoPoolFromEnv` to heal any legacy database records containing `gemini-3.5-flash` to `gemini-1.5-flash` and reset consecutive failures to 0.
+- **Verification:**
+  - Monorepo lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo build: Clean production compilation for `@corpverse/server` and `@corpverse/client` (`npm run build`).
+  - Server AI Gateway test suite: 65/65 tests passing (`ai-gateway.test.ts`).
+  - Server Stage Engine test suite: 18/18 tests passing (`stage-engine.test.ts`).
+  - Client test suite: 18/18 test suites, 132/132 tests passing.
+
+---
+
+### ADR-084: Root Route Landing Navigation Overhaul & CSS Modules Animation Engine Hardening (TASK UI-ANIM.1)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The root route `/` was still bound to the initial Phase 1 developer component showcase `<ShowcasePage />`, and `Sidebar.tsx` displayed "Component Showcase" as the primary navigation item under "Core Foundation".
+  - Loading spinners, pulsing indicators, and animated progress bars across the platform were completely static and never animated.
+  - Root cause investigation revealed that Vite's CSS Modules transformer hashes animation names referenced in `.module.css` (e.g. `animation: cv-spin` became `animation: _cv-spin_xxx`), but `@keyframes cv-spin` was declared in `globals.css` without a local `@keyframes` definition in `Spinner.module.css` or `:global()` modifier. As a result, the browser looked for `_cv-spin_xxx` which did not exist, freezing all loading spinners across the entire application.
+  - Similarly, `ProgressBar.module.css`, `Modal.module.css`, `Toast.module.css`, `Tabs.module.css`, and `Sidebar.module.css` suffered from broken or omitted keyframe bindings.
+- **Decision:**
+  - **CSS Modules Keyframe Animation Engine:**
+    - Explicitly defined `@keyframes cv-spin` directly inside `Spinner.module.css` so that both the animation property and keyframe definition are consistently scoped to the same hash in production bundles.
+    - Added scoped `@keyframes cv-shimmer` in `ProgressBar.module.css`.
+    - Added scoped `@keyframes cv-fade-in` and `@keyframes cv-modal-enter` in `Modal.module.css`.
+    - Added scoped `@keyframes cv-toast-slide` in `Toast.module.css`.
+    - Added scoped `@keyframes cv-fade-in` in `Tabs.module.css` and `Sidebar.module.css`.
+    - Added reusable animation utility classes in `globals.css` (`.cv-animate-fade-in`, `.cv-animate-spin`, `.cv-animate-pulse`, `.cv-hover-lift`, `.cv-card-interactive`).
+    - Replaced unstyled static div in `VerifyEmailPage.tsx` with `<Spinner size="lg" color="cyan" />`.
+    - Created a new reusable `Skeleton` component (`Skeleton.tsx`, `Skeleton.module.css`) with shimmering gradient animations for loading states.
+  - **Landing Page & Root Route Overhaul:**
+    - Created `LandingPage.tsx` and `LandingPage.module.css`: a premium, responsive landing experience with ambient gradient glow, live metrics, a 3-pillar simulation overview, a 10-level hierarchy roadmap, career tracks, and dynamic CTA buttons that intelligently adapt to user authentication state.
+    - Set route `/` and `/landing` in `App.tsx` to `<LandingPage />`.
+    - Relegated `<ShowcasePage />` strictly to `/showcase`, and moved "UI System Showcase" to the Admin navigation section in `Sidebar.tsx`.
+    - Replaced the primary link in `Sidebar.tsx` Core Foundation with "Platform Overview" pointing to `/`.
+- **Verification:**
+  - Monorepo lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo build: Clean production compilation for `@corpverse/server` and `@corpverse/client` (`npm run build`).
+  - Verified compiled production CSS bundles contain matched scoped keyframes (`@keyframes _cv-spin_...`, `@keyframes _cv-shimmer_...`, `@keyframes _cv-modal-enter_...`).
+  - Vitest Client Suite: 18 test files, 135/135 tests passing (`npm test` in client).
+
+---
+
+### ADR-085: Multi-Instance AI Provider Architecture, Key Pooling & Zero-Downtime Failover
+
+- **Status:** ACCEPTED
+- **Context:**
+  - When AI Managers configured API keys, the system previously enforced a compound unique index `{ code: 1, pool: 1 }` on `AIProviderModel`. As a result, only one single API key could ever exist per vendor platform (`gemini`, `openai`, `groq`) within a pool.
+  - When external providers hit vendor-side quota limits (e.g. OpenAI returning `RATE_LIMITED`, Google Gemini free-tier RPM/TPM thresholds being exceeded, or Groq model misconfigurations), the system had no secondary or fallback keys for that same platform.
+  - If a key failed repeatedly or hit rate limits, queued background jobs or synchronous generation requests could stall or fail ("process get off") instead of immediately rolling over to alternative API keys or alternative providers.
+- **Decision:**
+  - **Schema & Indexing Multi-Instance Support (`AIProviderModel`):**
+    - Removed the restrictive compound unique index `{ code: 1, pool: 1 }`.
+    - Added unique index `{ name: 1, pool: 1 }` and non-unique index `{ pool: 1, code: 1 }`.
+    - AI Managers can register multiple distinct configurations/keys for the same provider platform (e.g. "Google Gemini Pro", "Google Gemini Pro (Key 2)", "Groq Fast LPU").
+  - **Provider Router Instance Tracking (`ProviderRouter`):**
+    - Extended `ProviderEntry` with optional `id?: string` holding the MongoDB document ID.
+    - Updated `registerAdapter`, `setPriority`, `removeAdapter`, `getAdapter`, `setHealthState`, and `getHealthState` to match by instance `id` first, falling back to provider `code` for backward compatibility.
+    - Multiple adapters with the same `provider: 'gemini'` now coexist simultaneously in the pool with independent priorities and independent health states.
+  - **Granular Health Tracking (`HealthTracker`):**
+    - Updated `recordSuccess`, `recordFailure`, and `probeAndRecover` to accept an optional `providerId?: string`.
+    - Telemetry (consecutive failures, total requests, total failures, average latency) and circuit-breaker state transitions are persisted to the specific database document for that key instance.
+  - **Robust Failover Execution (`AIGateway` & `AIWorker`):**
+    - Updated `AIGateway.execute()` and `AIWorker.processClaimedJob()` to track attempts per instance (`providerInstanceKey = selectedEntry.id || selectedEntry.provider`).
+    - When an instance throws a retryable error (rate limit, timeout, 5xx), the error is logged with structured metadata, its health state is demoted in isolation, and the gateway immediately falls over to the next highest-priority instance in the pool.
+    - Jobs do not crash or stall unless every active provider instance in the pool has been exhausted.
+  - **AI Manager Service & API (`aiManager.service.ts`, `aiManager.controller.ts`, `aiManager.routes.ts`):**
+    - Added `loadAllProvidersFromDb()` to load and instantiate adapters for all enabled database records on server boot.
+    - Updated endpoints `/api/ai-manager/providers/:idOrCode` to accept MongoDB `_id` or provider code.
+    - Key masking (last 4 characters) and AES-256-GCM encryption continue to safeguard all keys.
+  - **Frontend Console UI (`AiManagerPage.tsx` & `aiOps.ts`):**
+    - Updated provider action calls (Edit, Enable, Disable, Remove, Ping Test) to pass `provider.id || provider.code`.
+    - Auto-suggests distinct instance display names (e.g. `Google Gemini Pro (Key 2)`) when selecting a platform with existing entries.
+    - Displays instance-specific health badges, latency metrics, and error telemetry.
+---
+
+### ADR-086: Active-Active Load Balancing, Model Compatibility & Automated Self-Healing (TASK AI-OPS.2)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - After multi-instance registration was enabled, multiple keys were registered for Gemini, OpenAI, and Groq in the `PIPELINE` pool.
+  - However, several systemic failures occurred:
+    1. Google Gemini keys experienced `NOT_FOUND` / `INVALID_REQUEST` because `gemini-1.5-flash` and `gemini-2.5-flash` were deprecated/restricted by Google API (`"This model is no longer available to new users. Please update your code to use models/gemini-3.8-flash"`).
+    2. Groq keys experienced `404` errors with `llama-3.3-70b-versatile` because Llama 3 models were decommissioned on free-tier Groq accounts.
+    3. The Groq health-check diagnostic probe encoded slashes (`%2F`) for namespaced models like `openai/gpt-oss-120b`, triggering 404s from Groq's model inspection endpoint.
+    4. With static priority 1..10 assignments, all traffic was funneled to the single highest-priority key until exhaustion, rather than distributing evenly across all healthy API keys to prevent single-key quota overload (RPM/TPM limits).
+- **Decision:**
+  - **Active-Active Round-Robin Load Distribution (`ProviderRouter`):**
+    - Implemented priority-tier round-robin counters (`roundRobinCounters`) inside `ProviderRouter.getAvailableProviders()`.
+    - Operational instances within the same priority tier rotate cyclically on every invocation (`offset = counter % tierEntries.length`). Incoming requests are evenly divided among all healthy keys, completely preventing single-key quota exhaustion.
+  - **Default Production Model Harmonization:**
+    - Upgraded Google Gemini default to `gemini-3.8-flash` (with alias support for `gemini-flash-latest`), which is Google's active, high-throughput Flash model for free-tier and pay-tier keys.
+    - Standardized Groq default to `openai/gpt-oss-120b`, the fully supported, active Groq model with verified 200 OK completions.
+    - Updated form defaults and helper descriptions in `AiManagerPage.tsx`.
+  - **Namespaced Model Path & Health Check Probing (`GroqAdapter`):**
+    - Fixed path encoding in `GroqAdapter.healthCheck()` to preserve path slashes in namespaced model IDs (`modelId.split('/').map(encodeURIComponent).join('/')`).
+    - Added fallback to `GET /models` to guarantee authentic credential verification.
+  - **Database Auto-Healing & Telemetry Synchronizer (`AIManagerService`):**
+    - Enhanced `seedDemoPoolFromEnv` and `loadAllProvidersFromDb` to automatically migrate legacy model strings (`gemini-1.5-flash`, `gemini-2.5-flash`, `llama-3.3-70b-versatile`) to verified current models (`gemini-3.8-flash`, `openai/gpt-oss-120b`).
+    - Automatically heals `TEMPORARILY_FAILED` records back to `HEALTHY` when upgraded models are loaded.
+    - Upgraded `testProvider` to execute a live `adapter.healthCheck()` and record authentic latency and health diagnostics in `aiHealthLogs`.
+- **Verification:**
+  - Live probe test across all 12 PIPELINE provider instances in MongoDB Atlas: 12/12 PASSING (all 4 Gemini, all 4 Groq, all 4 OpenAI instances active with measured latencies).
+  - Unit tests: 66/66 AI Gateway tests, 16/16 AI Manager integration tests passing.
+  - Client tests: 18/18 test suites, 135/135 tests passing.
+
+---
+
+### ADR-087: Removal of Platform Overview and Role-Based Post-Login Navigation (TASK UI-CLEANUP.1)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The navigation sidebar contained a "Platform Overview" link in the Core Foundation group pointing to `/` as well as a "UI System Showcase" link under the Admin group pointing to `/showcase`.
+  - When users logged in (or used the demo user button in `LoginPage.tsx`), the application hardcoded navigation to `/showcase`, bypassing the user's actual career dashboard or onboarding workflow.
+  - Return links on error/stub pages (`StubPages.tsx`) also redirected back to the component showcase (`/showcase`).
+- **Decision:**
+  - **Remove "Platform Overview" Link:** Completely removed the `Platform Overview` navigation link from `Sidebar.tsx`.
+  - **Remove "UI System Showcase" Navigation:** Removed the `/showcase` NavLink from the Admin navigation section in `Sidebar.tsx`.
+  - **Role-Based Post-Login Routing:**
+    - Exported `getPostLoginRedirect(user)` from `AuthContext.tsx` to deterministically calculate the appropriate landing route based on active roles:
+      - `platformRole === 'ADMIN'` $\rightarrow$ `/admin`
+      - `platformRole === 'AI_MANAGER'` $\rightarrow$ `/ai-ops`
+      - `careerRole === 'NONE'` $\rightarrow$ `/profile/setup`
+      - `careerRole === 'EMPLOYEE'` $\rightarrow$ `/workplace`
+      - `careerRole === 'FOUNDER'` $\rightarrow$ `/founder/dashboard`
+      - `careerRole === 'JOB_SEEKER'` $\rightarrow$ `/career`
+      - Unauthenticated / Fallback $\rightarrow$ `/jobs`
+    - Updated `LoginPage.tsx` `handleSubmit` to route dynamically using `getPostLoginRedirect(result.user)`.
+    - Updated Demo User login in `LoginPage.tsx` to navigate directly to `/career` (Alex Chen is a Job Seeker).
+  - **Stub & Error Pages Cleaned:** Replaced return buttons in `StubPages.tsx` pointing to `/showcase` with links to `/career` and `/jobs`.
+  - **AppShell Title Update:** Updated route title for `/` in `AppShell.tsx` from `'Showcase'` to `'Welcome'`.
+- **Verification:**
+  - Client Vitest Suite: 18 passed test files, 137 passed tests (`auth.test.tsx` verifying `getPostLoginRedirect` and absence of "Platform Overview" / "UI System Showcase" in Sidebar).
+  - Monorepo compilation: `npm run build` completed cleanly in 7.93s.
+  - Monorepo linting: `npm run lint` passed with 0 errors and 0 warnings.
+
+---
+
+### ADR-088: Automated Final Review Synthesis Lifecycle & AI Worker Multi-Instance Waiting Recovery (TASK FIX-FINAL-REVIEW-QUEUE)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Candidates passing the INTERVIEW chat stage were advanced to `currentStage = 'FINAL_REVIEW'` in `ApplicationStateMachine`, but were permanently stuck on the `/career` dashboard displaying "Executive Review in Progress..." with an endless spinner.
+  - While `POST /api/applications/:id/final-review` existed on the server, `client/src/api/career.ts` lacked an API method for `executeFinalReview`, and `ApplicationsTrackerPage.tsx` neither automatically dispatched the review nor provided a trigger button.
+  - In addition, in `AIWorker.checkAndResumeWaitingJobs`, attempt deletion previously executed `job.attemptsPerProvider.delete(entry.provider)`. In multi-instance mode (ADR-085/086), attempt keys use instance IDs (`entry.id || entry.provider`). As a consequence, `job.attemptsPerProvider.get(entry.id)` remained `>= maxAttempts` permanently, trapping jobs in `WAITING_FOR_PROVIDER` even when healthy providers were present.
+- **Decision:**
+  - **Expose Final Review API:** Added `careerApi.executeFinalReview(applicationId)` and the typed `FinalReviewResult` interface to `client/src/api/career.ts`.
+  - **Automated Frontend Synthesis & Manual Fallback Button:**
+    - In `ApplicationsTrackerPage.tsx`, added `triggeredFinalReviewRef` to auto-trigger `careerApi.executeFinalReview(appId)` immediately when active applications in `FINAL_REVIEW` are detected or polled.
+    - Added a manual fallback button (`data-testid="run-final-review-btn"`) labeled "Run Final Review" with disabled loading state while synthesis is in-flight.
+    - Upon synthesis resolution, re-fetched applications so the pipeline transitions immediately to `OFFER` (or `REJECTED`).
+  - **Server-Side Automated Pipeline Advance:** In `StageEngineService.submitMessage`, upon passing the final interview stage and transitioning to `FINAL_REVIEW`, asynchronously dispatched `finalReviewOfferService.executeFinalReview(...)` in the background so synthesis begins immediately.
+  - **Multi-Instance Attempt Map Cleanup in AIWorker:** In `AIWorker.checkAndResumeWaitingJobs`, updated the healthy provider reset to delete both `entry.provider` and `entry.id`, allowing previously exhausted jobs to cleanly resume execution on healthy provider instances.
+- **Verification:**
+  - Server unit & integration tests: 15/15 passing in `ai-reliability.test.ts`, 14/14 passing in `final-review-offer.test.ts`, 18/18 passing in `stage-engine.test.ts`.
+  - Client Vitest suite: 18 test files passing, 138/138 tests passing (including new `ApplicationsTrackerPage` final review auto-dispatch test in `hiringJourney.test.tsx`).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo Build: Clean TypeScript and Vite builds for server and client (`npm run build`).
+
+---
+
+### ADR-089: Task Evaluation Strict JSON Schema Compliance & Submission Retry Pathway (TASK FIX-TASK-EVALUATION-EXP)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - When an employee submitted their technical task work, the task was saved with status `SUBMITTED`, but no EXP was awarded and no evaluation was displayed on the UI.
+  - Root cause investigation identified:
+    1. In `server/src/schemas/taskEvaluation.schema.ts`, `taskEvaluationJsonSchema` lacked `additionalProperties: false` on the nested `criteriaScores.items` array definition. Groq (which enforces OpenAI-compatible strict structured outputs) rejected evaluation requests with a 400 `INVALID_REQUEST: additionalProperties:false must be set on every object`.
+    2. With OpenAI accounts having 0 credits and Gemini experiencing temporary 503 load spikes, all providers in the `PIPELINE` pool failed.
+    3. `dailyTask.controller.ts` caught the AI evaluation failure, returned `performanceRecord: null`, leaving the task in `SUBMITTED` state without any retry endpoint or background retry.
+    4. On `client/src/pages/employee/TaskWorkPage.tsx`, when `submission` existed but `performanceRecord` was null, the page simply locked the editor with a disabled "Already Submitted" button, giving the employee no visibility into the pending/failed state and no way to trigger evaluation.
+- **Decision:**
+  - **Strict JSON Schema Compliance:** Added `additionalProperties: false` to `criteriaScores.items` in `server/src/schemas/taskEvaluation.schema.ts` (and options items in `simulation.schema.ts`), enabling Groq and OpenAI to successfully execute structured schema validations.
+  - **Evaluation Retry Endpoint:** Implemented `evaluateTaskById` in `TaskEvaluationService`, `evaluateTask` in `DailyTaskController`, and registered `POST /api/employee/tasks/:id/evaluate` in `employee.routes.ts`.
+  - **Frontend Pending Banner & Run Evaluation Action:**
+    - Exported `evaluateSubmittedTask` in `client/src/api/employee.ts`.
+    - In `TaskWorkPage.tsx`, detected when `isAlreadySubmitted && !isEvaluated`, displaying an informative "Evaluation Pending" warning banner and replacing the disabled submit button with an active "Run AI Evaluation" button.
+  - **Idempotent Resolution:** Evaluated existing submitted task for user `trusharpatel800@gmail.com`, authoritatively awarding 20 EXP, writing to the immutable `expTransactions` ledger, and updating task status to `EVALUATED`.
+- **Verification:**
+  - Server unit & integration tests: 48 test files passing (855 tests passing).
+  - Client Vitest suite: 18 test files passing (138 tests passing).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+---
+
+### ADR-090: Founder Company Creation Schema Normalization & Dashboard Null-Safe Data Extraction (TASK FIX-FOUNDER-COMPANY-CREATION)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - After unlocking Founder Mode at 12,000+ EXP, users encountered two critical UX issues:
+    1. On `CreateCompanyPage` (`/founder/company/new`), creating a company with empty mission/description resulted in a toast error `Validation failed`. The frontend form marked description as `(Optional)`, while `createFounderCompanySchema` required a minimum 5-character string. Additionally, the client sent `domain` as a single string whereas the backend expected `domainsHired` array.
+    2. Navigating to Command Overview (`/founder`) before creating a company crashed React with an uncaught runtime error in the ErrorBoundary: `Cannot read properties of undefined (reading 'replace')`. The backend endpoint `GET /api/founder/company` returned `{ company: null, bots: [], isOpenForHiring: false }`. `FounderDashboardPage` stored the entire wrapper object into `company`, bypassing the `if (!company)` empty-state check, and then called `company.domain.replace('_', ' ')` on an undefined property.
+- **Decision:**
+  - **Company Creation Schema Flexibility (`server/src/schemas/founder.schema.ts`):**
+    - Updated `createFounderCompanySchema` to allow optional/empty `description`, defaulting to `'Corporate engineering enterprise delivering innovative technical solutions.'` when omitted or whitespace-only.
+    - Added support for both `domain` (single string fallback) and `domainsHired` (array), normalizing into `domainsHired: CareerDomain[]`.
+  - **Client-Side Form Polishing (`CreateCompanyPage.tsx`):**
+    - Added a validation guard warning if an entered description is between 1 and 4 characters (`warning('Corporate mission must be at least 5 characters')`).
+  - **Founder Dashboard Safe Unwrapping (`FounderDashboardPage.tsx` & `JobOpeningsPage.tsx`):**
+    - Safely unwrapped `res.company` from the response wrapper: `const companyData = res && 'company' in res ? res.company : res; setCompany(companyData);`.
+    - If `companyData` is null, rendered the "Establish Your Corporation" empty state with a direct call-to-action button to `/founder/company/new`.
+    - Added fallback domain resolution: `(company.domain || company.domainsHired?.[0] || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')`.
+  - **Workplace Dashboard Quick Action (`WorkplaceDashboardPage.tsx`):**
+    - Added an interactive **"Enter Founder HQ 🚀"** button on the Founder Mode Status banner when `isFounderUnlocked` is true, linking directly to `/founder/unlock`.
+- **Verification:**
+  - Server Founder test suite: 31 tests passing across `founder-company-bots.test.ts` and `founder-unlock.test.ts`.
+  - Client Vitest suite: 18 test files passing (138 tests passing).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo Build: Clean TypeScript and Vite builds for server and client (`npm run build`).
+
+---
+
+### ADR-091: Real-Time Client Top Bar & Leaderboards EXP Synchronization (TASK FIX-EXP-SYNC-TOPBAR-LEADERBOARD)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - When a user submitted their daily technical task and earned career EXP (e.g., +20 EXP), the Top Bar economic indicators (`L1 • 0 EXP`) and the Global Leaderboards (`/leaderboards`) did not reflect the new balance.
+  - Root cause investigation identified:
+    1. **Client AuthContext Desynchronization**: `Topbar.tsx` displays `user.totalExpCached` and `user.level` from `useAuth()`. `AuthContext` only bootstraps the user on initial load; when tasks were evaluated in `TaskWorkPage` or navigated via `WorkplaceDashboardPage`, `fetchCurrentUser()` was never invoked to refresh in-memory state.
+    2. **Leaderboards Stale Snapshot**: `RankingService.getLeaderboard` looked up precalculated snapshots in `LeaderboardModel.findOne({ category, period })`. Because `forceRefresh` defaulted to false, any existing snapshot was served permanently without expiration or automatic recomputation upon user awards.
+    3. **Pre-Seeded 0-Length Snapshots**: If a snapshot was created when 0 users or 0 companies existed, `findOne` found `rankings: []` and returned an empty table permanently.
+    4. **Company Growth NaN**: `computeCompanyGrowthLeaderboard` divided `cumulativeRevenue` (undefined for platform seed companies without financials) by operating days, resulting in `NaN` and failing MongoDB casting on snapshot writes.
+- **Decision:**
+  - **Proactive EXP Award Trigger (`server/src/services/economy/exp.service.ts`):**
+    - Both `awardExp` and `adjustExp` now proactively and asynchronously trigger `rankingService.refreshLeaderboard('USER_EXP')` and `rankingService.refreshLeaderboard('USER_LEVEL')` immediately upon transaction save.
+  - **Dynamic Leaderboard Recomputation & Force-Refresh Query (`server/src/services/ranking/ranking.service.ts` & `ranking.schema.ts`):**
+    - Added `forceRefresh` boolean transform to `getLeaderboardQuerySchema` and controller.
+    - If `snapshot` is missing, `forceRefresh` is requested, OR `snapshot.rankings.length === 0`, `RankingService.getLeaderboard` automatically recalculates and stores fresh rankings.
+    - Updated `computeUserExpLeaderboard` and `computeUserLevelLeaderboard` to resolve `effectiveExp = user.totalExp ?? user.totalExpCached ?? 0`.
+    - Protected `computeCompanyGrowthLeaderboard` with nullish coalescing `cumulativeRevenue ?? 0` and finite validation, preventing `NaN` cast errors.
+  - **Client Real-Time Balance Synchronization (`AuthContext.tsx`, `TaskWorkPage.tsx`, `WorkplaceDashboardPage.tsx`, `LeaderboardsPage.tsx`, `Topbar.tsx`):**
+    - `TaskWorkPage`: Invokes `fetchCurrentUser()` on evaluated task mount and immediately after submitting or running an evaluation.
+    - `WorkplaceDashboardPage`: Refreshes `fetchCurrentUser()` concurrently with workplace stats on dashboard load.
+    - `LeaderboardsPage`: Refreshes `fetchCurrentUser()` on load and during snapshot refreshes.
+    - `Topbar.tsx`: Null-safe rendering for `(user.totalExpCached ?? 0).toLocaleString()` and `L{user.level ?? 1}`.
+    - `AuthContext.tsx`: `fetchCurrentUser` gracefully preserves session on non-401 transient failures.
+- **Verification:**
+  - Database verification: All 12 leaderboard snapshots regenerated with 0 errors. Top `USER_EXP` rank 2 actively reflects user `trusharpatel800` with 20 EXP (Level 1, EMPLOYEE).
+  - Server Ranking suite: 15/15 tests passing (`src/tests/ranking.test.ts`).
+  - Client Vitest suite: 18 test files passing (138/138 tests).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+---
+
+### ADR-092: Simulation Scenario Response Normalization & Array Mapping Protection (TASK FIX-DAILY-DILEMMA-MAPPING)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Navigating to `/founder/simulation` (Daily Dilemma) caused a React crash: `Cannot read properties of undefined (reading 'map')`.
+  - Root cause investigation identified:
+    1. `SimulationController.getDailyScenario` responded with `{ scenario }` rather than the standardized `{ success: true, data: { scenario } }` payload format.
+    2. In `DailyScenarioPage.tsx`, `loadScenario` called `apiClient.get<ScenarioData>('/founder/simulation/scenario')`. `apiClient` returns the unwrapped data or body directly, so `res` was `{ scenario: ScenarioData }`.
+    3. `DailyScenarioPage` assigned this outer wrapper directly to `scenario`, making `scenario.options` undefined. When line 224 evaluated `{scenario.options.map((opt) => ...)}`, an uncaught runtime TypeError occurred.
+    4. In `FounderDashboardPage.tsx`, `financials` from `GET /founder/simulation/financials` was assigned directly from `{ history: FinancialSnapshot[] }`, resulting in a similar non-array state for `financials.map`.
+- **Decision:**
+  - **Standardized API Responses (`server/src/controllers/simulation.controller.ts`):**
+    - Updated `SimulationController` endpoints (`getDailyScenario`, `getFinancialHistory`, `submitDecision`, `executeDailyTick`) to return standard `{ success: true, data: ... }` responses.
+  - **Safe Client Data Extraction & Array Guards (`client/src/pages/founder/DailyScenarioPage.tsx` & `FounderDashboardPage.tsx`):**
+    - In `DailyScenarioPage.tsx`, added robust scenario extraction: `const scenarioData = res && 'scenario' in res ? res.scenario : res; setScenario(scenarioData);`.
+    - Guarded scenario option mapping with `Array.isArray(scenario.options) && scenario.options.length > 0`.
+    - Added an empty state card with an "Establish Enterprise 🏢" button when the founder has no active scenario/enterprise yet.
+    - In `FounderDashboardPage.tsx`, safely unwrapped `financials` with `const finData = Array.isArray(finRes.value) ? finRes.value : finRes.value?.history || [];` and guarded table mapping with `Array.isArray(financials)`.
+    - In `JobOpeningsPage.tsx`, guarded `job.requiredSkills.map` with `Array.isArray(job.requiredSkills)`.
+- **Verification:**
+  - Server Simulation unit tests: 29 tests passing across `simulation-service.test.ts` and `founder-company-bots.test.ts`.
+  - Client Vitest suite: 18 test files passing (138/138 tests).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+---
+
+### ADR-093: Founder Job Requisition Schema Normalization & Optional Description Handling (TASK FIX-FOUNDER-JOB-REQUISITION)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - On `/founder/jobs` (Job Openings), founders publishing a job requisition encountered a toast error: `Validation failed`.
+  - Root cause investigation identified:
+    1. The frontend modal field was labeled `Position Description (Optional)` and sent `undefined` (or a short string like `"Testing"`, 7 chars).
+    2. However, `createFounderJobSchema` in `server/src/schemas/founder.schema.ts` strictly required `description` with `.min(10, 'Job description must be at least 10 characters')`.
+    3. Additionally, the client sent `seniorityLevel: Number(seniorityLevel)`, while `createFounderJobSchema` did not define `seniorityLevel` (defining `minLevel`, `maxLevel`, and `targetLevel` instead).
+- **Decision:**
+  - **Schema Normalization & Default Generation (`server/src/schemas/founder.schema.ts`):**
+    - Updated `createFounderJobSchema` to make `description` optional with a default value: `'Join our autonomous engineering team to solve challenging domain problems and drive platform innovation.'`. If empty, whitespace, or shorter than 5 chars, the fallback mission is used.
+    - Added `seniorityLevel: z.number().int().min(1).max(10).optional()` and mapped `level = data.seniorityLevel ?? data.targetLevel ?? data.minLevel ?? 1` to `minLevel: minLvl`, `maxLevel: maxLvl`, and `targetLevel: level`.
+- **Verification:**
+  - Server Founder Engine suite: 27/27 tests passing (`src/tests/founder-engines-integration.test.ts` and `src/tests/founder-company-bots.test.ts`).
+  - Client Vitest suite: 18 test files passing (138/138 tests).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo Build: Clean TypeScript and Vite builds for server and client (`npm run build`).
+
+---
+
+### ADR-094: Leaderboards Client Response Unwrapping & Live Rendering Fix (TASK FIX-LEADERBOARD-UNWRAPPING)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Visiting `/leaderboards` in the browser displayed "No Rankings Found" ("Showing 0 of 0 entries") despite backend MongoDB snapshots containing active candidate rankings.
+  - Root cause investigation identified:
+    - In `client/src/pages/leaderboards/LeaderboardsPage.tsx`, `fetchLeaderboard` invoked `apiClient.get<{ success: boolean; data: LeaderboardResponse }>('/leaderboards')`.
+    - `apiClient.request()` automatically unwraps `successPayload.data` when present in server JSON responses.
+    - As a result, `res` returned from `apiClient.get` was already the unwrapped `LeaderboardResponse` object (`{ category, period, rankings, totalEntries, ... }`).
+    - `LeaderboardsPage.tsx` executed `if (res && res.data) { setData(res.data); }`. Because `res.data` was `undefined`, `setData` was never called, `data` remained `null`, and `rankings` defaulted to `[]`, causing the empty state.
+- **Decision:**
+  - **Polymorphic Safe Unwrapping (`client/src/pages/leaderboards/LeaderboardsPage.tsx`):**
+    - Updated `fetchLeaderboard` to handle both direct unwrapped payloads and wrapped responses:
+      ```typescript
+      const leaderboardData =
+        res && 'rankings' in res
+          ? (res as LeaderboardResponse)
+          : (res as { data?: LeaderboardResponse })?.data;
+
+      if (leaderboardData) {
+        setData(leaderboardData);
+      }
+      ```
+    - Guaranteed seamless interoperability with production API requests (which unwrap `data`) and isolated Vitest mocks (which simulate `{ data: ... }`).
+- **Verification:**
+  - Client Vitest suite: 18 test files passing (138/138 tests) including `leaderboards.test.tsx`.
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo Build: Clean TypeScript and Vite production builds (`npm run build`).
+
+---
+
+### ADR-095: Founder Portal Defensive Parsing & Safe String Formatting (TASK FIX-FOUNDER-PORTAL-DEFENSIVE-PARSING)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - On the Founder portal pages (`/founder/jobs`, `/founder/applicants`, `/founder/ledger`), user interactions triggered potential edge-case validation issues or crashes due to rigid assumptions regarding optional backend fields or API response envelopes:
+    1. In `JobOpeningsPage.tsx`, rendering `job.domain.replace('_', ' ')` threw a runtime TypeError when `job.domain` was nullish or uninitialized.
+    2. In `ApplicantPipelinePage.tsx`, candidates' `app.currentStage.replace('_', ' ')` threw a TypeError if `currentStage` was missing, and `apiClient.get` responses assumed a `{ applications: [] }` envelope rather than polyfilled arrays.
+    3. In `FounderLedgerPage.tsx`, transaction records expected strict envelope unwrapping.
+- **Decision:**
+  - **Safe String Fallbacks:**
+    - In `JobOpeningsPage.tsx`, updated domain rendering to `(job.domain || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')`.
+    - In `ApplicantPipelinePage.tsx`, updated stage rendering to `(app.currentStage || 'ATS_SCREENING').replace(/_/g, ' ')`.
+  - **Defensive Array Unwrapping:**
+    - In `ApplicantPipelinePage.tsx`, handled both raw array and envelope responses with `Array.isArray(res) ? res : res?.applications || []`.
+    - In `FounderLedgerPage.tsx`, handled transactions with `Array.isArray(res) ? res : res?.transactions || []`.
+- **Verification:**
+  - Server Founder Engine suite: 41/41 tests passing (`src/tests/founder-company-bots.test.ts`, `src/tests/founder-engines-integration.test.ts`, `src/tests/founder-unlock.test.ts`).
+  - Client Vitest suite: 18 test files passing (138/138 tests).
+  - Monorepo Lint: 0 errors, 0 warnings across server and client (`npm run lint`).
+  - Monorepo Build: Clean production builds for server and client (`npm run build`).
+
+
+
+
+
+
+
+
+
+
+
 
 
 

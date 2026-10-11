@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../store/AuthContext';
+import { AuthProvider, getPostLoginRedirect, DEFAULT_MOCK_USER } from '../store/AuthContext';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
+import { Sidebar } from '../components/layout/Sidebar';
 import apiClient from '../api/client';
 
 describe('Client Authentication Suite', () => {
@@ -206,6 +207,33 @@ describe('Client Authentication Suite', () => {
         expect(screen.getByText('Verification Successful!')).toBeDefined();
         expect(screen.getByRole('button', { name: /sign in to your workspace/i })).toBeDefined();
       });
+    });
+  });
+
+  describe('Post-Login Redirection & Navigation Consistency', () => {
+    it('redirects users to role-appropriate destinations via getPostLoginRedirect', () => {
+      expect(getPostLoginRedirect(null)).toBe('/jobs');
+      expect(getPostLoginRedirect({ careerRole: 'EMPLOYEE', platformRole: 'NONE' })).toBe('/workplace');
+      expect(getPostLoginRedirect({ careerRole: 'FOUNDER', platformRole: 'NONE' })).toBe('/founder/dashboard');
+      expect(getPostLoginRedirect({ careerRole: 'JOB_SEEKER', platformRole: 'NONE' })).toBe('/career');
+      expect(getPostLoginRedirect({ careerRole: 'NONE', platformRole: 'NONE' })).toBe('/profile/setup');
+      expect(getPostLoginRedirect({ careerRole: 'NONE', platformRole: 'ADMIN' })).toBe('/admin');
+      expect(getPostLoginRedirect({ careerRole: 'NONE', platformRole: 'AI_MANAGER' })).toBe('/ai-ops');
+    });
+
+    it('verifies Sidebar does not render Platform Overview or UI System Showcase links', () => {
+      render(
+        <MemoryRouter>
+          <AuthProvider initialUser={DEFAULT_MOCK_USER}>
+            <Sidebar mobileOpen={false} onCloseMobile={() => {}} />
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText('Platform Overview')).toBeNull();
+      expect(screen.queryByText('UI System Showcase')).toBeNull();
+      expect(screen.getByText('Global Leaderboards')).toBeDefined();
+      expect(screen.getByText('Explore Jobs')).toBeDefined();
     });
   });
 });

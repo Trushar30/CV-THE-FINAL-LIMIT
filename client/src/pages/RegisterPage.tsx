@@ -76,6 +76,8 @@ export function RegisterPage(): ReactElement {
 
         {errorMessage && (
           <div
+            role="alert"
+            aria-live="assertive"
             className={`${styles.alertBox} ${styles.alertError}`}
             style={{ marginBottom: '1.25rem' }}
           >
@@ -87,6 +89,8 @@ export function RegisterPage(): ReactElement {
         {successInfo ? (
           <div>
             <div
+              role="status"
+              aria-live="polite"
               className={`${styles.alertBox} ${styles.alertSuccess}`}
               style={{ marginBottom: '1.25rem' }}
             >

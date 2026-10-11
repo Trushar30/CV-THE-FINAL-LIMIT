@@ -25,7 +25,6 @@ export const corpCoinTransactionSchema = new Schema<ICorpCoinTransactionDocument
       type: Schema.Types.ObjectId,
       ref: 'Company',
       default: null,
-      index: true,
     },
     amount: {
       type: Number,
@@ -65,7 +64,7 @@ export const corpCoinTransactionSchema = new Schema<ICorpCoinTransactionDocument
 
 // Indexes per Spec Section 26 Collection 28
 corpCoinTransactionSchema.index({ userId: 1, createdAt: -1 });
-corpCoinTransactionSchema.index({ companyId: 1 });
+corpCoinTransactionSchema.index({ companyId: 1, createdAt: -1 });
 
 // Strict Append-Only Protection Hooks: Ledger entries cannot be modified or deleted
 corpCoinTransactionSchema.pre(

@@ -35,7 +35,6 @@ const CompanyBotSchema = new Schema<ICompanyBotDocument>(
       type: Schema.Types.ObjectId,
       ref: 'Company',
       required: true,
-      index: true,
     },
     botType: {
       type: String,

@@ -256,14 +256,26 @@ export class GroqAdapter implements ProviderAdapter {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const endpoint = `${this.baseUrl}/models/${encodeURIComponent(modelId)}`;
-      const response = await fetch(endpoint, {
+      const sanitizedModelPath = modelId.split('/').map(encodeURIComponent).join('/');
+      const endpoint = `${this.baseUrl}/models/${sanitizedModelPath}`;
+      let response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
         signal: controller.signal,
       });
+
+      // Fallback to checking models list endpoint if model-specific path returns 404
+      if (!response.ok && response.status === 404) {
+        response = await fetch(`${this.baseUrl}/models`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          signal: controller.signal,
+        });
+      }
 
       return response.ok;
     } catch {

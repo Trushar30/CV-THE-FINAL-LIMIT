@@ -95,7 +95,7 @@ export function StageChatPage(): ReactElement {
             initialMessages.push({
               id: `q-prev-${index}`,
               sender: 'AI',
-              text: `Question ${index + 1}: Contextual Interview Prompt`,
+              text: ans.question || ans.content || `Question ${index + 1}: Contextual Interview Prompt`,
               timestamp: ans.evaluatedAt || new Date().toISOString(),
             });
             initialMessages.push({
@@ -117,10 +117,14 @@ export function StageChatPage(): ReactElement {
 
         // Active current question if present
         if (stageRes.currentQuestion) {
+          const qText =
+            stageRes.currentQuestion.question ||
+            stageRes.currentQuestion.content ||
+            '';
           initialMessages.push({
             id: `q-active-${stageRes.interview.currentQuestionIndex}`,
             sender: 'AI',
-            text: stageRes.currentQuestion.question,
+            text: qText,
             questionType: stageRes.currentQuestion.type,
             difficulty: stageRes.currentQuestion.difficulty,
             timestamp: new Date().toISOString(),
@@ -144,7 +148,10 @@ export function StageChatPage(): ReactElement {
       return;
     }
 
-    const currentSequence = sessionData?.interview.currentQuestionIndex ?? 1;
+    const currentSequence =
+      currentQuestion?.sequenceNumber ??
+      sessionData?.interview.currentQuestionIndex ??
+      1;
 
     // Optimistically append candidate answer
     const candidateMsg: MessageItem = {
@@ -199,13 +206,17 @@ export function StageChatPage(): ReactElement {
               }
             : null
         );
+        const nextQText =
+          response.nextQuestion.question ||
+          response.nextQuestion.content ||
+          '';
         // Append new AI question
         setMessages((prev) => [
           ...prev,
           {
             id: `q-${Date.now()}`,
             sender: 'AI',
-            text: response.nextQuestion!.question,
+            text: nextQText,
             questionType: response.nextQuestion!.type,
             difficulty: response.nextQuestion!.difficulty,
             timestamp: new Date().toISOString(),
@@ -247,8 +258,8 @@ export function StageChatPage(): ReactElement {
   }
 
   const stageName = sessionData?.interview.stage.replace(/_/g, ' ') || 'Interview Stage';
-  const totalQuestions = sessionData?.interview.questionsCount || 3;
-  const currentQIndex = sessionData?.interview.currentQuestionIndex || 1;
+  const totalQuestions = sessionData?.interview.totalQuestions || sessionData?.interview.questionsCount || 3;
+  const currentQIndex = (sessionData?.interview.currentQuestionIndex ?? 0) + 1;
   const progressPercent = Math.min(100, (currentQIndex / totalQuestions) * 100);
 
   return (

@@ -13,13 +13,14 @@
 | **Phase 6** | **Interview Simulation Engine: Multi-Turn Stage Chat, Dynamic Evaluation, Offer Workflows & Admin Demo Console** | **COMPLETED**   |
 | **Phase 7** | **Employee System: On-Demand Daily Tasks, AI Evaluation, EXP Progression & Warning Workflows**                     | **COMPLETED**   |
 | **Phase 8** | **Founder Mode: Company Creation, AI Bot Marketplace & Deterministic Simulation Engine**                           | **COMPLETED**   |
-| **Phase 9** | **Consoles, Telemetry, Leaderboards & Platform Hardening**                                                         | **IN PROGRESS** |
+| **Phase 9** | **Consoles, Telemetry, Leaderboards & Platform Hardening**                                                         | **COMPLETED**   |
+| **Phase 10** | **Security Hardening, Acceptance Verification & Production Readiness**                                             | **COMPLETED**   |
 
 ---
 
 ## 2. Current Status
 
-- **Current Phase:** Phase 9 — Consoles, Telemetry, Leaderboards & Platform Hardening (Status: **IN PROGRESS**)
+- **Current Phase:** Phase 10 — Security Hardening, Acceptance Verification & Production Readiness (Status: **COMPLETED**)
 - **Completed Tasks:**
   - `TASK P0.1`: Memory system and master rules (`GEMINI.md`, `.agent/rules/corpverse.md`, `PROJECT_BRIEF.md`, `ARCHITECTURE.md`, `PROGRESS.md`, `DECISIONS.md`, `OPEN_QUESTIONS.md`, `HANDOFF.md`).
   - `TASK P0.2`: 35-section `CORPVERSE_SPECIFICATION.md` initial draft.
@@ -53,7 +54,7 @@
   - `TASK P6.1`: Application Model & State Machine (Spec Sections 7, 26, 27.4, ADR-045: `applications` model, `ApplicationStateMachine` 8-stage linear progression and terminal status enforcement, active application quota of 5, duplicate application prevention, withdrawal, expiry job; 94 unit/integration tests).
   - `TASK P6.2`: ATS Screening Evaluation Engine & AI Integration (Spec Sections 7, 8, 26, 27.4, ADR-046: `ATS_SCREEN` AI task type, strict schema validation, `evaluations` & `feedbacks` persistence, authoritative backend pass threshold scoring, queue resilience; 18 new integration tests).
   - `TASK P6.3`: Chat-Based Stages: SCREENING, ASSESSMENT, INTERVIEW (Spec Section 8, 26 Collections 12-14, 27.5, Decision D12, ADR-048: Unified reusable `StageEngineService` configured per stage and mode via `PlatformConfig.stages`, dynamic question generation grounded in candidate profile/resume/job context, trimmed conversation history budget, turn-by-turn evaluation, backend authoritative average score calculation, progression/rejection with diagnostic feedback, chat-shaped REST API, sequence/concurrency guards; 18 new integration tests, 130 tests across career suite, 490 passing server tests).
-  - `TASK P6.4`: Final Review, Offer Negotiation, and Atomic Acceptance Lifecycle (Spec Section 7, 26, 27.4, ADR-049: `finalReview` score aggregation with PlatformConfig weights, advisory AI executive summary, `offer` generation with level salary bands, conversational AI negotiation chat with authoritative backend salary clamping and round limits, atomic acceptance transaction creating `CompanyEmployee`, updating user `careerRole = 'EMPLOYEE'`, incrementing company count, full-company rejection, double-acceptance guard, and auto-withdrawal of competing active applications; 14 new integration tests, 504 passing server tests).
+  - `TASK P6.4`: Final Review, Offer Negotiation, and Atomic Acceptance Lifecycle (Spec Sections 7, 26, 27.4, ADR-049: `finalReview` score aggregation with PlatformConfig weights, advisory AI executive summary, `offer` generation with level salary bands, conversational AI negotiation chat with authoritative backend salary clamping and round limits, atomic acceptance transaction creating `CompanyEmployee`, updating user `careerRole = 'EMPLOYEE'`, incrementing company count, full-company rejection, double-acceptance guard, and auto-withdrawal of competing active applications; 14 new integration tests, 504 passing server tests).
   - `TASK P5.3`: Design Token Normalization & Layout Hardening for Career Explorer (ADR-050: Resolved filter bar collapse and chip overlap in `/jobs` and `/companies` caused by undefined `var(--cv-spacing-*)` references by converting to canonical `var(--cv-space-*)` tokens, adding backward-compatibility aliases to `tokens.css`, and enforcing 40px min-height form controls; 73 passing client tests).
   - `TASK P6.5`: In-App Notification Foundation & Hiring Events Integration (Spec Section 24, 26.36, 27.4, 27.8, ADR-051: `notifications` Mongoose model and indexes, `NotificationService` for create/list/markRead/markAllRead, hiring lifecycle event hooks for `STAGE_ADVANCED`, `APPLICATION_REJECTED` with direct feedback links, `OFFER_RECEIVED`, `HIRED`, and `APPLICATION_EXPIRED`, REST endpoints `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/read-all`, and owner-only `GET /api/applications/:id/feedback`; 18 new integration tests, 522 passing server tests).
   - `TASK P6.6`: Admin Demo Hiring Simulator & Production State Isolation (Spec Sections 23, 27.10, 42, ADR-052: Unified hiring engine reuse with `mode: 'DEMO'`, dedicated demo company with `aiProviderPool: 'DEMO'`, `DemoSessionModel` tracking parameters [domain, difficulty, questionCount, interviewType], step-by-step and automated simulation endpoints, full stage evaluation and AI request telemetry inspection, hard isolation invariants [zero `CompanyEmployee` creation, zero `careerRole` alteration, zero EXP/CorpCoin ledger transactions, excluded from rankings], and audited cleanup actions `DELETE /api/admin/demo/hiring/:sessionId` and `DELETE /api/admin/demo/hiring`; 13 new integration tests, 535 passing server tests).
@@ -67,7 +68,25 @@
   - `TASK P7.6`: Employee Workplace Frontend UI, Task Workspace, Evaluation Rubric & History (Spec Sections 9, 10, 14, 16, 26, 28, ADR-061: `WorkplaceDashboardPage` with company context, Level/EXP meter, Founder mode banner, active warnings countdown, promotion readiness panel, daily tasks grid; `TaskWorkPage` with rubric brief, solution editor, AI score hero, rubric criteria breakdown; `TaskHistoryPage` with evaluated tasks and double-entry EXP ledger; 8 client integration tests, 96 client tests, 737 monorepo tests passing).
   - `TASK P8.1`: Founder Mode Unlock, Atomic Transaction Lifecycle, One-Time Starter Capital Grant, and Prior Employment Termination (Spec Sections 3.1, 5, 12, 13, 26 Collection 23, ADR-062: `FounderModel`, Zod confirmation schema, `FounderService` with `getEligibility` and `unlockFounderMode` with atomic concurrency protection, prior employment termination, decrementing employee headcount, resolving warnings, exactly-once 1,000 CorpCoin starter grant in `corpCoinTransactions`, re-unlock support after bankruptcy without duplicate coin grants, in-app notification, 14 new unit and integration tests, 671 passing server tests, 767 total passing monorepo tests).
   - `TASK P8.2`: Founder Company Creation & AI Bot Store (Spec Sections 7, 8, 12, 13, 26 Collections 7, 9, Decision D13, D15, ADR-063: `CompanyBotModel` referencing abstract bot types without provider coupling, `isOpenForHiring` state machine transition flag on `CompanyModel`, `createFounderCompanySchema`, `purchaseBotSchema`, `FounderService.createCompany` enforcing 100 CorpCoin fee and 1 active company limit per founder, `FounderService.buyBot` debiting 250 CorpCoin per basic bot with `'BOT_PURCHASE'` ledger entries, automatic transition to `isOpenForHiring = true` when all 3 basic bots are acquired, total 850 CorpCoin spend trajectory leaving 150 buffer, 17 new unit/integration tests, 688 passing server tests, 784 total passing monorepo tests).
-- **Next Task:** `TASK P8.3: Daily Business Scenarios & Mathematical Simulation Engine (Spec Sections 14, 26 Collections 24–26, Decision D12: daily strategic scenario generation, founder decision submission, deterministic financial formulas for Revenue, Expenses, Profit, and Bankruptcy threshold execution at <= -1000).`
+  - `TASK P8.3`: Daily Business Scenarios & Mathematical Simulation Engine (Spec Sections 14, 26 Collections 24–26, Decision D12, ADR-065: Daily strategic dilemma generation, founder decision submission, deterministic financial simulation engine for Revenue, Expenses, Profit, and Bankruptcy threshold execution at financial health <= -1000).
+  - `TASK P8.4`: Founder Mode Frontend Suite (ADR-068: 9 views across unlock, company wizard, bot store, dashboard, daily scenario runner, job manager, applicant pipeline, CorpCoin ledger, and bankruptcy screen; 108 client tests).
+  - `TASK P9.1`: Global Deterministic Leaderboards, Precomputed Snapshots & Multi-Role Visibility (Spec Sections 15, 22, 26 Collection 35, ADR-069: LeaderboardModel, RankingService with 12 canonical categories, invariant exclusions, on-demand refresh, LeaderboardsPage.tsx with podium cards and table, 15 server tests, 4 client tests).
+  - `TASK P9.2`: Complete Employee & Founder Notifications Lifecycle (Spec Sections 24, 26.36, 27.8, ADR-070: demotion, termination, advance warning expiry notice, daily scenario ready, low balance warning, ai result ready, unread count endpoint, 10 server tests).
+  - `TASK P9.3`: Admin Management APIs, Confirmation Safety Mechanism & Permission Matrix Enforcement (Spec Sections 22, 25, 29, 30, 43, ADR-071: user search/pagination/edit/suspend/restore/delete, PlatformConfig section inspection/patching, dangerous confirmation tokens, 31 server tests).
+  - `TASK P9.4`: Admin Analytics, Bounded Date Aggregations, Telemetry Metrics & Paginated Viewers (Spec Sections 22, 28, 30, 43, ADR-072: 6 operational analytical dimensions, date window bounding <= 90 days, audit/AI log viewers, 20 server tests).
+  - `TASK P9.5`: Frontend: Ranking Page, Notifications Center, Admin Console & Typed Confirmation Safety (Spec Sections 22, 24, 43, ADR-073: Leaderboards standing highlight, dedicated Notifications Center, TypedConfirmationModal, 7-panel Admin Console, 16 client tests).
+  - `TASK P10.1`: Security Hardening, Vulnerability Remediation & Penetration Testing (Spec Section 32, ADR-074, `docs/SECURITY_REVIEW.md`: `sanitizeNoSql` middleware stripping query operators, `verifyEmailLimiter` and `publicQueryLimiter` rate limiters, `verifyCsrfOrigin` CSRF protection, 100% route parameter schema coverage with `objectIdParamSchema`, IDOR remediation on ATS screening, 19 security tests in `server/src/tests/security-review.test.ts`).
+  - `TASK P10.2`: End-to-End System Integration, State Machines & Economy Hardening (ADR-075: Playwright architectural selection; 16 state machine & economy invariant tests in `server/src/tests/state-machines-economy.test.ts`; 10-step full lifecycle integration test in `server/src/tests/full-lifecycle-e2e.test.ts`; 6 frontend lifecycle tests in `client/src/tests/e2eLifecycle.test.tsx`).
+  - `TASK BUGFIX-P6.1`: Job Detail Apply Integration & Dynamic Quota Telemetry (ADR-080: Connected `JobDetailPage.tsx` to `careerApi.applyJob()`, added `useOptionalAuth`, implemented reactive 0/5 quota meter, duplicate application detection, and role guards; resolved 429 dev rate limiting; 13 client career tests passing).
+  - `TASK BUGFIX-P6.3`: Chat Stage Interview Question Serialization & Sequence Invariant Hardening (ADR-082: Normalization of question text and sequence numbers in interview stages; 18 server tests, 132 client tests).
+  - `TASK BUGFIX-AI.1`: AI Gateway Multi-Provider Automatic Fallback & Operational Health Tiering (ADR-083: Sequential candidate iteration in `AIGateway.execute()`, operational state tiering in `ProviderRouter`, worker cascade on non-retryable single-provider errors in `AIWorker`, and healing of `gemini-1.5-flash` model identifier; 65 AI Gateway tests, 18 Stage Engine tests, 132 client tests).
+  - `TASK UI-ANIM.1`: Root Route Landing Navigation Overhaul & CSS Modules Animation Engine Hardening (ADR-084: Replaced root showcase with responsive `LandingPage.tsx`, added scoped keyframes in `Spinner`, `ProgressBar`, `Modal`, `Toast`, `Tabs`, `Sidebar`, created `Skeleton` loader, resolved 0-animation defect, and updated navigation; 135 client tests passing).
+  - `TASK AI-OPS.1`: Multi-Instance AI Provider Architecture & Key Pooling (ADR-085: Dropped single-provider unique index, enabled multi-key registration per platform, instance tracking in `ProviderRouter` and `HealthTracker`, granular failover in `AIGateway`, dynamic name auto-generation in UI; 66 AI Gateway tests, 16 AI Manager tests).
+  - `TASK AI-OPS.2`: Active-Active Round-Robin Load Distribution, Model Compatibility & Automated Healing (ADR-086: Priority-tier round-robin distribution prevents single-key quota overload; upgraded Google Gemini to `gemini-3.8-flash` and Groq to `openai/gpt-oss-120b`; namespaced model health checks; database auto-healing of legacy model IDs; 12/12 live pipeline keys passing with live latency measurement).
+  - `TASK UI-CLEANUP.1`: Removal of Platform Overview and Role-Based Post-Login Navigation (ADR-087: Removed Platform Overview from Sidebar, eliminated /showcase post-login redirection in favor of deterministic role routing, cleaned return buttons in StubPages, added comprehensive test assertions; 137 client tests passing).
+  - `TASK FIX-FINAL-REVIEW-QUEUE`: Automated Final Review Synthesis Lifecycle & AI Worker Multi-Instance Waiting Recovery (ADR-088: Added `careerApi.executeFinalReview` to client API, auto-synthesis and manual run button in `ApplicationsTrackerPage.tsx`, background trigger upon interview pass in `StageEngineService`, and fixed multi-instance attempt ID cleanup in `AIWorker.checkAndResumeWaitingJobs`; 138 client tests passing, 47 server suite tests passing).
+  - `TASK FIX-EXP-SYNC-TOPBAR-LEADERBOARD`: Real-Time Client Top Bar & Leaderboards EXP Synchronization (ADR-091: Background auto-refresh of `USER_EXP` and `USER_LEVEL` leaderboards in `ExpService.awardExp`, query `forceRefresh` support and auto-recomputation on empty snapshots in `RankingService`, fixed `growthScore` NaN, real-time `fetchCurrentUser()` triggers in `TaskWorkPage`, `WorkplaceDashboardPage`, and `LeaderboardsPage`, null-safe Top Bar balance pill rendering; verified with live MongoDB refresh showing user `trusharpatel800` at Rank 2 with 20 EXP; 138 client tests passing, 15 ranking server tests passing).
+- **Next Task:** `Browser Verification: Verify that the top bar displays L1 • 20 EXP on http://localhost:5173/workplace and that /leaderboards displays Rank 2 with 20 EXP.`
 
 ---
 
@@ -460,11 +479,266 @@ Built `AnalyticsController` and mounted 9 routes under `/api/admin/analytics/*` 
   5. Vitest Tests: Added `client/src/tests/adminConsole.test.tsx` (6 tests), `client/src/tests/notificationsCenter.test.tsx` (5 tests), and updated `client/src/tests/leaderboards.test.tsx` (5 tests). All 17 client test suites (124 tests total) pass with 100% build and lint clean.
 - **Application Code Written:** `client/src/api/admin.ts`, `client/src/components/admin/TypedConfirmationModal.tsx`, `client/src/components/admin/TypedConfirmationModal.module.css`, `client/src/pages/admin/AdminConsolePage.tsx`, `client/src/pages/admin/AdminConsole.module.css`, `client/src/pages/NotificationsPage.tsx`, `client/src/pages/NotificationsPage.module.css`, `client/src/pages/leaderboards/LeaderboardsPage.tsx`, `client/src/components/notifications/NotificationBell.tsx`, `client/src/components/notifications/NotificationBell.module.css`, `client/src/components/layout/Sidebar.tsx`, `client/src/App.tsx`, `client/src/tests/adminConsole.test.tsx`, `client/src/tests/notificationsCenter.test.tsx`, `client/src/tests/leaderboards.test.tsx`.
 
+### TASK P10.1: Security Hardening, Vulnerability Remediation & Penetration Testing (Spec Section 32, ADR-074, docs/SECURITY_REVIEW.md)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Performed comprehensive security audit and defense-in-depth hardening against Spec Section 32 across 10 security areas, accompanied by full penetration tests and audit documentation in `docs/SECURITY_REVIEW.md`:
+  1. Rate Limiting Coverage: Configured layered rate limiters: global rate limiting (300 req / 15 min), auth rate limiter (10 req / 15 min per IP), brute-force account lockout (423 Locked after 5 failed attempts within 15 min), resume upload limiter (5 uploads / 15 min), newly added `verifyEmailLimiter` (15 req / 15 min) on `POST /api/auth/verify-email`, and newly added `publicQueryLimiter` (120 req / 15 min) across public browsing routes (`/api/companies`, `/api/jobs`, `/api/domains`, `/api/skills`).
+  2. Input Validation Coverage: Enforced 100% Zod validation coverage across request bodies, query strings, and URL parameters. Created canonical `objectIdParamSchema` enforcing 24-character hexadecimal regex and `listSkillsQuerySchema`. Wired parameter validation into resume routes (`/:id/download`, `/:id/analysis`, `/:id`), company and job routes (`/:id`), employee task routes (`/:id`, `/:id/evaluation`, `/:id/submit`), founder routes (`POST /unlock`, `POST /company`, `POST /bots/purchase`, `POST /jobs`, `PATCH /jobs/:id/close`, `GET /applications/:id`), and skill search routes.
+  3. NoSQL Injection Defense: Implemented global `sanitizeNoSql` middleware (`server/src/middleware/sanitize.ts`) that recursively scans `req.body`, `req.query`, and `req.params`, strips any keys starting with `$` (MongoDB operators like `$ne`, `$gt`, `$where`) or containing dot notation `.`, logs warnings on attempted injections, and runs ahead of all route handlers.
+  4. XSS & AI Output Sanitization: Verified React's automatic JSX text escaping across all client views, confirmed zero usage of `dangerouslySetInnerHTML`, and ensured all AI output strings are strictly validated against Zod schemas and rendered safely as text nodes.
+  5. CSRF Strategy for Cookie Auth: Implemented `verifyCsrfOrigin` middleware (`server/src/middleware/csrf.middleware.ts`) enforcing `Origin` and `Referer` validation against allowed client origins (`CLIENT_ORIGIN`, localhost) on state-changing cookie routes (`POST /api/auth/refresh`, `POST /api/auth/logout`), supplementing the existing `SameSite: strict`, `httpOnly`, and `Secure` cookie attributes.
+  6. File Upload Hardening: Verified MongoDB GridFS engine enforces binary magic-byte detection (PDF `%PDF-`, DOCX `PK\x03\x04`), dynamic size limit checks (`PlatformConfig.security.resumeMaxSizeBytes`), corrupt archive detection, password-protected PDF/DOCX rejection, and filename sanitization stripping path traversal sequences (`..`, `/`, `\`).
+  7. Secrets in Logs & Storage: Audited structured logger redaction rules (`winston`), confirming automatic masking of sensitive keys (`password`, `passwordHash`, `token`, `secret`, `authorization`, `cookie`, `apiKey`, `gemini_api_key`, `openai_api_key`, `groq_api_key`). Confirmed zero storage or exposure of plaintext passwords (Argon2id hashing with unique salts) or AI provider API keys.
+  8. CORS & HTTP Security Headers: Audited Helmet security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security`, `X-XSS-Protection`, removal of `X-Powered-By`), and strict CORS origin whitelisting (`origin: CLIENT_ORIGIN`, `credentials: true`).
+  9. Dependency Vulnerability Audit: Conducted dependency audit across monorepo packages, verifying pinned trusted versions and zero critical vulnerabilities.
+  10. IDOR Access Controls: Patched authorization gap in `atsScreeningService.enqueueAtsScreening` to verify caller ownership of `application.userId` unless caller is `ADMIN`. Tested object-level permissions across resumes (owner or ADMIN), daily tasks (assigned employee only), notifications (recipient only), company management (founder only), and demo hiring sessions (ADMIN only).
+  Built automated Vitest security test suite `server/src/tests/security-review.test.ts` with 19 tests verifying all 10 areas with 100% pass rate.
+- **Application Code Written:** `server/src/middleware/sanitize.ts`, `server/src/middleware/rateLimiter.ts`, `server/src/middleware/csrf.middleware.ts`, `server/src/schemas/common.schema.ts`, `server/src/services/career/atsScreening.service.ts`, `server/src/controllers/application.controller.ts`, `server/src/routes/auth.routes.ts`, `server/src/routes/resume.routes.ts`, `server/src/routes/company.routes.ts`, `server/src/routes/domain.routes.ts`, `server/src/routes/skill.routes.ts`, `server/src/routes/employee.routes.ts`, `server/src/routes/founder.routes.ts`, `server/src/app.ts`, `server/src/tests/security-review.test.ts`, `docs/SECURITY_REVIEW.md`, `docs/DECISIONS.md`.
+
+
+### TASK P10.2: End-to-End System Integration, State Machines & Economy Hardening (ADR-075)
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-10
+- **Description:** Successfully raised system test confidence and implemented comprehensive end-to-end integration and invariant testing across backend, frontend, state machines, and economic systems:
+  1. Framework Decision (ADR-075): Evaluated Playwright vs Cypress; selected Playwright for native TypeScript support, ESM/Vite alignment, headless speed, network interception (`page.route`), and isolated multi-role browser contexts.
+  2. State Machine & Economy Invariants Suite (`server/src/tests/state-machines-economy.test.ts`): Built 16-test suite verifying:
+     - `ApplicationStateMachine`: full 8-stage linear forward progression (`APPLIED` $\rightarrow$ `ATS_SCREENING` $\rightarrow$ `SCREENING` $\rightarrow$ `ASSESSMENT` $\rightarrow$ `INTERVIEW` $\rightarrow$ `FINAL_REVIEW` $\rightarrow$ `OFFER` $\rightarrow$ `ACCEPTED`), rejection of skipping stages, rejection of backward transitions, valid terminal transitions (`REJECTED`, `WITHDRAWN`, `EXPIRED`), rejection of transitions from terminal states, and `ACCEPTED` terminal status exclusivity from `OFFER`.
+     - EXP Engine & Level Table: deterministic level mapping across all 10 tiers (L1 Intern $\rightarrow$ L10 Principal), score clamping $[0, 100]$, awarded EXP clamping $[0, \text{maxExp}]$, performance score band categorization (`POOR` through `EXCELLENT`), non-negative EXP invariant.
+     - Economy & CorpCoin Ledgers: starter grant invariant (1,000 CorpCoin), company founding fee (100 CorpCoin), 3 basic bots acquisition ($3 \times 250 = 750 \text{ CorpCoin}$) with exact 150 CorpCoin buffer preserved, debit validation rejecting negative balances.
+     - Simulation & Bankruptcy Invariants: deterministic profit math ($Revenue - Expenses = Profit$), bankruptcy liquidation strictly triggered when $\text{financialHealth} \le -1000$.
+     - Warnings & Discipline: natural 30-day expiration window, threshold of 4 active warnings triggering employment review.
+  3. Server Full-Lifecycle Integration Suite (`server/src/tests/full-lifecycle-e2e.test.ts`): Implemented deterministic end-to-end user lifecycle test using Mock AI adapter across all 10 milestones:
+     - Register (`careerRole: NONE`) $\rightarrow$ Onboard (`careerRole: JOB_SEEKER`) $\rightarrow$ Apply $\rightarrow$ Get Hired (`careerRole: EMPLOYEE`) $\rightarrow$ Complete Tasks $\rightarrow$ Promotion to Level 2 $\rightarrow$ Founder Unlock (12,000 EXP, prior employment termination, 1,000 CC grant, `careerRole: FOUNDER`) $\rightarrow$ Create Company (100 CC) $\rightarrow$ Buy 3 Basic Bots (750 CC, leaves 150 CC buffer, unlocks `isOpenForHiring`) & hire employee $\rightarrow$ Bankruptcy liquidation ($\text{financialHealth} \le -1000$, company `BANKRUPT`, founder resets to `JOB_SEEKER`, personal EXP strictly preserved, starter capital never re-granted).
+  4. Frontend Lifecycle Suite (`client/src/tests/e2eLifecycle.test.tsx`): Built 6 UI milestone tests verifying Registration portal submission, Employee Workplace dashboard, Founder Mode unlock eligibility and activation, Company Creation wizard, AI Bot marketplace acquisition, and Bankruptcy liquidation screen.
+  5. Test Verification & Code Quality:
+     - Server tests: 31 test suites passing, state machine & lifecycle suites 100% passing.
+     - Client tests: 18 test suites passing, 130 tests passing with 0 failures.
+     - Zero linter errors, zero TypeScript errors, clean production builds on both workspaces.
+- **Application Code Written:** `server/src/tests/state-machines-economy.test.ts`, `server/src/tests/full-lifecycle-e2e.test.ts`, `client/src/tests/e2eLifecycle.test.tsx`, `docs/DECISIONS.md` (ADR-075), `docs/PROGRESS.md`, `docs/ARCHITECTURE.md`, `docs/HANDOFF.md`.
+
 ---
 
-## 4. Pending / Next Immediate Tasks
+### Task P10.3: Database Index Optimization, Multi-Document Transactions, Pagination, Worker Idempotency, Queue Load Resilience, and Consistency Checker Engine
 
-1. **TASK P10.1:** End-to-End System Integration & Acceptance Verification (Full lifecycle validation across Job Seeker, Employee, Founder, AI Manager, and Admin roles).
+- **Status:** COMPLETED
+- **Milestone Overview:**
+  1. **Schema Indexes Audited & Cleaned:**
+     - Removed redundant inline `index: true` on `AuditLogModel` (`actorId`, `action`, `createdAt`) and added high-performance compound query indexes: `{ actorId: 1, createdAt: -1 }`, `{ action: 1, createdAt: -1 }`, `{ targetId: 1, createdAt: -1 }`, `{ createdAt: -1 }`.
+     - Removed redundant inline `index: true` on `PlatformConfigModel.isActive`, preserving partial unique index `{ isActive: 1 }`.
+     - Replaced duplicate index on `CorpCoinTransactionModel` with `{ companyId: 1, createdAt: -1 }`.
+     - Removed redundant index on `CompanyBotModel.companyId` to rely on compound `{ companyId: 1, botType: 1 }`.
+     - Zero duplicate index warnings on Mongoose initialization.
+  2. **Multi-Document Transactions Audited:**
+     - Verified transaction session propagation and rollback safety across `acceptOffer`, `unlockFounderMode`, `createCompany`, `buyBot`, and `executeBankruptcyLiquidation`.
+  3. **Universal Pagination Hardening:**
+     - Created `paginationQuerySchema` in `common.schema.ts` (`page: min 1 default 1`, `limit: min 1 max 100 default 20`).
+     - Added paginated skip/limit to `dailyTaskController.getTaskHistory`, `dailyTaskController.getExpLedger`, and `founderController.getApplications`. Clamped limits in `founderService.getCorpCoinLedger`.
+  4. **Automated Consistency Checker & Repair Engine:**
+     - Created `server/src/utils/consistencyChecker.ts`:
+       - Verified cached `totalExp` matches `SUM(expTransactions.amount)`.
+       - Verified cached `corpCoinBalance` matches `SUM(corpCoinTransactions.amount)`.
+       - Audited orphan foreign keys across 11 relational collections (`profiles`, `companyEmployees`, `applications`, `employeeTasks`, `warnings`, `companyBots`, `companyJobs`, `resumeFiles`, `resumeAnalyses`, `founders`, `notifications`).
+       - Supported automated repair (`--fix`) for drifted balances and orphan documents.
+     - Created standalone CLI runner `server/src/scripts/check-consistency.ts` with formatted ASCII audit report.
+     - Added test suite `server/src/tests/consistency-checker.test.ts` (4/4 passing).
+  5. **Worker Idempotency & Queue Under Load Suite:**
+     - Added `server/src/tests/queue-worker-load.test.ts` (3/3 passing):
+       - Tested idempotency key deduplication on duplicate AI job submissions.
+       - Tested atomic claiming without double processing across 5 concurrent workers draining 50 jobs.
+       - Tested lease crash recovery for expired job locks.
+  6. **Build & Quality Verification:**
+     - Server and client builds: 100% clean, 0 TypeScript errors.
+     - ESLint: 0 errors, 0 warnings across both workspaces.
+- **Application Code Written:** `server/src/models/AuditLog.ts`, `server/src/models/PlatformConfig.ts`, `server/src/models/CorpCoinTransaction.ts`, `server/src/models/CompanyBot.ts`, `server/src/schemas/common.schema.ts`, `server/src/controllers/dailyTask.controller.ts`, `server/src/schemas/founder.schema.ts`, `server/src/services/founder/founder.service.ts`, `server/src/utils/consistencyChecker.ts`, `server/src/scripts/check-consistency.ts`, `server/src/tests/consistency-checker.test.ts`, `server/src/tests/queue-worker-load.test.ts`, `docs/DECISIONS.md` (ADR-076), `docs/PROGRESS.md`, `docs/ARCHITECTURE.md`, `docs/HANDOFF.md`.
+
+---
+
+---
+
+### Task P10.4: Client-Wide Polish, WCAG AA Accessibility, Mobile Responsiveness (Down to 360px), Form Feedback, and Dynamic Titles
+
+- **Status:** COMPLETED
+- **Milestone Overview:**
+  1. **Dynamic Page Titles & Route Synchronization:**
+     - Created `client/src/hooks/useDocumentTitle.ts` enforcing consistent `<Title> | CorpVerse` document naming.
+     - Updated `client/src/components/layout/AppShell.tsx` to automatically synchronize `document.title` and `Topbar` titles with route mapping (`/showcase`, `/leaderboards`, `/jobs`, `/companies`, `/career`, `/workplace`, `/founder/*`, `/admin/*`, `/notifications`) via `useLocation()`.
+  2. **404 & 403 Pages Upgraded:**
+     - Overhauled `NotFoundPage` (404) with `FolderEmptyIcon`, title announcement, and clear recovery buttons back to Showcase and Jobs.
+     - Overhauled `UnauthorizedPage` (403) with `ShieldCheckIcon`, role switch guidance, and clear recovery navigation.
+  3. **WCAG AA Accessibility & Design Tokens Hardening:**
+     - Updated `client/src/styles/themes.css`: Darkened `--cv-text-muted` in `.theme-light` from `#798788` to `#596668` ensuring WCAG AA contrast ratio $\ge 5.2:1$ on light backgrounds.
+     - Updated `client/src/styles/globals.css`: Enhanced visible focus states (`:focus-visible`) with accessible focus rings and ambient halos (`box-shadow: 0 0 0 4px rgba(95, 138, 142, 0.22)`). Added responsive typography scaling for `<480px` (`15px`) and `<360px` (`14px`).
+  4. **Mobile Responsiveness Down to 360px Viewport:**
+     - Updated `Topbar.module.css`: Added `@media (max-width: 360px)` rules to truncate title, hide status dot, resize role select, and prevent horizontal overflow.
+     - Updated `Career.module.css`: Added mobile media query collapsing `.cardsGrid` to `1fr` and wrapping search/filter controls.
+     - Updated `Employee.module.css`: Added mobile media query collapsing `.tasksGrid` and `.metricsGrid` to `1fr`, with scrollable tab navigation.
+     - Updated `Founder.module.css`: Added `@media (max-width: 480px)` collapsing `.statGrid` to `1fr` and stacking headers.
+     - Updated `Leaderboards.module.css`: Added mobile query collapsing podium cards to `1fr`, with scrollable tabs.
+     - Updated `NotificationsPage.module.css`: Added mobile query for stacked header, horizontally scrollable filter chips, and full-width card spacing.
+     - Updated `ProfileSetup.module.css`: Added `@media (max-width: 480px)` stacking wizard action buttons.
+     - Updated `CreateCompanyPage.tsx` and `TaskWorkPage.tsx`: Replaced fixed minmax grid column widths with responsive `minmax(min(100%, 300px), 1fr)`.
+  5. **Form Validation Feedback & ARIA States:**
+     - Audited and reinforced `role="alert"` and `aria-live="assertive"` on error banners, and `role="status"` on success notices across `LoginPage.tsx` and `RegisterPage.tsx`.
+     - Confirmed `Input.tsx` automatic `aria-invalid`, `aria-describedby`, and error message linkage.
+  6. **Build & Quality Verification:**
+     - Client Vitest suite: 18/18 test files passing (130/130 tests).
+     - Client lint: 0 errors, 0 warnings.
+     - Client & Server build: 100% clean production bundle generation (`dist/`).
+- **Application Code Written:** `client/src/hooks/useDocumentTitle.ts`, `client/src/components/layout/AppShell.tsx`, `client/src/components/layout/Topbar.module.css`, `client/src/pages/StubPages.tsx`, `client/src/styles/themes.css`, `client/src/styles/globals.css`, `client/src/pages/Career.module.css`, `client/src/pages/employee/Employee.module.css`, `client/src/pages/founder/Founder.module.css`, `client/src/pages/founder/CreateCompanyPage.tsx`, `client/src/pages/employee/TaskWorkPage.tsx`, `client/src/pages/leaderboards/Leaderboards.module.css`, `client/src/pages/NotificationsPage.module.css`, `client/src/pages/ProfileSetup.module.css`, `client/src/pages/LoginPage.tsx`, `client/src/pages/RegisterPage.tsx`, `docs/DECISIONS.md` (ADR-077), `docs/PROGRESS.md`, `docs/ARCHITECTURE.md`, `docs/HANDOFF.md`.
+
+---
+
+### Task P10.5: Master Documentation, API Reference, Dockerization, Demo Seeder, and Production Checklist
+
+- **Status:** COMPLETED
+- **Milestone Overview:**
+  1. **Containerization & Deployment Topology (`server/Dockerfile`, `client/Dockerfile`, `client/nginx.conf`, `docker-compose.yml`, `.dockerignore`):**
+     - Authored multi-stage Node 22 slim Dockerfile for backend server compiling TypeScript with pruned production dependencies and non-root execution (`appuser:nodejs`).
+     - Authored multi-stage Nginx Alpine Dockerfile for client delivering optimized static SPA bundle with security headers, gzip compression, and reverse-proxy `/api/` routing.
+     - Crafted root `docker-compose.yml` orchestrating MongoDB 7.0 (with volume persistence & healthcheck probe), server, and client services on isolated bridge network.
+  2. **Automated Demo Data Seeder (`server/src/scripts/seed-demo-data.ts` & `npm run seed:demo`):**
+     - Built idempotent seeder populating realistic, clearly flagged simulation personas across all roles:
+       - System Administrator (`admin@corpverse.dev`, `ADMIN`)
+       - AI Infrastructure Director (`aimanager@corpverse.dev`, `AI_MANAGER`)
+       - Job Candidate (`alex.chen@corpverse.dev`, `JOB_SEEKER`)
+       - Employed Engineer (`employee@corpverse.dev`, `EMPLOYEE`, L3 Junior+ with tasks & EXP ledger)
+       - Corporate Founder (`founder@corpverse.dev`, `FOUNDER`, L9 Lead with active corporation, 3 basic bots, and open job posting)
+     - Added npm script shortcuts in server and root package manifests.
+  3. **Authoritative REST API Reference (`docs/API.md`):**
+     - Authored comprehensive documentation of all backend REST endpoints generated from codebase routes, controllers, and Zod schemas across 13 functional modules.
+  4. **Production Runbook & Security Checklist (`docs/PRODUCTION_CHECKLIST.md`):**
+     - Detailed pre-flight audit covering secret rotation, TLS 1.3 termination, MongoDB replica set PITR backups, structured log redaction, WAF boundaries, and healthcheck probes.
+  5. **Master Repository Documentation (`README.md` & `docs/ARCHITECTURE.md`):**
+     - Created root `README.md` featuring architecture diagrams in Mermaid, folder structure map, dual-role system guide, setup instructions, and script catalog.
+     - Updated `docs/ARCHITECTURE.md` with Section 29 documenting container topology and operational tooling.
+  6. **Build & Quality Verification:**
+     - `npm run lint`: 0 errors, 0 warnings across workspaces.
+     - `npm run build`: Clean production builds for server and client.
+- **Application Code Written:** `server/Dockerfile`, `client/Dockerfile`, `client/nginx.conf`, `docker-compose.yml`, `.dockerignore`, `server/src/scripts/seed-demo-data.ts`, `server/package.json`, `package.json`, `docs/API.md`, `docs/PRODUCTION_CHECKLIST.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (ADR-078), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+---
+
+### Task P10.6: Final Comprehensive Specification Audit & No-Invention Verification
+
+- **Status:** COMPLETED
+- **Milestone Overview:**
+  1. **Section-by-Section Specification Audit:**
+     - Compared implementation against all 35 functional specification sections and all 38 Mongoose collections in `docs/CORPVERSE_SPECIFICATION.md`.
+     - Produced comprehensive report in `docs/FINAL_AUDIT.md` (35/35 fully implemented, 0 missing, 0 partially implemented, 1 intentional realignment via ADR-023).
+  2. **Hardcoded Numbers vs. PlatformConfig Audit:**
+     - Located and documented 2 server-side and 3 client-side static numbers. Formulated non-breaking proposals for user approval.
+  3. **No-Invention Rules Verification:**
+     - Verified zero provider SDK imports (`@google/genai`, `openai`, `groq-sdk`) outside `server/src/ai/` via automated AST/file scanner test.
+     - Verified zero mutations to `totalExp` or `corpCoinBalance` outside authoritative ledger services, administrative reset, and consistency repair tooling.
+     - Verified zero role checks outside the strict dual-role permission matrix (`careerRole` and `platformRole`).
+- **Application Code Written:** `docs/FINAL_AUDIT.md`, `docs/DECISIONS.md` (ADR-079), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+### TASK BUGFIX-P6.1: Job Detail Apply Integration & Dynamic Quota Telemetry
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-11
+- **Description:**
+  1. Replaced static disabled Apply CTA on `JobDetailPage.tsx` with dynamic interactive submission invoking `careerApi.applyJob()`.
+  2. Implemented active application quota tracker (`x / 5`), duplicate requisition check, role permissions check, and automatic redirect to `/applications`.
+  3. Added `useOptionalAuth` helper to `client/src/store/AuthContext.tsx` to prevent crashes when components are rendered in isolated test runners.
+  4. Seeded `RATE_LIMIT_MAX=1000` in `server/.env` to prevent 429 lockout during active local browser usage.
+  5. Expanded `client/src/tests/career.test.tsx` with 4 comprehensive tests (13 passing tests).
+- **Application Code Written:** `client/src/pages/JobDetailPage.tsx`, `client/src/store/AuthContext.tsx`, `client/src/tests/career.test.tsx`, `server/.env`, `docs/DECISIONS.md` (ADR-080), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+### TASK BUGFIX-P6.2: Automatic ATS Screening Pipeline Auto-Enqueuing & Auto-Recovery
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-11
+- **Description:**
+  1. Updated `ApplicationController.apply` to automatically enqueue ATS screening upon application creation, advancing stage from `APPLIED` to `ATS_SCREENING`.
+  2. Added self-healing recovery in `ApplicationController.list` and `getById` to auto-enqueue any active applications sitting in `APPLIED`.
+  3. Added background polling (every 3s) in `ApplicationsTrackerPage.tsx` so candidate pipelines dynamically update when AI evaluations conclude.
+  4. Enhanced in-progress stage banner with spinner, stage label, and manual "Run ATS Screening" fallback button.
+  5. Added `triggerAtsScreen(id)` to `careerApi`.
+- **Application Code Written:** `server/src/controllers/application.controller.ts`, `client/src/api/career.ts`, `client/src/pages/career/ApplicationsTrackerPage.tsx`, `client/src/tests/hiringJourney.test.tsx`, `docs/DECISIONS.md` (ADR-081), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+### TASK BUGFIX-P6.3: Chat Stage Interview Question Serialization & Sequence Invariant Hardening
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-11
+- **Description:**
+  1. Resolved empty question text in Interview Session (`/applications/:id/stage`) message bubbles by formatting `currentQuestion` and `nextQuestion` in `StageEngineController` to populate both `question` and `content`.
+  2. Updated `StageChatPage.tsx` message synthesis and answer progression to seamlessly handle both `question` and `content`.
+  3. Fixed out-of-order sequence submission bug in `handleSubmitAnswer` by prioritizing `currentQuestion.sequenceNumber` over raw 0-indexed `currentQuestionIndex`.
+  4. Enriched previous turn answers with evaluation notes and timestamps across session restorations.
+  5. Corrected 1-based question sequence display (`Question X of Y`).
+- **Application Code Written:** `server/src/controllers/stageEngine.controller.ts`, `server/src/services/career/stageEngine.service.ts`, `client/src/pages/career/StageChatPage.tsx`, `client/src/api/career.ts`, `docs/DECISIONS.md` (ADR-082), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+### TASK P3.7: Multi-Instance AI Provider Architecture, Key Pooling & Zero-Downtime Failover
+
+- **Status:** COMPLETED
+- **Completed Date:** 2026-10-11
+- **Description:**
+  1. Replaced restrictive unique index `{ code: 1, pool: 1 }` on `AIProviderModel` with unique index `{ name: 1, pool: 1 }` and non-unique index `{ pool: 1, code: 1 }`. Multiple API keys and configurations can now be registered for the same vendor platform (`gemini`, `openai`, `groq`).
+  2. Extended `ProviderRouter` to track adapters by unique instance `id` (MongoDB `_id`), enabling multiple active adapters of the same provider code with distinct priorities and health states.
+  3. Updated `HealthTracker` to isolate metrics (failures, requests, latency, circuit-breaker states) per provider document instance.
+  4. Updated `AIGateway` and `AIWorker` to track retry attempts per instance key (`entry.id || entry.provider`) and seamlessly fail over to alternate keys/providers without stalling or dropping background jobs or requests.
+  5. Updated `aiManager.service.ts` to support both `_id` and provider `code`, added `loadAllProvidersFromDb()` on server startup, and updated routes/controllers to `/providers/:idOrCode`.
+  6. Updated frontend `AiManagerPage.tsx` and `aiOpsApi` to support instance IDs, auto-suggest unique names (`(Key 2)`, etc.), and show granular telemetry.
+  7. Added multi-instance failover test in `server/src/tests/ai-gateway.test.ts` (66/66 passing) and verified `ai-manager.test.ts` (16/16 passing).
+- **Application Code Written:** `server/src/models/AIProvider.ts`, `server/src/ai/provider-router.ts`, `server/src/ai/health-tracker.ts`, `server/src/ai/gateway.ts`, `server/src/ai/worker.ts`, `server/src/services/ai/aiManager.service.ts`, `server/src/controllers/aiManager.controller.ts`, `server/src/routes/aiManager.routes.ts`, `client/src/api/aiOps.ts`, `client/src/pages/AiManagerPage.tsx`, `server/src/tests/ai-gateway.test.ts`, `docs/DECISIONS.md` (ADR-085), `docs/PROGRESS.md`, `docs/HANDOFF.md`.
+
+---
+
+- **TASK FIX-TASK-EVALUATION-EXP: Task Evaluation Strict JSON Schema Compliance & Submission Retry Pathway (ADR-089)**:
+  1. Fixed missing `additionalProperties: false` in `criteriaScores.items` within `server/src/schemas/taskEvaluation.schema.ts` (and `options.items` in `simulation.schema.ts`) to conform strictly to Groq and OpenAI structured JSON schema requirements.
+  2. Implemented `evaluateTaskById` in `TaskEvaluationService` and `evaluateTask` in `DailyTaskController`, exposing `POST /api/employee/tasks/:id/evaluate` for explicit evaluation and retry workflows.
+  3. Extended client API `evaluateSubmittedTask` in `client/src/api/employee.ts` and enhanced `TaskWorkPage.tsx` with an "Evaluation Pending" warning banner and an interactive "Run AI Evaluation" button.
+  4. Successfully evaluated the user's submitted task, awarding 20 EXP into the immutable `expTransactions` ledger and updating the task status to `EVALUATED`.
+  5. Verified across monorepo: 48 server test files passing (855 tests), 18 client test files passing (138 tests), clean lint (0 errors) and clean production build.
+
+---
+
+- **TASK FIX-FOUNDER-COMPANY-CREATION: Founder Company Creation Schema Normalization & Dashboard Null-Safe Data Extraction (ADR-090)**:
+  1. Updated `createFounderCompanySchema` (`server/src/schemas/founder.schema.ts`) to make `description` optional with a fallback default (`'Corporate engineering enterprise delivering innovative technical solutions.'`) and normalize incoming `domain` (single string) or `domainsHired` (array) into `domainsHired: CareerDomain[]`.
+  2. Enhanced `CreateCompanyPage.tsx` with a pre-submit warning guard for descriptions shorter than 5 characters.
+  3. Fixed runtime crash in `FounderDashboardPage.tsx` by safely unwrapping `res.company` from the `{ company: ICompany | null, bots: ICompanyBot[], isOpenForHiring: boolean }` API payload, rendering the "Establish Your Corporation" state when null, and safely resolving domain with `company.domain || company.domainsHired?.[0] || 'SOFTWARE_ENGINEERING'`.
+  4. Added **"Enter Founder HQ 🚀"** button on `WorkplaceDashboardPage.tsx` when `isFounderUnlocked` is true.
+  5. Verified across monorepo: 31 Founder server tests passing, 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+---
+
+- **TASK FIX-DAILY-DILEMMA-MAPPING: Simulation Scenario Response Normalization & Array Mapping Protection (ADR-092)**:
+  1. Standardized `SimulationController` endpoints (`server/src/controllers/simulation.controller.ts`) to return `{ success: true, data: { scenario } }` and `{ success: true, data: { history } }`.
+  2. In `DailyScenarioPage.tsx`, unwrapped `res.scenario` safely, guarded options mapping with `Array.isArray(scenario.options)`, and added a fallback empty state card with an "Establish Enterprise 🏢" button when no scenario exists.
+  3. In `FounderDashboardPage.tsx`, unwrapped financial snapshots (`finRes.value?.history`) and guarded table mapping with `Array.isArray(financials)`.
+  4. In `JobOpeningsPage.tsx`, guarded `job.requiredSkills.map` with `Array.isArray(job.requiredSkills)`.
+  5. Verified across monorepo: 29 simulation unit tests passing, 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+---
+
+- **TASK FIX-FOUNDER-JOB-REQUISITION: Founder Job Requisition Schema Normalization & Optional Description Handling (ADR-093)**:
+  1. Updated `createFounderJobSchema` (`server/src/schemas/founder.schema.ts`) to make `description` optional with an automated fallback default (`'Join our autonomous engineering team to solve challenging domain problems and drive platform innovation.'`).
+  2. Mapped client `seniorityLevel` to `minLevel`, `maxLevel`, and `targetLevel` in schema transform.
+  3. Verified across monorepo: 27 founder engine server tests passing, 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+---
+
+- **TASK FIX-LEADERBOARD-UNWRAPPING: Leaderboards Client Response Unwrapping & Live Rendering Fix (ADR-094)**:
+  1. Updated `LeaderboardsPage.tsx` to safely handle unwrapped data payloads (`res && 'rankings' in res ? res : res.data`), fixing the bug where `res.data` was `undefined` because `apiClient` had already unwrapped the response body.
+  2. Verified across monorepo: 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+---
+
+- **TASK FIX-FOUNDER-PORTAL-DEFENSIVE-PARSING: Founder Portal Defensive Parsing & String Replacement Fallbacks (ADR-095)**:
+  1. Updated `JobOpeningsPage.tsx` to safely render `job.domain` with `(job.domain || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')`.
+  2. Updated `ApplicantPipelinePage.tsx` with defensive `currentStage` replacement `(app.currentStage || 'ATS_SCREENING').replace(/_/g, ' ')` and defensive array extraction `Array.isArray(res) ? res : res?.applications || []`.
+  3. Updated `FounderLedgerPage.tsx` with defensive array extraction `Array.isArray(res) ? res : res?.transactions || []`.
+  4. Verified across monorepo: 41 server founder tests passing, 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+
+
+
+
+
 
 
 

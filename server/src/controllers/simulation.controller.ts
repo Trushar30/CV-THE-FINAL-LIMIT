@@ -10,7 +10,10 @@ export class SimulationController {
     }
     const dateKey = req.query.date ? String(req.query.date) : undefined;
     const scenario = await simulationService.getDailyScenario(req.user._id, dateKey);
-    res.status(200).json({ scenario });
+    res.status(200).json({
+      success: true,
+      data: { scenario },
+    });
   }
 
   public async submitDecision(req: Request, res: Response): Promise<void> {
@@ -19,7 +22,10 @@ export class SimulationController {
     }
     const validated = submitDecisionSchema.parse(req.body);
     const result = await simulationService.submitDecision(req.user._id, validated);
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
   }
 
   public async executeDailyTick(req: Request, res: Response): Promise<void> {
@@ -28,7 +34,10 @@ export class SimulationController {
     }
     const dateKey = req.body?.date ? String(req.body.date) : undefined;
     const result = await simulationService.executeDailyTick(req.user._id, dateKey);
-    res.status(200).json(result);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
   }
 
   public async getFinancialHistory(req: Request, res: Response): Promise<void> {
@@ -37,7 +46,10 @@ export class SimulationController {
     }
     const limit = req.query.limit ? Number(req.query.limit) : 30;
     const history = await simulationService.getFinancialHistory(req.user._id, limit);
-    res.status(200).json({ history });
+    res.status(200).json({
+      success: true,
+      data: { history },
+    });
   }
 }
 

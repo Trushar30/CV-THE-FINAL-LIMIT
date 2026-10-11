@@ -81,11 +81,11 @@ describe('GeminiAdapter', () => {
 
     it('should support static modelId and apiKey', () => {
       const adapter = new GeminiAdapter({
-        modelId: 'gemini-1.5-pro',
+        modelId: 'gemini-1.5-flash',
         apiKey: 'my-key',
       });
       expect(adapter.name).toBe('gemini');
-      expect(adapter.getModelId()).toBe('gemini-1.5-pro');
+      expect(adapter.getModelId()).toBe('gemini-1.5-flash');
       expect(adapter.getTimeoutMs()).toBe(15000);
     });
 

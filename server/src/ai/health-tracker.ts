@@ -134,17 +134,27 @@ export class HealthTracker {
    * Handle successful provider call:
    * Reset consecutive failures, update average latency, and restore HEALTHY state if recovered.
    */
-  async recordSuccess(pool: AIPool, provider: AIProvider, latencyMs: number): Promise<void> {
-    const currentRouterState = this.router.getHealthState(pool, provider);
+  async recordSuccess(
+    pool: AIPool,
+    provider: AIProvider,
+    latencyMs: number,
+    providerId?: string
+  ): Promise<void> {
+    const routerKey = providerId || provider;
+    const currentRouterState = this.router.getHealthState(pool, routerKey);
 
     // If disabled manually by AI Manager, do not auto-enable
     if (currentRouterState !== 'DISABLED') {
-      this.router.setHealthState(pool, provider, 'HEALTHY');
+      this.router.setHealthState(pool, routerKey, 'HEALTHY');
     }
 
     if (mongoose.connection.readyState === 1) {
       try {
-        const doc = await AIProviderModel.findOne({ code: provider, pool });
+        const query =
+          providerId && Types.ObjectId.isValid(providerId)
+            ? { _id: new Types.ObjectId(providerId) }
+            : { code: provider, pool };
+        const doc = await AIProviderModel.findOne(query);
         if (doc) {
           const oldTotal = doc.totalRequests;
           const oldAvg = doc.averageLatencyMs || 0;
@@ -163,6 +173,7 @@ export class HealthTracker {
       } catch (err) {
         logger.warn('Failed to update provider health on success', {
           provider,
+          providerId,
           error: String(err),
         });
       }
@@ -181,9 +192,11 @@ export class HealthTracker {
     pool: AIPool,
     provider: AIProvider,
     category: AIErrorCategory,
-    errorMessage: string
+    errorMessage: string,
+    providerId?: string
   ): Promise<ProviderHealthState> {
-    const currentRouterState = this.router.getHealthState(pool, provider);
+    const routerKey = providerId || provider;
+    const currentRouterState = this.router.getHealthState(pool, routerKey);
     if (currentRouterState === 'DISABLED') {
       return 'DISABLED';
     }
@@ -197,7 +210,11 @@ export class HealthTracker {
     // Read or increment consecutive failures in DB if connected
     if (mongoose.connection.readyState === 1) {
       try {
-        const doc = await AIProviderModel.findOne({ code: provider, pool });
+        const query =
+          providerId && Types.ObjectId.isValid(providerId)
+            ? { _id: new Types.ObjectId(providerId) }
+            : { code: provider, pool };
+        const doc = await AIProviderModel.findOne(query);
         if (doc) {
           doc.totalRequests += 1;
           doc.totalFailures += 1;
@@ -224,6 +241,7 @@ export class HealthTracker {
       } catch (err) {
         logger.warn('Failed to update provider health on failure', {
           provider,
+          providerId,
           error: String(err),
         });
       }
@@ -234,7 +252,7 @@ export class HealthTracker {
       }
     }
 
-    this.router.setHealthState(pool, provider, nextState);
+    this.router.setHealthState(pool, routerKey, nextState);
     return nextState;
   }
 
@@ -242,9 +260,14 @@ export class HealthTracker {
    * Probe an unhealthy provider with an adapter health check and recover if successful.
    * Returns true if provider is now HEALTHY.
    */
-  async probeAndRecover(pool: AIPool, adapter: ProviderAdapter): Promise<boolean> {
+  async probeAndRecover(
+    pool: AIPool,
+    adapter: ProviderAdapter,
+    providerId?: string
+  ): Promise<boolean> {
     const provider = adapter.name;
-    const currentState = this.router.getHealthState(pool, provider);
+    const routerKey = providerId || provider;
+    const currentState = this.router.getHealthState(pool, routerKey);
 
     if (currentState === 'HEALTHY' || currentState === 'DISABLED') {
       return currentState === 'HEALTHY';
@@ -272,23 +295,25 @@ export class HealthTracker {
     });
 
     if (isHealthy) {
-      this.router.setHealthState(pool, provider, 'HEALTHY');
+      this.router.setHealthState(pool, routerKey, 'HEALTHY');
       if (mongoose.connection.readyState === 1) {
         try {
-          await AIProviderModel.updateOne(
-            { code: provider, pool },
-            {
-              $set: {
-                status: 'HEALTHY',
-                consecutiveFailures: 0,
-                lastSuccessAt: new Date(),
-                recoveryCheckAt: null,
-              },
-            }
-          );
+          const query =
+            providerId && Types.ObjectId.isValid(providerId)
+              ? { _id: new Types.ObjectId(providerId) }
+              : { code: provider, pool };
+          await AIProviderModel.updateOne(query, {
+            $set: {
+              status: 'HEALTHY',
+              consecutiveFailures: 0,
+              lastSuccessAt: new Date(),
+              recoveryCheckAt: null,
+            },
+          });
         } catch (err) {
           logger.warn('Failed to mark provider healthy in DB', {
             provider,
+            providerId,
             error: String(err),
           });
         }
@@ -298,19 +323,21 @@ export class HealthTracker {
       // Keep degraded/failed and increment backoff
       if (mongoose.connection.readyState === 1) {
         try {
-          await AIProviderModel.updateOne(
-            { code: provider, pool },
-            {
-              $set: {
-                recoveryCheckAt: new Date(Date.now() + this.tempFailInitialBackoffMs),
-                lastFailureAt: new Date(),
-                lastFailureReason: errorMessage ?? 'Health check failed',
-              },
-            }
-          );
+          const query =
+            providerId && Types.ObjectId.isValid(providerId)
+              ? { _id: new Types.ObjectId(providerId) }
+              : { code: provider, pool };
+          await AIProviderModel.updateOne(query, {
+            $set: {
+              recoveryCheckAt: new Date(Date.now() + this.tempFailInitialBackoffMs),
+              lastFailureAt: new Date(),
+              lastFailureReason: errorMessage ?? 'Health check failed',
+            },
+          });
         } catch (err) {
           logger.warn('Failed to update recoveryCheckAt in DB', {
             provider,
+            providerId,
             error: String(err),
           });
         }

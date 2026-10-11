@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from 'react';
+import { useState, useEffect, useRef, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   careerApi,
@@ -70,24 +70,69 @@ export function ApplicationsTrackerPage(): ReactElement {
   const [withdrawAppId, setWithdrawAppId] = useState<string | null>(null);
   const [withdrawReason, setWithdrawReason] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
+  const [manualTriggeringAppId, setManualTriggeringAppId] = useState<string | null>(null);
+  const triggeredFinalReviewRef = useRef<Set<string>>(new Set());
 
   const navigate = useNavigate();
 
-  const fetchApplications = async (): Promise<void> => {
+  const handleTriggerFinalReview = async (appId: string): Promise<void> => {
     try {
-      setLoading(true);
+      setManualTriggeringAppId(appId);
+      await careerApi.executeFinalReview(appId);
+      await fetchApplications(false);
+    } catch {
+      // Non-blocking
+    } finally {
+      setManualTriggeringAppId(null);
+    }
+  };
+
+  const fetchApplications = async (setPageLoading = true): Promise<void> => {
+    try {
+      if (setPageLoading) setLoading(true);
       const res = await careerApi.getApplications({ limit: 50 });
-      setApplications(res.applications || []);
+      const appList = res.applications || [];
+      setApplications(appList);
+
+      // Automatically synthesize final review for any active application in FINAL_REVIEW stage
+      const finalReviewApps = appList.filter(
+        (app) => app.status === 'ACTIVE' && app.currentStage === 'FINAL_REVIEW'
+      );
+      for (const fApp of finalReviewApps) {
+        if (!triggeredFinalReviewRef.current.has(fApp._id)) {
+          triggeredFinalReviewRef.current.add(fApp._id);
+          void handleTriggerFinalReview(fApp._id);
+        }
+      }
     } catch {
       // Keep empty array on error
     } finally {
-      setLoading(false);
+      if (setPageLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    void fetchApplications();
+    void fetchApplications(true);
+
+    // Silent background poll to auto-update when AI evaluation finishes
+    const interval = setInterval(() => {
+      void fetchApplications(false);
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const handleTriggerAtsScreen = async (appId: string): Promise<void> => {
+    try {
+      setManualTriggeringAppId(appId);
+      await careerApi.triggerAtsScreen(appId);
+      await fetchApplications(false);
+    } catch {
+      // Non-blocking
+    } finally {
+      setManualTriggeringAppId(null);
+    }
+  };
 
   const activeApplications = applications.filter((app) => app.status === 'ACTIVE');
   const activeCount = activeApplications.length;
@@ -379,9 +424,40 @@ export function ApplicationsTrackerPage(): ReactElement {
 
                     {/* Active In-Progress Banner (ATS or Final Review) */}
                     {isActive && !isChatStage && !isOfferStage && (
-                      <Badge variant="warning" size="sm">
-                        AI Processing Stage
-                      </Badge>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Badge variant="warning" size="sm">
+                          <Spinner size="sm" />
+                          {app.currentStage === 'ATS_SCREENING'
+                            ? 'ATS AI Screening in Progress...'
+                            : app.currentStage === 'FINAL_REVIEW'
+                              ? 'Executive Review in Progress...'
+                              : 'AI Processing Stage'}
+                        </Badge>
+                        {app.currentStage === 'APPLIED' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => void handleTriggerAtsScreen(app._id)}
+                            disabled={manualTriggeringAppId === app._id}
+                            data-testid="run-ats-btn"
+                          >
+                            <SparklesIcon size={14} />
+                            {manualTriggeringAppId === app._id ? 'Starting AI Screening...' : 'Run ATS Screening'}
+                          </Button>
+                        )}
+                        {app.currentStage === 'FINAL_REVIEW' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => void handleTriggerFinalReview(app._id)}
+                            disabled={manualTriggeringAppId === app._id}
+                            data-testid="run-final-review-btn"
+                          >
+                            <SparklesIcon size={14} />
+                            {manualTriggeringAppId === app._id ? 'Synthesizing Review...' : 'Run Final Review'}
+                          </Button>
+                        )}
+                      </div>
                     )}
 
                     {/* Rejection Feedback CTA */}

@@ -62,10 +62,24 @@ body {
   background: var(--cv-text-muted);
 }
 
-/* Global Focus Ring */
+/* Accessible Global Focus Ring with Apple-Style Soft Ambient Halo */
 :focus-visible {
   outline: 2px solid var(--cv-border-focus);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(95, 138, 142, 0.22);
+}
+
+/* Mobile Typography & Layout Scaling down to 360px */
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 360px) {
+  html {
+    font-size: 14px;
+  }
 }
 
 /* Global Keyframe Animations */
@@ -169,6 +183,48 @@ body {
 
 .cv-float {
   animation: cv-float-ambient 4s ease-in-out infinite;
+}
+
+.cv-animate-fade-in {
+  animation: cv-fade-in var(--cv-transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.cv-animate-spin {
+  animation: cv-spin 0.75s linear infinite;
+}
+
+.cv-animate-pulse {
+  animation: cv-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.cv-hover-lift {
+  transition:
+    transform var(--cv-transition-fast),
+    box-shadow var(--cv-transition-fast),
+    border-color var(--cv-transition-fast);
+}
+
+.cv-hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--cv-shadow-lg), var(--cv-shadow-glow-primary);
+}
+
+.cv-card-interactive {
+  transition:
+    transform var(--cv-transition-fast),
+    border-color var(--cv-transition-fast),
+    box-shadow var(--cv-transition-fast);
+  cursor: pointer;
+}
+
+.cv-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--cv-brand-primary-400);
+  box-shadow: var(--cv-shadow-md);
+}
+
+.cv-card-interactive:active {
+  transform: scale(0.99);
 }
 
 /* Accessible utility */
