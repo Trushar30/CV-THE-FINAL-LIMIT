@@ -11,24 +11,23 @@
   border-collapse: collapse;
   text-align: left;
   font-family: var(--cv-font-sans);
-  font-size: var(--cv-text-sm);
+  font-size: var(--cv-text-14);
   color: var(--cv-text-primary);
 }
 
 .th {
-  padding: 0.75rem 1rem;
-  font-size: var(--cv-text-xs);
-  font-weight: var(--cv-font-semibold);
+  padding: 10px 14px;
+  font-size: var(--cv-text-12);
+  font-weight: 500;
   color: var(--cv-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--cv-tracking-normal);
   background-color: var(--cv-bg-surface-subtle);
   border-bottom: 1px solid var(--cv-border-default);
   white-space: nowrap;
 }
 
 .td {
-  padding: 0.875rem 1rem;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--cv-border-subtle);
   color: var(--cv-text-primary);
   vertical-align: middle;
@@ -39,7 +38,7 @@
 }
 
 .striped .tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.015);
+  background-color: var(--cv-bg-surface-subtle);
 }
 
 .hoverable .tr:hover {
@@ -56,10 +55,11 @@
 
 .align-right {
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .emptyCell {
   text-align: center;
-  padding: var(--cv-space-10) var(--cv-space-4);
+  padding: var(--cv-space-8) var(--cv-space-4);
   color: var(--cv-text-muted);
 }

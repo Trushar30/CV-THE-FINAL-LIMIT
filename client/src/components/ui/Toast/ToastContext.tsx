@@ -6,6 +6,12 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import {
+  CheckIcon,
+  AlertCircleIcon,
+  AlertTriangleIcon,
+  CloseIcon,
+} from '../Icon';
 import styles from './Toast.module.css';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -29,12 +35,19 @@ export interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const DEFAULT_ICONS: Record<ToastType, string> = {
-  success: '✓',
-  error: '✕',
-  warning: '⚠',
-  info: 'ℹ',
-};
+function renderToastIcon(type: ToastType): ReactElement {
+  switch (type) {
+    case 'success':
+      return <CheckIcon size={16} color="var(--cv-accent-emerald-400)" />;
+    case 'error':
+      return <AlertCircleIcon size={16} color="var(--cv-status-danger-text)" />;
+    case 'warning':
+      return <AlertTriangleIcon size={16} color="var(--cv-accent-amber-400)" />;
+    case 'info':
+    default:
+      return <AlertCircleIcon size={16} color="var(--cv-brand-400)" />;
+  }
+}
 
 export function ToastProvider({ children }: { children: ReactNode }): ReactElement {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -89,7 +102,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
       <aside aria-label="Notifications" className={styles.container}>
         {toasts.map((t) => (
           <div key={t.id} role="status" className={`${styles.toast} ${styles[`type-${t.type}`]}`}>
-            <span className={styles.icon}>{DEFAULT_ICONS[t.type]}</span>
+            <span className={styles.icon}>{renderToastIcon(t.type)}</span>
             <div className={styles.content}>
               {t.title && <div className={styles.title}>{t.title}</div>}
               <div className={styles.message}>{t.message}</div>
@@ -100,7 +113,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
               onClick={() => dismissToast(t.id)}
               aria-label="Dismiss notification"
             >
-              ✕
+              <CloseIcon size={14} />
             </button>
           </div>
         ))}

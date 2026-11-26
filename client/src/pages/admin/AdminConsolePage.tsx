@@ -15,6 +15,7 @@ import {
 } from '../../api/admin';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { Button, Spinner, Badge } from '../../components/ui';
+import { StarIcon } from '../../components/ui/Icon';
 import { TypedConfirmationModal } from '../../components/admin/TypedConfirmationModal';
 import styles from './AdminConsole.module.css';
 
@@ -711,9 +712,14 @@ export const AdminConsolePage: React.FC = () => {
                             {c.type}
                           </Badge>
                         </td>
-                        <td>{c.employeeCount} / {c.maxEmployees}</td>
-                        <td>★ {c.companyRating?.toFixed(1) || '0.0'}</td>
-                        <td style={{ color: c.financialHealth < 0 ? '#ef4444' : '#10b981' }}>
+                        <td className="tabular-nums">{c.employeeCount} / {c.maxEmployees}</td>
+                        <td>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <StarIcon size={12} color="var(--cv-gold-400)" />
+                            <span className="tabular-nums">{c.companyRating?.toFixed(1) || '0.0'}</span>
+                          </span>
+                        </td>
+                        <td className="tabular-nums" style={{ color: c.financialHealth < 0 ? 'var(--cv-status-danger-text)' : 'var(--cv-status-success-text)' }}>
                           {c.financialHealth}
                         </td>
                         <td>

@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -167,23 +168,36 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps): Reac
     apiClient.setAccessToken(token);
   }, []);
 
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
+
   const refreshSession = useCallback(async (): Promise<boolean> => {
-    try {
-      const response = await apiClient.post<{
-        user: Parameters<typeof toUserStub>[0];
-        accessToken: string;
-      }>('/auth/refresh');
-      if (response && response.accessToken) {
-        updateAccessToken(response.accessToken);
-        setUser(toUserStub(response.user));
-        return true;
-      }
-      return false;
-    } catch {
-      updateAccessToken(null);
-      setUser(null);
-      return false;
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
     }
+
+    const runRefresh = async (): Promise<boolean> => {
+      try {
+        const response = await apiClient.post<{
+          user: Parameters<typeof toUserStub>[0];
+          accessToken: string;
+        }>('/auth/refresh');
+        if (response && response.accessToken) {
+          updateAccessToken(response.accessToken);
+          setUser(toUserStub(response.user));
+          return true;
+        }
+        return false;
+      } catch {
+        updateAccessToken(null);
+        setUser(null);
+        return false;
+      } finally {
+        refreshPromiseRef.current = null;
+      }
+    };
+
+    refreshPromiseRef.current = runRefresh();
+    return refreshPromiseRef.current;
   }, [updateAccessToken]);
 
   // Initial bootstrap: attempt silent refresh if no initialUser was explicitly provided

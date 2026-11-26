@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, DEFAULT_MOCK_USER } from '../store/AuthContext';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { RoleRoute } from '../components/guards/RoleRoute';
+import { PublicOnlyRoute } from '../components/guards/PublicOnlyRoute';
 
 describe('Route Guards Suite', () => {
   it('allows access to protected route when authenticated', () => {
@@ -133,4 +134,50 @@ describe('Route Guards Suite', () => {
 
     expect(screen.getByText('Founder Command HQ')).toBeDefined();
   });
+
+  it('allows unauthenticated visitor to access PublicOnlyRoute', () => {
+    render(
+      <AuthProvider initialUser={null}>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <PublicOnlyRoute>
+                  <div>Public Login Content</div>
+                </PublicOnlyRoute>
+              }
+            />
+            <Route path="/career" element={<div>Career Hub</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    );
+
+    expect(screen.getByText('Public Login Content')).toBeDefined();
+  });
+
+  it('redirects authenticated user away from PublicOnlyRoute to their destination', () => {
+    render(
+      <AuthProvider initialUser={DEFAULT_MOCK_USER}>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <PublicOnlyRoute>
+                  <div>Public Login Content</div>
+                </PublicOnlyRoute>
+              }
+            />
+            <Route path="/career" element={<div>Authenticated Career Hub</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    );
+
+    expect(screen.getByText('Authenticated Career Hub')).toBeDefined();
+    expect(screen.queryByText('Public Login Content')).toBeNull();
+  });
 });
+

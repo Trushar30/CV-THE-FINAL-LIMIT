@@ -75,6 +75,15 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-085: Multi-Instance AI Provider Architecture, Key Pooling & Zero-Downtime Failover](#adr-085-multi-instance-ai-provider-architecture-key-pooling--zero-downtime-failover)
 - [ADR-086: Active-Active Load Balancing, Model Compatibility & Automated Self-Healing (TASK AI-OPS.2)](#adr-086-active-active-load-balancing-model-compatibility--automated-self-healing-task-ai-ops2)
 - [ADR-087: Removal of Platform Overview and Role-Based Post-Login Navigation](#adr-087-removal-of-platform-overview-and-role-based-post-login-navigation)
+- [ADR-096: Design System Cleanup, Fontsource Inter, and Strict Aesthetic Restraint (TASK PHASE 1)](#adr-096-design-system-cleanup-fontsource-inter-and-strict-aesthetic-restraint-task-phase-1)
+- [ADR-097: Root Routing Architecture, Marketing Layout Separation, and Split-Screen Auth Experience (TASK PHASE 2)](#adr-097-root-routing-architecture-marketing-layout-separation-and-split-screen-auth-experience-task-phase-2)
+- [ADR-098: Restrained Linear/Vercel Marketing Landing Page & Interactive Kernel Simulation Preview (TASK PHASE 3)](#adr-098-restrained-linearvercel-marketing-landing-page--interactive-kernel-simulation-preview-task-phase-3)
+- [ADR-099: Motion Design System, Spring Transitions, and Universal Reduced-Motion Accessibility (TASK PHASE 4)](#adr-099-motion-design-system-spring-transitions-and-universal-reduced-motion-accessibility-task-phase-4)
+- [ADR-100: WebGL Dynamic ASCII Background Integration for Marketing Landing Page (TASK PHASE 5)](#adr-100-webgl-dynamic-ascii-background-integration-for-marketing-landing-page-task-phase-5)
+- [ADR-101: Comprehensive Product Polish Pass, Screen-by-Screen Aesthetic Audit, Emoji Elimination, and Tabular Numerics (TASK PHASE 5)](#adr-101-comprehensive-product-polish-pass-screen-by-screen-aesthetic-audit-emoji-elimination-and-tabular-numerics-task-phase-5)
+- [ADR-111: Canonical React Bits <GradientASCII /> Defaults & Showcase Integration](#adr-111-canonical-react-bits-gradientascii--defaults--showcase-integration)
+- [ADR-112: Marketing Navigation Simplification & Minimalist Topbar Layout](#adr-112-marketing-navigation-simplification--minimalist-topbar-layout)
+- [ADR-113: Light (White) Theme Overhaul, Theme-Adaptive Hero Contrast, and ASCII Palettes](#adr-113-light-white-theme-overhaul-theme-adaptive-hero-contrast-and-ascii-palettes)
 
 ---
 
@@ -1919,6 +1928,279 @@ This document tracks all foundational architectural and technical decisions made
   - Client Vitest suite: 18 test files passing (138/138 tests).
   - Monorepo Lint: 0 errors, 0 warnings across server and client (`npm run lint`).
   - Monorepo Build: Clean production builds for server and client (`npm run build`).
+
+---
+
+### ADR-096: Restrained Linear/Vercel Design System Foundation & Zero-Glow Token Normalization (TASK PHASE 1)
+
+- **Status:** ACCEPTED
+- **Context:** The frontend previously used high-saturation gradients, neon glows (`--cv-shadow-glow-*`), and inconsistent type/radius scales. Phase 1 required establishing a modern, highly restrained design system (Linear, Vercel, Stripe level of discipline) with self-hosted Inter typography, strict 4px spacing, 6/10/14px radii, and WCAG AA contrast.
+- **Decision:**
+  - **Typography:** Self-hosted `@fontsource/inter` (400, 500, 600, 700). Defined strict type scale (12, 13, 14, 16, 20, 24, 32, 48, 64) with 14px body baseline on app screens. Headings clamped to weight 600 with -0.02em tracking. Added universal `tabular-nums` class for numeric stats, EXP, CorpCoins, and scores.
+  - **Color Palette & Restraint:** Single 10-step neutral scale (`zinc`), single brand accent (`indigo`), semantic status tokens (success, warning, danger, info), and zero neon glows (`--cv-shadow-glow-*` mapped to zero/transparent). Removed all gradient text and heavy backdrop blurs outside of topbar and modals.
+  - **Strict Radii & Spacing:** Strict 4px grid and exact radii: 6px (inputs, chips, badges, buttons), 10px (cards, table container, panels), 14px (modals).
+  - **Component Normalization:** Standardized heights (32px sm, 36px md, 44px lg), padding, and active state (`scale(0.98)`). Focus rings unified to 2px accent rings. Built new `Select` and `Tooltip` components in `client/src/components/ui`.
+  - **Icon System:** Updated vector icons to stroke width 1.5, standard 16/20px sizes, and wrapped button contents to eliminate icon-label spacing defects.
+- **Verification:**
+  - Client Vitest Suite: 18 test files passing (141/141 tests).
+  - Monorepo Lint: 0 errors, 0 warnings (`npm run lint`).
+  - Monorepo Build: Clean production builds for client and server (`npm run build`).
+
+---
+
+### ADR-097: Root Routing Architecture, Marketing Layout Separation, and Split-Screen Auth Experience (TASK PHASE 2)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Previously, all routes including `/` (LandingPage), `/login`, `/register`, `/verify-email`, and `/404` were placed inside `<Route element={<AppShell />}>`. This caused unauthenticated visitors to see the internal application sidebar and corporate economic balance pills on the marketing landing page and authentication screens.
+  - `RootRouter.tsx` was unused and contained an unpolished cyan spinner with "Authenticating session..." text.
+  - `PublicOnlyRoute.tsx` redirected authenticated users to `'/'` by default, risking landing page flash instead of smoothly navigating to their role-appropriate destination.
+  - `RoleRoute.tsx` did not preserve `state={{ from: location }}` when redirecting unauthenticated users to `/login`.
+  - Login and registration screens used plain stacked cards, raw emojis, lacked inline password reveal toggles, and did not preserve deep-link return destinations.
+- **Decision:**
+  - **Marketing Layout Separation:** Created `MarketingLayout.tsx` and `MarketingLayout.module.css` with sticky top navigation (logo, anchor navigation, theme toggle, dynamic auth action button) and restrained multi-column footer without an internal sidebar. Supports both layout `<Outlet />` routing and direct children wrapping.
+  - **Refactored RootRouter:** Replaced the spinner with a calm, branded splash screen (logo monogram + 2px indeterminate progress bar) during session resolution; navigates authenticated users directly to `getPostLoginRedirect(user)`; renders `<MarketingLayout><LandingPage /></MarketingLayout>` for guests.
+  - **Route Architecture Restructuring:** Extracted `/login`, `/register`, `/verify-email`, `/404`, and marketing routes outside of `<AppShell />`. Wrapped `/login` and `/register` with `<PublicOnlyRoute>`. App routes remain protected inside `<AppShell />`.
+  - **Guards & Redirection:** Updated `PublicOnlyRoute.tsx` to automatically redirect authenticated sessions to `getPostLoginRedirect(user)`. Updated `RoleRoute.tsx` to preserve `state={{ from: location }}`.
+  - **Split-Screen Authentication Design:** Redesigned `LoginPage.tsx` and `RegisterPage.tsx` with modern split-screen layouts (`Auth.module.css`: form panel on left, simulation value overview on right; responsive fallback on mobile/tablets). Added interactive password reveal toggles (`EyeIcon` / `EyeOffIcon`), replaced all emojis with vector icons (`LockIcon`, `MailIcon`, `AlertCircleIcon`, `CheckCircle2Icon`), and preserved deep-link return destinations on successful login.
+  - **Vector Icons:** Extended `client/src/components/ui/Icon` with `LockIcon`, `MailIcon`, `EyeIcon`, and `EyeOffIcon`.
+  - **Testing:** Added test coverage in `guards.test.tsx` for `PublicOnlyRoute` (guest access vs authenticated redirect).
+---
+
+### ADR-098: Restrained Linear/Vercel Marketing Landing Page & Interactive Kernel Simulation Preview (TASK PHASE 3)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The original landing page featured legacy text gradients (`.gradientText`), heavy animated ambient glow radial gradients (`.ambientGlow`), and lacked interactive demonstration of the core simulation mechanics.
+  - Spec and user requirements demanded a premier, restrained SaaS landing page (Linear, Vercel, Stripe level of discipline) with zero text gradients, zero neon glows, zero raw emojis, strict type scale, and universal `tabular-nums` for numeric indicators.
+- **Decision:**
+  - **Hero & Visual Restraint:** Removed all text gradients and radial background glows in favor of a subtle, restrained architectural grid pattern with radial alpha mask. Refined typography with 600-weight headings, -0.02em tracking, and clear status pill badges.
+  - **Interactive Simulation Kernel Preview:** Implemented an interactive terminal-style simulation viewport with 3 active stage tabs:
+    1. `01 HIRING`: Demonstrates 8-stage ATS screening, live transcript evaluation between Candidate and AI Hiring Bot, and salary band bounds ($95k-$125k).
+    2. `02 WORKPLACE`: Demonstrates sprint execution on a distributed systems task, 14/14 automated test passes, and double-entry EXP ledger record creation.
+    3. `03 FOUNDER`: Demonstrates executive command HQ with autonomous bot fleet status, CorpCoin treasury balance, and daily P&L financial scenario impact.
+  - **Core Pillars & Progression:** Structured the 3 simulation pillars (Job Seeker, Employee, Founder) and 10-level seniority progression track (L1 Intern 0 EXP to L10 Principal 16,000 EXP, highlighting Level 9 Founder Unlock at 12,000 EXP) using normalized card, badge, and vector icon tokens.
+  - **Zero Emoji Compliance:** Ensured all illustrations, buttons, and badges strictly utilize vector icons (`LaptopIcon`, `CloudIcon`, `BrainCircuitIcon`, `BotIcon`, `ZapIcon`, `BriefcaseIcon`, `ShieldCheckIcon`).
+- **Verification:**
+  - Client Vitest Suite: 18 test files passing (144/144 tests passing).
+  - Client Production Build: `vite build` completed cleanly in 7.44s.
+
+---
+
+### ADR-099: Motion Design System, Spring Transitions, and Universal Reduced-Motion Accessibility (TASK PHASE 4)
+
+- **Status:** ACCEPTED
+- **Context:**
+  - Micro-interactions, page entrances, modal dialog reveals, balance counters, and tab indicators lacked unified, restrained physics. Ad-hoc CSS transitions existed across components without consistent spring damping or universal OS-level accessibility (`prefers-reduced-motion`) handling.
+  - Linear/Raycast design discipline requires spring-based micro-interactions that feel snappy (<200ms duration, high stiffness, zero bounce/wobble) and universal accessibility compliance.
+- **Decision:**
+  - **Motion Integration:** Installed `motion` (`motion/react`) package.
+  - **Canonical Spring Tokens (`motionTokens.ts`):**
+    - `SPRING_FAST`: `{ type: 'spring', stiffness: 400, damping: 30 }` for buttons and compact interactive elements.
+    - `SPRING_SNAPPY`: `{ type: 'spring', stiffness: 500, damping: 35 }` for tab sliding indicators.
+    - `SPRING_GENTLE`: `{ type: 'spring', stiffness: 260, damping: 24 }` for larger container reveals.
+    - `PAGE_TRANSITION_VARIANTS`: Calm fade with subtle 6px vertical shift.
+    - `MODAL_BACKDROP_VARIANTS` & `MODAL_DIALOG_VARIANTS`: Backdrop fade and dialog scale entrance (`0.96` to `1.0`).
+    - `STAGGER_CONTAINER_VARIANTS` & `STAGGER_ITEM_VARIANTS`: 40ms stagger cap.
+  - **Component Enhancements:**
+    - `AnimatedNumber`: Tabular numeric count-up component with automatic initial render stability, `useReducedMotion()`, and custom formatting. Integrated into `Topbar.tsx` for EXP and CorpCoin balances.
+    - `Button`: Upgraded to `motion.button` with `whileTap={{ scale: 0.98 }}` and spring transition, preserving all native HTML button semantics and disabled/loading protections.
+    - `Modal`: Integrated with `AnimatePresence` for smooth exit transitions, backdrop fade, and scale-up dialog entrance.
+    - `Tabs`: Added `<motion.span layoutId="activeTabIndicator" />` for fluid sliding pill/underline transitions between tabs.
+    - `PageTransition`: Drop-in wrapper component for page transitions.
+    - `StaggerList` & `StaggerItem`: Micro-staggered list container with a 5-item cap.
+  - **Universal Accessibility:** Wrapped the application tree in `<MotionConfig reducedMotion="user">` in `App.tsx`, guaranteeing universal `prefers-reduced-motion` compliance across the entire application without boilerplate.
+- **Verification:**
+  - Client Vitest Suite: 19 test files passing (151/151 tests passing, including dedicated `motion.test.tsx` suite).
+  - Client Production Build: `tsc && vite build` completed cleanly with zero TypeScript errors.
+
+---
+
+### ADR-100: WebGL Dynamic ASCII Background Integration for Marketing Landing Page (TASK PHASE 5)
+
+- **Context:**
+  The public marketing landing page (`/`) represents the initial entrypoint for students, engineers, and visitors. To evoke an authentic corporate engineering simulation kernel vibe (Linear / Vercel restraint meets cyber-simulation), an interactive WebGL shader component (`GradientASCII`) was adapted from React Bits to replace flat background gradients with an interactive, animated ASCII glyph field.
+- **Decision:**
+  1. **Strict TypeScript & Design System Alignment:**
+     - Created `client/src/components/ui/GradientASCII/GradientASCII.tsx` and `GradientASCII.css`, exported from `client/src/components/ui/index.ts`.
+     - Brand color alignment with CorpVerse design tokens:
+       - Dark mode palette (`CORPVERSE_DARK_PALETTE`): deep zinc (`#09090b`), slate (`#18181b`), brand indigos (`#312e81`, `#4338ca`, `#6366f1`), and cyan accent (`#38bdf8`).
+       - Light mode palette (`CORPVERSE_LIGHT_PALETTE`): clean zinc (`#ffffff`, `#f4f4f5`), soft indigos (`#e0e7ff`, `#c7d2fe`, `#818cf8`, `#6366f1`).
+     - Font family alignment with `--cv-font-mono`: `"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace`.
+     - Glyphs configured for technical corporate simulation kernel: `' 01+-·:;=*#@'`.
+     - Automatic dynamic theme adaptation via `useTheme()` (`lightMode={theme === 'light'}`).
+  2. **Landing Page Architecture & Non-Interference:**
+     - Placed inside `.asciiBackground` in `LandingPage.tsx` behind the hero section with `z-index: 0` and `pointer-events: none`.
+     - Masked with an elliptical radial gradient and bottom linear fade (`.asciiOverlay`) ensuring seamless blend into `var(--cv-bg-app)` without rectangular clipping.
+     - Global pointer tracking via `window` listeners allows interactive pointer trails and click ripple waves (`clickEffect="wave"`) without interfering with clickable buttons, links, or text selection.
+  3. **Accessibility & Test Resilience:**
+     - Automatic motion dampening when `prefers-reduced-motion: reduce` is detected.
+     - Safe try-catch context acquisition guards for headless/jsdom testing environments (`canvas.getContext`).
+     - Tested with 4 unit tests in `src/tests/gradientAscii.test.tsx`.
+- **Verification:**
+  - Client Vitest Suite: 20 test files passing (155/155 tests passing).
+  - Client Production Build: `tsc && vite build` completed in 8.28s with zero TypeScript or bundling errors.
+
+---
+
+### ADR-101: Comprehensive Product Polish Pass, Screen-by-Screen Aesthetic Audit, Emoji Elimination, and Tabular Numerics (TASK PHASE 5)
+
+- **Context:**
+  Following the design system consolidation (Phase 1), routing/auth flow restructuring (Phase 2), landing page kernel simulation (Phase 3), and spring motion design system (Phase 4), CorpVerse required a comprehensive screen-by-screen product audit across all candidate, employee, founder, and administrator flows. The primary objectives: eradicate colloquial emojis, enforce universal `tabular-nums` formatting for economic/telemetry data, replace unicode artifacts with dedicated SVG vector iconography, and verify full test suite integrity and zero-error production builds.
+- **Decision:**
+  1. **Employee & Candidate Experience Polish:**
+     - `TaskWorkPage.tsx`: Replaced emojis (`⚠️`, `✓`, `▲`) with `AlertTriangleIcon`, `CheckCircle2Icon`, and `AlertCircleIcon`. Corrected duplicate inline style declarations.
+     - `WorkplaceDashboardPage.tsx`: Replaced emojis (`⚡`, `🚀`, `✓`) with `ZapIcon`, `RocketIcon`, `CheckCircle2Icon`.
+     - `ProfileSetupPage.tsx`: Replaced all emojis (`🚀`, `⚠️`, `✓`, `✕`, `📄`, `📎`) with vector icons (`RocketIcon`, `AlertTriangleIcon`, `AlertCircleIcon`, `CheckIcon`, `CloseIcon`, `FileTextIcon`, `PaperclipIcon`).
+  2. **Founder Experience Polish:**
+     - `FounderUnlockPage.tsx`: Replaced emojis with `RocketIcon`, `CoinIcon`, `ZapIcon`; preserved canonical text nodes for test assertion compatibility.
+     - `CreateCompanyPage.tsx`: Replaced emojis with `BuildingIcon`, `ClipboardListIcon`, `CoinIcon`; enforced explicit `CorpCoin` unit labeling in the incorporation fee breakdown.
+     - `BotShopPage.tsx`: Replaced emojis (`🤖`, `⚡`, `⚖️`, `🛒`, `✨`, `⚠️`, `✓`, `🧠`, `🔒`, `🪙`) with `BotIcon`, `ZapIcon`, `ScaleIcon`, `ShoppingCartIcon`, `CheckCircle2Icon`, `AlertTriangleIcon`, `CheckIcon`, `LockIcon`, `BrainCircuitIcon`, `CoinIcon`. Fixed direct payload access on `apiClient.get`.
+     - `FounderDashboardPage.tsx`: Replaced emojis with `BuildingIcon`, `ZapIcon`, `BotIcon`, `ClipboardListIcon`, `UsersIcon`, `UserIcon`, `TrendingUpIcon`.
+     - `DailyScenarioPage.tsx`, `ApplicantPipelinePage.tsx`, `JobOpeningsPage.tsx`, `FounderLedgerPage.tsx`, `BankruptcyOutcomePage.tsx`: Systematically eradicated emojis and restored exact test attributes (`data-testid="reentry-jobs-btn"`).
+  3. **Consoles & Platform Infrastructure:**
+     - `LeaderboardsPage.tsx`: Replaced raw category and segment emojis with vector icons (`UserIcon`, `BuildingIcon`, `ZapIcon`, `AwardIcon`, `CoinIcon`, `TargetIcon`, `CrownIcon`, `TrendingUpIcon`, `UsersIcon`, `ShieldCheckIcon`, `StarIcon`, `RocketIcon`, `RefreshCwIcon`). Applied `tabular-nums` formatting across ranking scores and podium standings. Preserved exact podium badge string test invariants.
+     - `AdminAiHealthPage.tsx`: Replaced emojis (`🛡️`, `🔄`, `🔌`, `📜`, `⚡`) with `ShieldCheckIcon`, `RefreshCwIcon`, `ActivityIcon`, `FileTextIcon`, `ZapIcon`, `AlertCircleIcon`.
+     - `AiManagerPage.tsx`: Replaced emojis (`🧠`, `🔄`, `⚙️`, `📊`) with `BrainCircuitIcon`, `RefreshCwIcon`, `SettingsIcon`, `BarChartIcon`. Preserved test button name `▲`.
+     - `AdminConsolePage.tsx`: Replaced Unicode star `★` with `StarIcon` and applied `tabular-nums` across financial telemetry and workforce columns.
+     - `ToastContext.tsx`: Replaced unicode symbols (`✓`, `✕`, `⚠`, `ℹ`) with `CheckIcon`, `AlertCircleIcon`, `AlertTriangleIcon`, and `CloseIcon`.
+     - `ErrorBoundary.tsx`: Replaced raw `⚠` with `AlertTriangleIcon`.
+- **Verification:**
+  - Client Vitest Suite: 20 test files passing (155/155 tests passing).
+  - Client Production Build: `tsc && vite build` built cleanly in 7.75s with zero errors.
+
+---
+
+### ADR-110: WebGL Canvas Recovery, Hero Contrast Tuning & Auth Refresh Deduplication
+
+- **Status:** ACCEPTED
+- **Context:**
+  - In React 18 development mode, React StrictMode mounts, unmounts, and remounts components. `GradientASCII.tsx` previously executed `gl.getExtension('WEBGL_lose_context')?.loseContext()` in its `useEffect` cleanup. This permanently destroyed the WebGL context on StrictMode unmount, causing Chromium/Brave to display the crashed canvas sad face icon (`:(`) on remount and preventing any ASCII characters from rendering.
+  - With the canvas crashed, only the fallback CSS mask rendered, blasting a bright radial glow that washed out the hero headline.
+  - Color parsing in `GradientASCII.tsx` previously utilized an offscreen 2D canvas `probe.getImageData(0, 0, 1, 1)`, triggering browser canvas fingerprinting defenses.
+  - Rapid hot-reloading and dual StrictMode initial session checks tripped the backend's strict 30 req/15min `refreshLimiter`, returning HTTP 429 on `POST /api/v1/auth/refresh`.
+  - Missing `/vite.svg` icon triggered 404 network errors in DevTools.
+- **Decision:**
+  - **WebGL Context Lifecycle & Safe Cleanup:**
+    - Removed `loseContext()` from `GradientASCII.tsx` cleanup. Properly delete textures, framebuffers, vertex array objects, and shader programs without corrupting the WebGL context across React remounts.
+    - Added shader compilation and program linking error diagnostics in `compile()` and `link()` to catch GLSL syntax errors early.
+  - **Zero-DOM Mathematical Color Parser:**
+    - Replaced the offscreen 2D canvas probe with a pure hex/rgb bitshift parser in `parse()`, completely eliminating canvas fingerprinting alerts.
+  - **Hero Aesthetic Calibration:**
+    - Adjusted `GradientASCII` props on `LandingPage.tsx`: switched to `shape="rise"` with restrained `gradientOpacity={0.04}` in dark mode (`0.06` in light mode), `glyphOpacity={0.8}`, and subtle `glow={0.06}`.
+    - Updated `LandingPage.module.css`: replaced the elliptical mask with a smooth vertical fade (`linear-gradient(to bottom, #000 65%, transparent 100%)`), added a subtle contrast vignette in `.asciiOverlay`, and added `text-shadow` to `.heroTitle` for crisp typography.
+  - **Auth Refresh In-Flight Deduplication & Dev Rate Limiting:**
+    - Added `refreshPromiseRef` in `client/src/store/AuthContext.tsx` to deduplicate concurrent or StrictMode double-invocations into a single in-flight network request.
+    - Configured `refreshLimiter` in `server/src/middleware/rateLimiter.ts` to allow 1000 requests per 15 minutes during development (`env.NODE_ENV === 'development' ? 1000 : 30`), aligning with ADR-080.
+  - **Monogram Favicon:**
+    - Generated `client/public/favicon.svg` with the CorpVerse brand monogram and updated `client/index.html`.
+- **Verification:**
+  - Client Vitest Suite: 20 test files, 155/155 tests passing.
+  - Server Session Suite: 15/15 integration tests passing (`session.test.ts`).
+  - Monorepo Lint: 0 errors, 0 warnings across ESLint.
+  - Monorepo Build: Client and server compile cleanly with zero TypeScript errors.
+
+---
+
+### ADR-111: Canonical React Bits <GradientASCII /> Defaults & Showcase Integration
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The user requested integration of the official open-source React Bits `<GradientASCII />` component with its canonical defaults and requested usage example (`colors={['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']}`, `shape="horizon"`, `characters=" =+xX0S8#@"`, `cellSize={18}`, `density={0.8}`).
+  - In `LandingPage.tsx`, the component previously lacked interactive pointer routing and had an ultra-low opacity setting that rendered it nearly invisible.
+  - Furthermore, `GradientASCII` was missing from the CorpVerse Design Kit (`ShowcasePage.tsx`), preventing developers from reviewing and interacting with the component in isolation.
+- **Decision:**
+  - **Canonical Defaults:**
+    - Updated `GradientASCII.tsx` default props to match React Bits: `DEFAULT_COLORS` (`['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']`), `DEFAULT_CHARACTERS` (`' =+xX0S8#@'`), `DEFAULT_FONT` (`"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`), `gradientOpacity: 0.9`, `glyphOpacity: 0.85`, `glow: 0.2`, `density: 0.8`, `cellSize: 18`, `speed: 1`, `softness: 0.5`.
+    - Maintained safe WebGL resource cleanup (textures, buffers, VAO, programs) without destructive `loseContext()`, and retained zero-DOM bitshift hex/rgb color parsing.
+  - **Landing Page Hero Integration:**
+    - Integrated `<GradientASCII />` with `colors={['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']}`, `shape="horizon"`, `characters=" =+xX0S8#@"`, `cellSize={18}`, `density={0.8}`.
+    - Updated `LandingPage.module.css` to route pointer events: `.asciiBackground` has `pointer-events: auto`, `.heroSection` has `pointer-events: none` with interactive buttons (`a`, `button`, `.heroBadge`) re-enabled (`pointer-events: auto`). This allows cursor movement anywhere across the hero to scramble ASCII characters and trigger click wave ripples.
+    - Added a centered radial vignette overlay in `.asciiOverlay` and text-shadow on `.heroTitle` ensuring crisp text readability against the horizon light.
+  - **Showcase & Design Kit Playground (`ShowcasePage.tsx`):**
+    - Added dedicated tab `"WebGL Simulation (React Bits)"` to `ShowcasePage.tsx` with a full-width 600px interactive viewport matching the official usage specification.
+- **Verification:**
+  - Client Vitest Suite: 20 test files, 155/155 tests passing.
+  - Client Production Build: Clean compilation in 7.66s.
+  - Monorepo Lint: 0 errors, 0 warnings.
+
+---
+
+### ADR-112: Marketing Navigation Simplification & Minimalist Topbar Layout
+
+- **Status:** ACCEPTED
+- **Context:**
+  - The marketing landing page navbar previously included in-page anchor and external route links (`Simulation`, `Progression`, `Economy`, `Companies`, `Careers`, `Design Kit`).
+  - These center links cluttered the public header and duplicated links already present in the footer directory (`footerLinkGroup`) and hero CTAs.
+  - The user requested removing all center navigation items from the landing page navbar and adjusting the navbar to a clean, balanced layout.
+- **Decision:**
+  - **Header Structure Simplification:**
+    - Removed `<nav className={styles.navLinks}>` from `MarketingLayout.tsx`.
+    - Left area now contains only the brand logo anchor (`Link to="/" className={styles.logo}`).
+    - Right area contains the theme toggle button and authentication action buttons (`Sign In` and `Get Started`, or `Go to Workspace →` when authenticated).
+  - **CSS Refinement:**
+    - Removed unused `.navLinks` and `.navLink` rules in `MarketingLayout.module.css`.
+    - Removed redundant flex gap from `.leftArea`.
+    - Added subtle opacity hover transition to `.logo` (`opacity: 0.9` on `:hover`).
+- **Verification:**
+  - Client Vitest Suite: 20 test files, 155/155 tests passing.
+  - Client Production Build: Clean compilation in 7.73s.
+  - Monorepo Lint: 0 errors, 0 warnings.
+
+---
+
+### ADR-113: Light (White) Theme Overhaul, Theme-Adaptive Hero Contrast, and ASCII Palettes
+
+- **Status:** ACCEPTED
+- **Context:**
+  - In light theme (`.theme-light`), the landing page hero suffered from several visual defects:
+    1. `<GradientASCII />` was hardcoded to an electric blue/cyan palette (`['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']`) with full 0.9 gradient opacity, creating a harsh saturated block on the white page.
+    2. `.asciiOverlay` had a hardcoded dark radial gradient (`rgba(9, 9, 11, 0.75)`), causing a murky black smudge across the hero center in light mode.
+    3. `.heroTitle` had a heavy black `text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9)` that blurred and soiled text on light backgrounds.
+    4. Subtitle text lacked contrast due to the dark oval smudge.
+    5. The kernel simulation preview window lacked crisp macOS/Stripe-level chrome contrast in light mode.
+- **Decision:**
+  - **Theme-Adaptive Hero Variables in `themes.css`:**
+    - Defined `--cv-hero-overlay-radial`:
+      - Dark: `radial-gradient(ellipse 65% 55% at 50% 25%, rgba(9, 9, 11, 0.75) 0%, rgba(9, 9, 11, 0.25) 55%, transparent 100%)`
+      - Light: `radial-gradient(ellipse 70% 60% at 50% 25%, rgba(250, 250, 250, 0.9) 0%, rgba(250, 250, 250, 0.45) 60%, transparent 100%)`
+    - Defined `--cv-hero-title-shadow`:
+      - Dark: `0 2px 24px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.7)`
+      - Light: `none` (crisp razor-clean text)
+    - Defined `--cv-hero-grid-opacity`:
+      - Dark: `0.25`
+      - Light: `0.45`
+  - **Theme-Adaptive `<GradientASCII />` Props in `LandingPage.tsx` and `ShowcasePage.tsx`:**
+    - When `theme === 'light'`:
+      - `colors`: `['#ffffff', '#f0f4ff', '#e0e7ff', '#c7d2fe', '#818cf8', '#6366f1']` (soft porcelain to indigo)
+      - `gradientOpacity`: `0.35`
+      - `glyphOpacity`: `0.65`
+      - `glow`: `0.12`
+      - `density`: `0.72`
+      - `lightMode`: `true`
+    - When `theme === 'dark'`:
+      - `colors`: `['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']`
+      - `gradientOpacity`: `0.9`
+      - `glyphOpacity`: `0.85`
+      - `glow`: `0.2`
+      - `density`: `0.8`
+      - `lightMode`: `false`
+  - **Kernel Simulation Window Styling in `LandingPage.module.css`:**
+    - `.kernelTopBar` uses `var(--cv-bg-surface-subtle)` (`#f8fafc` in light mode) for a distinct title bar.
+    - Window control dots styled with refined traffic light accents (`#ef4444`, `#f59e0b`, `#10b981`).
+    - Tabs sidebar uses `var(--cv-bg-surface-subtle)` with `.kernelTabBtnActive` elevating in clean white (`var(--cv-bg-surface)`) and `var(--cv-shadow-sm)`.
+  - **Light Theme Tokens in `themes.css`:**
+    - Refined light theme tokens (`--cv-bg-surface-subtle: #f8fafc`, `--cv-bg-surface-hover: #f1f5f9`, `--cv-border-default: rgba(0, 0, 0, 0.09)`, multi-layered diffused shadows).
+- **Verification:**
+  - Client Vitest Suite: 20 test files, 155/155 tests passing.
+  - Client Production Build: Clean compilation in 7.55s.
+  - Monorepo Lint: 0 errors, 0 warnings.
+
+
+
+
+
+
 
 
 

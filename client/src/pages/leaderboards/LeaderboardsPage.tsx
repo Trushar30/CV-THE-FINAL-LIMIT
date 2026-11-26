@@ -3,6 +3,21 @@ import { useAuth } from '../../store/AuthContext';
 import { apiClient } from '../../api/client';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { Button, Spinner, EmptyState, Badge } from '../../components/ui';
+import {
+  UserIcon,
+  BuildingIcon,
+  ZapIcon,
+  AwardIcon,
+  CoinIcon,
+  TargetIcon,
+  CrownIcon,
+  TrendingUpIcon,
+  UsersIcon,
+  ShieldCheckIcon,
+  StarIcon,
+  RocketIcon,
+  RefreshCwIcon,
+} from '../../components/ui/Icon';
 import styles from './Leaderboards.module.css';
 
 export type LeaderboardCategory =
@@ -43,23 +58,54 @@ export interface LeaderboardResponse {
   calculatedAt: string;
 }
 
-const USER_CATEGORIES: { id: LeaderboardCategory; label: string; icon: string }[] = [
-  { id: 'USER_EXP', label: 'Highest EXP', icon: '⚡' },
-  { id: 'USER_LEVEL', label: 'Highest Level', icon: '🏅' },
-  { id: 'USER_CORPCOIN', label: 'CorpCoin Wealth', icon: '🪙' },
-  { id: 'USER_PERFORMANCE', label: 'Task Performance', icon: '🎯' },
-  { id: 'USER_FOUNDER', label: 'Top Founders', icon: '👑' },
+const USER_CATEGORIES: { id: LeaderboardCategory; label: string }[] = [
+  { id: 'USER_EXP', label: 'Highest EXP' },
+  { id: 'USER_LEVEL', label: 'Highest Level' },
+  { id: 'USER_CORPCOIN', label: 'CorpCoin Wealth' },
+  { id: 'USER_PERFORMANCE', label: 'Task Performance' },
+  { id: 'USER_FOUNDER', label: 'Top Founders' },
 ];
 
-const COMPANY_CATEGORIES: { id: LeaderboardCategory; label: string; icon: string }[] = [
-  { id: 'COMPANY_PROFIT', label: 'Net Profit', icon: '📈' },
-  { id: 'COMPANY_REVENUE', label: 'Total Revenue', icon: '💰' },
-  { id: 'COMPANY_WORKFORCE', label: 'Largest Workforce', icon: '👥' },
-  { id: 'COMPANY_RETENTION', label: 'Retention Rate', icon: '🛡️' },
-  { id: 'COMPANY_RATING', label: 'Company Rating', icon: '⭐' },
-  { id: 'COMPANY_GROWTH', label: 'Fastest Growing', icon: '🚀' },
-  { id: 'COMPANY_LOSS_MAKING', label: 'Loss-Making List', icon: '📉' },
+const COMPANY_CATEGORIES: { id: LeaderboardCategory; label: string }[] = [
+  { id: 'COMPANY_PROFIT', label: 'Net Profit' },
+  { id: 'COMPANY_REVENUE', label: 'Total Revenue' },
+  { id: 'COMPANY_WORKFORCE', label: 'Largest Workforce' },
+  { id: 'COMPANY_RETENTION', label: 'Retention Rate' },
+  { id: 'COMPANY_RATING', label: 'Company Rating' },
+  { id: 'COMPANY_GROWTH', label: 'Fastest Growing' },
+  { id: 'COMPANY_LOSS_MAKING', label: 'Loss-Making List' },
 ];
+
+function renderCategoryIcon(id: LeaderboardCategory): React.ReactElement {
+  switch (id) {
+    case 'USER_EXP':
+      return <ZapIcon size={14} color="var(--cv-gold-400)" />;
+    case 'USER_LEVEL':
+      return <AwardIcon size={14} color="var(--cv-brand-400)" />;
+    case 'USER_CORPCOIN':
+      return <CoinIcon size={14} color="var(--cv-gold-400)" />;
+    case 'USER_PERFORMANCE':
+      return <TargetIcon size={14} color="var(--cv-accent-emerald-400)" />;
+    case 'USER_FOUNDER':
+      return <CrownIcon size={14} color="var(--cv-gold-400)" />;
+    case 'COMPANY_PROFIT':
+      return <TrendingUpIcon size={14} color="var(--cv-accent-emerald-400)" />;
+    case 'COMPANY_REVENUE':
+      return <CoinIcon size={14} color="var(--cv-gold-400)" />;
+    case 'COMPANY_WORKFORCE':
+      return <UsersIcon size={14} color="var(--cv-brand-400)" />;
+    case 'COMPANY_RETENTION':
+      return <ShieldCheckIcon size={14} color="var(--cv-accent-emerald-400)" />;
+    case 'COMPANY_RATING':
+      return <StarIcon size={14} color="var(--cv-gold-400)" />;
+    case 'COMPANY_GROWTH':
+      return <RocketIcon size={14} color="var(--cv-brand-400)" />;
+    case 'COMPANY_LOSS_MAKING':
+      return <TrendingUpIcon size={14} color="var(--cv-status-danger-text)" style={{ transform: 'rotate(90deg)' }} />;
+    default:
+      return <ZapIcon size={14} />;
+  }
+}
 
 export const LeaderboardsPage: React.FC = () => {
   const { user, fetchCurrentUser } = useAuth();
@@ -176,7 +222,10 @@ export const LeaderboardsPage: React.FC = () => {
             onClick={handleRefresh}
             disabled={refreshing || loading}
           >
-            {refreshing ? 'Refreshing...' : '↻ Refresh Cache'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <RefreshCwIcon size={13} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh Cache'}</span>
+            </span>
           </Button>
         </div>
       </div>
@@ -188,14 +237,20 @@ export const LeaderboardsPage: React.FC = () => {
           className={`${styles.segmentButton} ${activeTab === 'USERS' ? styles.segmentButtonActive : ''}`}
           onClick={() => handleTabChange('USERS')}
         >
-          👤 Engineering Talent
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <UserIcon size={14} />
+            <span>Engineering Talent</span>
+          </span>
         </button>
         <button
           type="button"
           className={`${styles.segmentButton} ${activeTab === 'COMPANIES' ? styles.segmentButtonActive : ''}`}
           onClick={() => handleTabChange('COMPANIES')}
         >
-          🏢 Corporate Rankings
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <BuildingIcon size={14} />
+            <span>Corporate Rankings</span>
+          </span>
         </button>
       </div>
 
@@ -208,7 +263,7 @@ export const LeaderboardsPage: React.FC = () => {
             className={`${styles.categoryChip} ${category === c.id ? styles.categoryChipActive : ''}`}
             onClick={() => handleCategoryChange(c.id)}
           >
-            <span>{c.icon}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{renderCategoryIcon(c.id)}</span>
             <span>{c.label}</span>
           </button>
         ))}
@@ -280,7 +335,7 @@ export const LeaderboardsPage: React.FC = () => {
                       )}
                     </div>
                     <div className={styles.podiumName}>{item.name}</div>
-                    <div className={styles.podiumScore}>
+                    <div className={`${styles.podiumScore} tabular-nums`}>
                       {typeof item.score === 'number' ? item.score.toLocaleString() : item.score}
                     </div>
                     {item.secondaryMetric && (
@@ -307,7 +362,7 @@ export const LeaderboardsPage: React.FC = () => {
               <div className={styles.myStandingStats}>
                 <div className={styles.myStandingStatBlock}>
                   <span className={styles.myStandingStatLabel}>Score</span>
-                  <span className={styles.myStandingStatValue}>
+                  <span className={`${styles.myStandingStatValue} tabular-nums`}>
                     {typeof myRankItem.score === 'number'
                       ? myRankItem.score.toLocaleString()
                       : myRankItem.score}
@@ -395,7 +450,7 @@ export const LeaderboardsPage: React.FC = () => {
                           )}
                         </td>
                         <td>
-                          <span className={styles.scoreValue}>
+                          <span className={`${styles.scoreValue} tabular-nums`}>
                             {typeof item.score === 'number' ? item.score.toLocaleString() : item.score}
                           </span>
                         </td>

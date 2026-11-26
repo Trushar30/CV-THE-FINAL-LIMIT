@@ -1,0 +1,68 @@
+.splashContainer {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--cv-bg-app);
+  color: var(--cv-text-primary);
+  font-family: var(--cv-font-sans);
+}
+
+.splashBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cv-space-4);
+}
+
+.splashMonogram {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--cv-radius-md);
+  background: var(--cv-brand-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  box-shadow: var(--cv-shadow-sm);
+}
+
+.splashBarTrack {
+  width: 120px;
+  height: 2px;
+  background-color: var(--cv-border-default);
+  border-radius: var(--cv-radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.splashBarIndicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background-color: var(--cv-brand-500);
+  border-radius: var(--cv-radius-full);
+  animation: indeterminateBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes indeterminateBar {
+  0% {
+    left: -40%;
+    width: 30%;
+  }
+  50% {
+    left: 40%;
+    width: 60%;
+  }
+  100% {
+    left: 100%;
+    width: 30%;
+  }
+}

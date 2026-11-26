@@ -5,6 +5,7 @@ import apiClient from '../../api/client';
 import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
+import { ZapIcon, BuildingIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface ScenarioOption {
@@ -147,8 +148,8 @@ export function DailyScenarioPage(): ReactElement {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>⚡</span> Daily Executive Dilemma
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ZapIcon size={22} color="var(--cv-gold-400)" /> Daily Executive Dilemma
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {scenario && (
@@ -329,13 +330,15 @@ export function DailyScenarioPage(): ReactElement {
       {/* No active scenario empty state */}
       {!scenario && (
         <div className={styles.sectionCard} style={{ textAlign: 'center', padding: 'var(--cv-space-8) var(--cv-space-4)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+          <div style={{ display: 'inline-flex', padding: '16px', borderRadius: 'var(--cv-radius-full)', background: 'var(--cv-bg-surface-elevated)', border: '1px solid var(--cv-border-default)', marginBottom: '1rem' }}>
+            <ZapIcon size={32} color="var(--cv-gold-400)" />
+          </div>
           <h2 style={{ margin: 0, fontSize: 'var(--cv-text-xl)', color: 'var(--cv-text-primary)' }}>No Daily Dilemma Available</h2>
           <p style={{ maxWidth: 540, margin: '0.5rem auto 1.5rem', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
             Daily dilemmas are generated for active operating companies. Please make sure your company is incorporated and active in Executive HQ.
           </p>
-          <Button variant="gold" size="md" onClick={() => navigate('/founder/company/new')}>
-            Establish Company 🏢
+          <Button variant="primary" size="md" rightIcon={<BuildingIcon size={16} />} onClick={() => navigate('/founder/company/new')}>
+            Establish Company
           </Button>
         </div>
       )}

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, type CareerRole, type PlatformRole } from '../../store/AuthContext';
 import { LoadingScreen } from '../common/LoadingScreen';
 
@@ -17,13 +17,14 @@ export function RoleRoute({
   fallbackPath = '/unauthorized',
 }: RoleRouteProps): ReactElement {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <LoadingScreen message="Checking role privileges..." />;
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Admins bypass normal career role restrictions if platformRole includes ADMIN

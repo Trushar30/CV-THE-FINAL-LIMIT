@@ -1,4 +1,6 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useId, type ReactElement, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { SPRING_SNAPPY } from '../Motion/motionTokens';
 import styles from './Tabs.module.css';
 
 export interface TabItem {
@@ -28,6 +30,9 @@ export function Tabs({
   children,
   className = '',
 }: TabsProps): ReactElement {
+  const instanceId = useId();
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className={`${styles.container} ${styles[`variant-${variant}`]} ${className}`}>
       <div role="tablist" className={styles.tabList}>
@@ -45,9 +50,18 @@ export function Tabs({
               className={`${styles.tabButton} ${isActive ? styles.active : ''}`}
               onClick={() => onChange(tab.id)}
             >
-              {tab.icon && <span className={styles.icon}>{tab.icon}</span>}
-              <span>{tab.label}</span>
-              {tab.badge !== undefined && <span className={styles.badge}>{tab.badge}</span>}
+              {isActive && (
+                <motion.span
+                  layoutId={shouldReduceMotion ? undefined : `activeTabIndicator-${instanceId}`}
+                  className={styles.activeIndicator}
+                  transition={SPRING_SNAPPY}
+                />
+              )}
+              <span className={styles.tabLabelWrapper}>
+                {tab.icon && <span className={styles.icon}>{tab.icon}</span>}
+                <span>{tab.label}</span>
+                {tab.badge !== undefined && <span className={styles.badge}>{tab.badge}</span>}
+              </span>
             </button>
           );
         })}

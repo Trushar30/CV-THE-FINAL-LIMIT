@@ -3,9 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './store/ThemeContext';
 import { AuthProvider } from './store/AuthContext';
 import { ToastProvider } from './components/ui/Toast/ToastContext';
+import { MotionConfig } from 'motion/react';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
+import { MarketingLayout } from './components/layout/MarketingLayout';
+import { PublicOnlyRoute } from './components/guards/PublicOnlyRoute';
 import { RoleRoute } from './components/guards/RoleRoute';
+import { RootRouter } from './pages/RootRouter';
 import { ShowcasePage } from './pages/ShowcasePage';
 import { LandingPage } from './pages/LandingPage';
 import { CompaniesPage } from './pages/CompaniesPage';
@@ -48,13 +52,39 @@ export function App(): ReactElement {
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <BrowserRouter>
-              <Routes>
+            <MotionConfig reducedMotion="user">
+              <BrowserRouter>
+                <Routes>
+                  {/* Platform Landing & Root Router */}
+                  <Route path="/" element={<RootRouter />} />
+
+                {/* Marketing Layout Routes */}
+                <Route element={<MarketingLayout />}>
+                  <Route path="/landing" element={<LandingPage />} />
+                </Route>
+
+                {/* Public-Only Auth Routes */}
+                <Route
+                  path="/login"
+                  element={
+                    <PublicOnlyRoute>
+                      <LoginPage />
+                    </PublicOnlyRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <PublicOnlyRoute>
+                      <RegisterPage />
+                    </PublicOnlyRoute>
+                  }
+                />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+
                 {/* Main App Layout */}
                 <Route element={<AppShell />}>
-                  {/* Platform Landing & Root Routes */}
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/landing" element={<LandingPage />} />
+                  {/* Public App Views with Shell */}
                   <Route path="/showcase" element={<ShowcasePage />} />
                   <Route path="/leaderboards" element={<LeaderboardsPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
@@ -64,6 +94,7 @@ export function App(): ReactElement {
                   <Route path="/companies/:id" element={<CompanyDetailPage />} />
                   <Route path="/jobs" element={<JobsPage />} />
                   <Route path="/jobs/:id" element={<JobDetailPage />} />
+
 
                   {/* Job Seeker Guarded Routes */}
                   <Route
@@ -285,19 +316,19 @@ export function App(): ReactElement {
                     }
                   />
 
-                  {/* Auth & Error Pages */}
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/verify-email" element={<VerifyEmailPage />} />
+                  {/* Onboarding & Access Control */}
                   <Route path="/profile/setup" element={<ProfileSetupPage />} />
                   <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                  <Route path="/404" element={<NotFoundPage />} />
-                  <Route path="*" element={<Navigate to="/404" replace />} />
                 </Route>
+
+                {/* Standalone Fallback / Error Routes */}
+                <Route path="/404" element={<NotFoundPage />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </BrowserRouter>
-          </ToastProvider>
-        </AuthProvider>
+          </MotionConfig>
+        </ToastProvider>
+      </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { Table, type Column } from '../../components/ui/Table/Table';
+import { UsersIcon, ClipboardListIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface ApplicantSummary {
@@ -157,8 +158,8 @@ export function ApplicantPipelinePage(): ReactElement {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>👥</span> Candidate Intake & Evaluation Pipeline
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <UsersIcon size={24} color="var(--cv-brand-500)" /> Candidate Intake & Evaluation Pipeline
           </h1>
           <Badge variant="cyan">{applications.length} Candidates Tracked</Badge>
         </div>
@@ -181,7 +182,7 @@ export function ApplicantPipelinePage(): ReactElement {
       <div className={styles.sectionCard}>
         {applications.length === 0 ? (
           <div className={styles.emptyState}>
-            <span>📋</span>
+            <ClipboardListIcon size={32} color="var(--cv-text-muted)" />
             <h3 className={styles.emptyStateTitle}>No Applicants in Pipeline</h3>
             <p style={{ margin: 0, fontSize: 'var(--cv-text-sm)' }}>
               Open a job opening or ensure all 3 bots are acquired so job seekers can discover your listings.

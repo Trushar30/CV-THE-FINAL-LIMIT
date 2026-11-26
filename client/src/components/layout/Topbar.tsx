@@ -5,6 +5,7 @@ import { useTheme } from '../../store/ThemeContext';
 import { Button } from '../ui/Button/Button';
 import { MenuIcon, ZapIcon, CoinIcon, SunIcon, MoonIcon } from '../ui/Icon';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { AnimatedNumber } from '../ui/Motion/AnimatedNumber';
 import styles from './Topbar.module.css';
 
 export interface TopbarProps {
@@ -66,11 +67,15 @@ export function Topbar({
               <ZapIcon size={13} color="var(--cv-violet-400)" />
               <span>L{user.level ?? 1}</span>
               <span>•</span>
-              <span>{(user.totalExpCached ?? 0).toLocaleString()} EXP</span>
+              <span>
+                <AnimatedNumber value={user.totalExpCached ?? 0} /> EXP
+              </span>
             </div>
             <div className={`${styles.pill} ${styles.pillCoin}`} title="CorpCoin Balance">
               <CoinIcon size={13} color="var(--cv-gold-400)" />
-              <span>{(user.corpCoinBalanceCached ?? 0).toLocaleString()} CC</span>
+              <span>
+                <AnimatedNumber value={user.corpCoinBalanceCached ?? 0} /> CC
+              </span>
             </div>
           </div>
         )}

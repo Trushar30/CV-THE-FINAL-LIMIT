@@ -100,8 +100,7 @@ export function CompaniesPage(): ReactElement {
             </p>
           </div>
           <Link to="/jobs">
-            <Button variant="secondary" size="md">
-              <BriefcaseIcon size={16} />
+            <Button variant="secondary" size="md" leftIcon={<BriefcaseIcon size={16} />}>
               Browse Open Positions
             </Button>
           </Link>

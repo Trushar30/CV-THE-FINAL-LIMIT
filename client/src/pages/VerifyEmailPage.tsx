@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactElement } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { Button, Input, Spinner } from '../components/ui';
+import { MailIcon, CheckCircle2Icon, AlertCircleIcon } from '../components/ui/Icon';
 import styles from './Auth.module.css';
 
 export function VerifyEmailPage(): ReactElement {
@@ -68,118 +69,118 @@ export function VerifyEmailPage(): ReactElement {
   };
 
   return (
-    <div className={styles.authContainer}>
-      <div className={styles.authCard}>
-        <div className={styles.authHeader}>
-          <div className={styles.authBadge}>
-            <span>✉️</span>
-            <span>Security Verification</span>
-          </div>
-          <h1 className={styles.authTitle}>Verify Email</h1>
-          <p className={styles.authSubtitle}>
-            Activate your CorpVerse credentials to unlock virtual workspace access
-          </p>
-        </div>
+    <div className={styles.authPage}>
+      <div className={styles.formPanel} style={{ width: '100%' }}>
+        <div className={styles.formInner}>
+          <Link to="/" className={styles.topBrand} aria-label="Return to CorpVerse home">
+            <span className={styles.brandMonogram}>C</span>
+            <span className={styles.brandName}>CorpVerse</span>
+          </Link>
 
-        {isVerifying && (
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <p style={{ color: 'var(--cv-text-secondary)', marginBottom: '1rem' }}>
-              Validating security token with CorpVerse Auth Engine...
+          <div className={styles.headerText}>
+            <h1 className={styles.title}>Verify Email</h1>
+            <p className={styles.subtitle}>
+              Activate your simulated credentials to unlock workspace access
             </p>
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto' }}>
-              <Spinner size="lg" color="cyan" label="Validating security token with CorpVerse Auth Engine..." />
-            </div>
           </div>
-        )}
 
-        {successMessage && !isVerifying && (
-          <div>
-            <div
-              className={`${styles.alertBox} ${styles.alertSuccess}`}
-              style={{ marginBottom: '1.5rem' }}
-            >
-              <span className={styles.alertIcon}>🎉</span>
-              <div>
-                <strong>Verification Successful!</strong>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8125rem' }}>{successMessage}</p>
+          {isVerifying && (
+            <div style={{ textAlign: 'center', padding: 'var(--cv-space-6) 0' }}>
+              <p style={{ color: 'var(--cv-text-secondary)', marginBottom: 'var(--cv-space-3)' }}>
+                Validating security token with Auth Gateway...
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <Spinner size="md" color="primary" label="Validating security token" />
               </div>
             </div>
+          )}
 
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => navigate('/login')}
-              style={{ width: '100%' }}
-            >
-              Sign In to Your Workspace →
-            </Button>
-          </div>
-        )}
+          {successMessage && !isVerifying && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-4)' }}>
+              <div className={`${styles.alertBox} ${styles.alertSuccess}`}>
+                <span className={styles.alertIcon}>
+                  <CheckCircle2Icon size={16} color="var(--cv-status-success-text)" />
+                </span>
+                <div>
+                  <strong style={{ display: 'block', marginBottom: '2px' }}>
+                    Verification Successful!
+                  </strong>
+                  <p style={{ margin: 0, fontSize: 'var(--cv-text-13)' }}>{successMessage}</p>
+                </div>
+              </div>
 
-        {errorMessage && !isVerifying && (
-          <div>
-            <div
-              className={`${styles.alertBox} ${styles.alertError}`}
-              style={{ marginBottom: '1.5rem' }}
-            >
-              <span className={styles.alertIcon}>❌</span>
-              <div>{errorMessage}</div>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => navigate('/login')}
+                fullWidth
+              >
+                Sign In to Your Workspace →
+              </Button>
             </div>
+          )}
 
-            {/* Resend Option */}
-            <form onSubmit={handleResend} style={{ marginTop: '1.5rem' }}>
+          {errorMessage && !isVerifying && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-4)' }}>
+              <div className={`${styles.alertBox} ${styles.alertError}`}>
+                <span className={styles.alertIcon}>
+                  <AlertCircleIcon size={16} color="var(--cv-status-danger-text)" />
+                </span>
+                <div>{errorMessage}</div>
+              </div>
+
+              {/* Resend Option */}
+              <form onSubmit={handleResend} className={styles.form}>
+                <p
+                  style={{
+                    fontSize: 'var(--cv-text-13)',
+                    color: 'var(--cv-text-secondary)',
+                    margin: 0,
+                  }}
+                >
+                  Need a new verification link? Enter your email:
+                </p>
+                <Input
+                  type="email"
+                  placeholder="your.email@corpverse.dev"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  required
+                  disabled={isResending}
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="md"
+                  loading={isResending}
+                  fullWidth
+                >
+                  {isResending ? 'Sending...' : 'Request New Verification Link'}
+                </Button>
+              </form>
+
+              {resendStatus && (
+                <div className={`${styles.alertBox} ${styles.alertSuccess}`}>
+                  <span className={styles.alertIcon}>
+                    <MailIcon size={16} color="var(--cv-status-success-text)" />
+                  </span>
+                  <div>{resendStatus}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!tokenParam && !isVerifying && !successMessage && !errorMessage && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-4)' }}>
               <p
                 style={{
-                  fontSize: '0.875rem',
+                  fontSize: 'var(--cv-text-13)',
                   color: 'var(--cv-text-secondary)',
-                  marginBottom: '0.75rem',
+                  margin: 0,
                 }}
               >
-                Need a new verification link? Enter your email:
+                Enter the verification token from your confirmation email:
               </p>
-              <Input
-                type="email"
-                placeholder="your.email@corpverse.dev"
-                value={resendEmail}
-                onChange={(e) => setResendEmail(e.target.value)}
-                required
-                disabled={isResending}
-              />
-              <Button
-                type="submit"
-                variant="outline"
-                loading={isResending}
-                fullWidth
-                style={{ marginTop: '0.75rem' }}
-              >
-                {isResending ? 'Sending...' : 'Request New Verification Link'}
-              </Button>
-            </form>
-
-            {resendStatus && (
-              <div
-                className={`${styles.alertBox} ${styles.alertSuccess}`}
-                style={{ marginTop: '1rem' }}
-              >
-                <span className={styles.alertIcon}>✉️</span>
-                <div>{resendStatus}</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!tokenParam && !isVerifying && !successMessage && !errorMessage && (
-          <div>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                color: 'var(--cv-text-secondary)',
-                marginBottom: '1rem',
-              }}
-            >
-              Enter the verification token from your email confirmation:
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <Input
                 placeholder="Paste verification token"
                 value={tokenInput}
@@ -187,20 +188,22 @@ export function VerifyEmailPage(): ReactElement {
               />
               <Button
                 variant="primary"
+                size="md"
                 onClick={() => executeVerification(tokenInput)}
                 disabled={!tokenInput.trim()}
+                fullWidth
               >
                 Verify Token
               </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className={styles.authFooter}>
-          Return to
-          <Link to="/login" className={styles.footerLink}>
-            Sign In
-          </Link>
+          <div className={styles.authFooter}>
+            Return to
+            <Link to="/login" className={styles.footerLink}>
+              Sign In
+            </Link>
+          </div>
         </div>
       </div>
     </div>

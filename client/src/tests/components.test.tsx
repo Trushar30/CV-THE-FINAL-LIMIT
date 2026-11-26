@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import {
   Button,
   Input,
+  Select,
   Card,
   Modal,
   Table,
@@ -12,6 +13,7 @@ import {
   EmptyState,
   Spinner,
   Skeleton,
+  Tooltip,
   BriefcaseIcon,
   ZapIcon,
 } from '../components/ui';
@@ -258,6 +260,38 @@ describe('Reusable UI Components Suite', () => {
       const zap = screen.getByTestId('zap-icon');
       expect(zap.getAttribute('width')).toBe('16');
       expect(zap.getAttribute('height')).toBe('16');
+    });
+  });
+
+  describe('Select Component', () => {
+    it('renders select with label and options', () => {
+      const options = [
+        { value: 'opt1', label: 'Option 1' },
+        { value: 'opt2', label: 'Option 2' },
+      ];
+      render(<Select label="Test Select" options={options} />);
+      expect(screen.getByLabelText(/test select/i)).toBeDefined();
+      expect(screen.getByText('Option 1')).toBeDefined();
+      expect(screen.getByText('Option 2')).toBeDefined();
+    });
+
+    it('renders error message and aria-invalid on Select', () => {
+      render(<Select label="Role" error="Role is required" />);
+      const select = screen.getByLabelText(/role/i);
+      expect(select.getAttribute('aria-invalid')).toBe('true');
+      expect(screen.getByText('Role is required')).toBeDefined();
+    });
+  });
+
+  describe('Tooltip Component', () => {
+    it('renders trigger element and tooltip content', () => {
+      render(
+        <Tooltip content="Help text">
+          <button type="button">Hover me</button>
+        </Tooltip>
+      );
+      expect(screen.getByText('Hover me')).toBeDefined();
+      expect(screen.getByRole('tooltip', { hidden: true })).toBeDefined();
     });
   });
 });

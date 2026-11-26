@@ -72,25 +72,27 @@ export function ApplicationsTrackerPage(): ReactElement {
   const [withdrawing, setWithdrawing] = useState(false);
   const [manualTriggeringAppId, setManualTriggeringAppId] = useState<string | null>(null);
   const triggeredFinalReviewRef = useRef<Set<string>>(new Set());
+  const isMountedRef = useRef(true);
 
   const navigate = useNavigate();
 
   const handleTriggerFinalReview = async (appId: string): Promise<void> => {
     try {
-      setManualTriggeringAppId(appId);
+      if (isMountedRef.current) setManualTriggeringAppId(appId);
       await careerApi.executeFinalReview(appId);
-      await fetchApplications(false);
+      if (isMountedRef.current) await fetchApplications(false);
     } catch {
       // Non-blocking
     } finally {
-      setManualTriggeringAppId(null);
+      if (isMountedRef.current) setManualTriggeringAppId(null);
     }
   };
 
   const fetchApplications = async (setPageLoading = true): Promise<void> => {
     try {
-      if (setPageLoading) setLoading(true);
+      if (setPageLoading && isMountedRef.current) setLoading(true);
       const res = await careerApi.getApplications({ limit: 50 });
+      if (!isMountedRef.current) return;
       const appList = res.applications || [];
       setApplications(appList);
 
@@ -107,30 +109,36 @@ export function ApplicationsTrackerPage(): ReactElement {
     } catch {
       // Keep empty array on error
     } finally {
-      if (setPageLoading) setLoading(false);
+      if (setPageLoading && isMountedRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     void fetchApplications(true);
 
     // Silent background poll to auto-update when AI evaluation finishes
     const interval = setInterval(() => {
-      void fetchApplications(false);
+      if (isMountedRef.current) {
+        void fetchApplications(false);
+      }
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleTriggerAtsScreen = async (appId: string): Promise<void> => {
     try {
-      setManualTriggeringAppId(appId);
+      if (isMountedRef.current) setManualTriggeringAppId(appId);
       await careerApi.triggerAtsScreen(appId);
-      await fetchApplications(false);
+      if (isMountedRef.current) await fetchApplications(false);
     } catch {
       // Non-blocking
     } finally {
-      setManualTriggeringAppId(null);
+      if (isMountedRef.current) setManualTriggeringAppId(null);
     }
   };
 

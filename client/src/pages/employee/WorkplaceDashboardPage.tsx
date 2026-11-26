@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button/Button';
 import { ProgressBar } from '../../components/ui/ProgressBar/ProgressBar';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState';
+import { ZapIcon, CheckCircle2Icon, XCircleIcon } from '../../components/ui/Icon';
 import { useAuth } from '../../store/AuthContext';
 import {
   fetchTodayTasks,
@@ -131,7 +132,10 @@ export function WorkplaceDashboardPage(): ReactElement {
       <div className={styles.founderBanner} data-testid="founder-mode-banner">
         <div>
           <div className={styles.founderBannerTitle}>
-            <span>⚡ Founder Mode Status:</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <ZapIcon size={14} color="var(--cv-gold-400)" />
+              Founder Mode Status:
+            </span>
             {isFounderUnlocked ? (
               <span className={styles.founderUnlockedTag}>Unlocked</span>
             ) : (
@@ -158,7 +162,7 @@ export function WorkplaceDashboardPage(): ReactElement {
               onClick={() => navigate('/founder/unlock')}
               data-testid="enter-founder-hq-btn"
             >
-              Enter Founder HQ 🚀
+              Enter Founder HQ
             </Button>
           </div>
         ) : (
@@ -275,7 +279,10 @@ export function WorkplaceDashboardPage(): ReactElement {
               <div className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <span>Total EXP</span>
-                  <span>{promotionProgress.criteria.exp.met ? '✓ Met' : 'Missing'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: promotionProgress.criteria.exp.met ? 'var(--cv-status-success-text)' : 'var(--cv-text-muted)' }}>
+                    {promotionProgress.criteria.exp.met ? <CheckCircle2Icon size={12} color="var(--cv-status-success-text)" /> : null}
+                    {promotionProgress.criteria.exp.met ? 'Met' : 'Missing'}
+                  </span>
                 </div>
                 <div className={styles.criterionValue}>
                   {promotionProgress.criteria.exp.current} / {promotionProgress.criteria.exp.required}
@@ -291,7 +298,10 @@ export function WorkplaceDashboardPage(): ReactElement {
               <div className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <span>Completed Tasks</span>
-                  <span>{promotionProgress.criteria.completedTasks.met ? '✓ Met' : 'Missing'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: promotionProgress.criteria.completedTasks.met ? 'var(--cv-status-success-text)' : 'var(--cv-text-muted)' }}>
+                    {promotionProgress.criteria.completedTasks.met ? <CheckCircle2Icon size={12} color="var(--cv-status-success-text)" /> : null}
+                    {promotionProgress.criteria.completedTasks.met ? 'Met' : 'Missing'}
+                  </span>
                 </div>
                 <div className={styles.criterionValue}>
                   {promotionProgress.criteria.completedTasks.current} / {promotionProgress.criteria.completedTasks.required}
@@ -307,7 +317,10 @@ export function WorkplaceDashboardPage(): ReactElement {
               <div className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <span>Average Score</span>
-                  <span>{promotionProgress.criteria.averageScore.met ? '✓ Met' : 'Missing'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: promotionProgress.criteria.averageScore.met ? 'var(--cv-status-success-text)' : 'var(--cv-text-muted)' }}>
+                    {promotionProgress.criteria.averageScore.met ? <CheckCircle2Icon size={12} color="var(--cv-status-success-text)" /> : null}
+                    {promotionProgress.criteria.averageScore.met ? 'Met' : 'Missing'}
+                  </span>
                 </div>
                 <div className={styles.criterionValue}>
                   {promotionProgress.criteria.averageScore.current}% (Min {promotionProgress.criteria.averageScore.required}%)
@@ -323,7 +336,10 @@ export function WorkplaceDashboardPage(): ReactElement {
               <div className={styles.criterionCard}>
                 <div className={styles.criterionHeader}>
                   <span>Active Warnings</span>
-                  <span>{promotionProgress.criteria.activeWarnings.met ? '✓ Met' : 'Exceeded'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: promotionProgress.criteria.activeWarnings.met ? 'var(--cv-status-success-text)' : 'var(--cv-status-danger-text)' }}>
+                    {promotionProgress.criteria.activeWarnings.met ? <CheckCircle2Icon size={12} color="var(--cv-status-success-text)" /> : <XCircleIcon size={12} color="var(--cv-status-danger-text)" />}
+                    {promotionProgress.criteria.activeWarnings.met ? 'Met' : 'Exceeded'}
+                  </span>
                 </div>
                 <div className={styles.criterionValue}>
                   {promotionProgress.criteria.activeWarnings.current} (Max {promotionProgress.criteria.activeWarnings.maxAllowed})

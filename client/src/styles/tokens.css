@@ -1,111 +1,162 @@
 /**
  * CorpVerse Design System — Design Tokens
- * Gamified Learning & Apple-Grade Modern Corporate Aesthetic
- * Palette Inspired by "Child of Light", "Winter Garden", "Charon", "Smokehouse", "Cascades", & "Vantablack"
+ * Linear / Vercel / Stripe Level Restraint
  */
 
 :root {
-  /* Gamified Learning Canonical Swatches */
-  --cv-palette-child-of-light: #eff4f8; /* Soft Alabaster / Crisp Mist Canvas */
-  --cv-palette-winter-garden: #c5d0cf; /* Frosted Sage / Sea-glass Slate */
-  --cv-palette-charon: #a1a19c; /* Mineral Slate / Neutral Stone */
-  --cv-palette-smokehouse: #706255; /* Warm Roasted Mocha / Grounding Taupe */
-  --cv-palette-cascades: #273e41; /* Deep Nordic Pine Spruce Teal (Hero Anchor) */
-  --cv-palette-vantablack: #020101; /* Absolute Obsidian Black */
+  /* =========================================================================
+     1. ONE NEUTRAL SCALE (10 Steps: Zinc / Slate Restraint)
+     ========================================================================= */
+  --cv-neutral-50: #fafafa;
+  --cv-neutral-100: #f4f4f5;
+  --cv-neutral-200: #e4e4e7;
+  --cv-neutral-300: #d4d4d8;
+  --cv-neutral-400: #a1a1aa;
+  --cv-neutral-500: #71717a;
+  --cv-neutral-600: #52525b;
+  --cv-neutral-700: #3f3f46;
+  --cv-neutral-800: #27272a;
+  --cv-neutral-900: #18181b;
+  --cv-neutral-950: #09090b;
 
-  /* Brand Primary Ramp — Cascades (#273E41) */
-  --cv-brand-primary-50: #eff5f6;
-  --cv-brand-primary-100: #dce7e8;
-  --cv-brand-primary-200: #bcd0d2;
-  --cv-brand-primary-300: #93b2b5;
-  --cv-brand-primary-400: #628f93;
-  --cv-brand-primary-500: #3e6b70;
-  --cv-brand-primary-600: #273e41; /* Hero Canonical: Cascades */
-  --cv-brand-primary-700: #1e3235;
-  --cv-brand-primary-800: #162527;
-  --cv-brand-primary-900: #0f1a1c;
+  /* Backward Compatibility Canonical Palette Mappings */
+  --cv-palette-child-of-light: var(--cv-neutral-100);
+  --cv-palette-winter-garden: var(--cv-neutral-300);
+  --cv-palette-charon: var(--cv-neutral-500);
+  --cv-palette-smokehouse: var(--cv-neutral-600);
+  --cv-palette-cascades: #4f46e5;
+  --cv-palette-vantablack: var(--cv-neutral-950);
 
-  /* Warm Earthy Accent Ramp — Smokehouse (#706255) */
-  --cv-warm-accent-50: #f7f5f3;
-  --cv-warm-accent-100: #eee9e5;
-  --cv-warm-accent-200: #ded5cd;
-  --cv-warm-accent-300: #c5b6a9;
-  --cv-warm-accent-400: #998575;
-  --cv-warm-accent-500: #706255; /* Hero Canonical: Smokehouse */
-  --cv-warm-accent-600: #594d42;
-  --cv-warm-accent-700: #443b32;
-  --cv-warm-accent-800: #312923;
-  --cv-warm-accent-900: #1f1a16;
+  /* =========================================================================
+     2. ONE BRAND ACCENT SCALE (Indigo: #6366f1 / #4f46e5)
+     ========================================================================= */
+  --cv-brand-50: #eef2ff;
+  --cv-brand-100: #e0e7ff;
+  --cv-brand-200: #c7d2fe;
+  --cv-brand-300: #a5b4fc;
+  --cv-brand-400: #818cf8;
+  --cv-brand-500: #6366f1;
+  --cv-brand-600: #4f46e5;
+  --cv-brand-700: #4338ca;
+  --cv-brand-800: #3730a3;
+  --cv-brand-900: #312e81;
 
-  /* Cyber & Luminous Accents */
-  --cv-accent-cyan-400: #5fc4cb;
-  --cv-accent-cyan-500: #38b0b9;
-  --cv-accent-cyan-600: #218c94;
+  /* Brand Primary Aliases */
+  --cv-brand-primary-50: var(--cv-brand-50);
+  --cv-brand-primary-100: var(--cv-brand-100);
+  --cv-brand-primary-200: var(--cv-brand-200);
+  --cv-brand-primary-300: var(--cv-brand-300);
+  --cv-brand-primary-400: var(--cv-brand-400);
+  --cv-brand-primary-500: var(--cv-brand-500);
+  --cv-brand-primary-600: var(--cv-brand-600);
+  --cv-brand-primary-700: var(--cv-brand-700);
+  --cv-brand-primary-800: var(--cv-brand-800);
+  --cv-brand-primary-900: var(--cv-brand-900);
+
+  /* Warm Accent Aliases */
+  --cv-warm-accent-50: var(--cv-neutral-50);
+  --cv-warm-accent-100: var(--cv-neutral-100);
+  --cv-warm-accent-200: var(--cv-neutral-200);
+  --cv-warm-accent-300: var(--cv-neutral-300);
+  --cv-warm-accent-400: var(--cv-neutral-400);
+  --cv-warm-accent-500: var(--cv-neutral-500);
+  --cv-warm-accent-600: var(--cv-neutral-600);
+  --cv-warm-accent-700: var(--cv-neutral-700);
+  --cv-warm-accent-800: var(--cv-neutral-800);
+  --cv-warm-accent-900: var(--cv-neutral-900);
+
+  /* Restrained Cyan & Emerald Tokens (Mapped Cleanly) */
+  --cv-accent-cyan-400: #38bdf8;
+  --cv-accent-cyan-500: #0ea5e9;
+  --cv-accent-cyan-600: #0284c7;
 
   --cv-accent-emerald-400: #34d399;
   --cv-accent-emerald-500: #10b981;
   --cv-accent-emerald-600: #059669;
 
-  /* CorpCoin Gold Palette — Warm Golden Amber */
+  /* CorpCoin Gold Palette — Restrained Amber */
   --cv-gold-400: #fbbf24;
   --cv-gold-500: #f59e0b;
   --cv-gold-600: #d97706;
 
-  /* EXP Violet Palette — Gamified Lavender/Purple */
+  /* EXP Violet Palette — Restrained Violet */
   --cv-violet-400: #a78bfa;
   --cv-violet-500: #8b5cf6;
   --cv-violet-600: #7c3aed;
 
-  /* Semantic Status Palettes */
-  --cv-status-success-bg: rgba(16, 185, 129, 0.12);
-  --cv-status-success-border: rgba(16, 185, 129, 0.3);
+  /* =========================================================================
+     3. SEMANTIC STATUS PALETTES
+     ========================================================================= */
+  --cv-status-success-bg: rgba(16, 185, 129, 0.1);
+  --cv-status-success-border: rgba(16, 185, 129, 0.25);
   --cv-status-success-text: #10b981;
 
-  --cv-status-warning-bg: rgba(245, 158, 11, 0.12);
-  --cv-status-warning-border: rgba(245, 158, 11, 0.3);
+  --cv-status-warning-bg: rgba(245, 158, 11, 0.1);
+  --cv-status-warning-border: rgba(245, 158, 11, 0.25);
   --cv-status-warning-text: #f59e0b;
 
-  --cv-status-danger-bg: rgba(239, 68, 68, 0.12);
-  --cv-status-danger-border: rgba(239, 68, 68, 0.3);
+  --cv-status-danger-bg: rgba(239, 68, 68, 0.1);
+  --cv-status-danger-border: rgba(239, 68, 68, 0.25);
   --cv-status-danger-text: #ef4444;
 
-  --cv-status-info-bg: rgba(56, 176, 185, 0.12);
-  --cv-status-info-border: rgba(56, 176, 185, 0.3);
-  --cv-status-info-text: #218c94;
+  --cv-status-info-bg: rgba(59, 130, 246, 0.1);
+  --cv-status-info-border: rgba(59, 130, 246, 0.25);
+  --cv-status-info-text: #3b82f6;
 
-  /* Apple-Grade Typography Scale */
-  --cv-font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', Roboto,
-    sans-serif;
-  --cv-font-mono:
-    'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* =========================================================================
+     4. TYPOGRAPHY SCALE (12, 13, 14, 16, 20, 24, 32, 48, 64)
+     ========================================================================= */
+  --cv-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --cv-font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
 
-  --cv-text-xs: 0.75rem; /* 12px */
-  --cv-text-sm: 0.875rem; /* 14px */
-  --cv-text-base: 1rem; /* 16px */
-  --cv-text-lg: 1.125rem; /* 18px */
-  --cv-text-xl: 1.25rem; /* 20px */
-  --cv-text-2xl: 1.5rem; /* 24px */
-  --cv-text-3xl: 1.875rem; /* 30px */
-  --cv-text-4xl: 2.25rem; /* 36px */
+  --cv-text-12: 0.75rem;     /* 12px */
+  --cv-text-13: 0.8125rem;   /* 13px */
+  --cv-text-14: 0.875rem;    /* 14px — Standard body */
+  --cv-text-16: 1rem;        /* 16px */
+  --cv-text-20: 1.25rem;     /* 20px */
+  --cv-text-24: 1.5rem;      /* 24px */
+  --cv-text-32: 2rem;        /* 32px */
+  --cv-text-48: 3rem;        /* 48px */
+  --cv-text-64: 4rem;        /* 64px */
 
+  /* Scale Name Aliases */
+  --cv-text-xs: var(--cv-text-12);
+  --cv-text-sm: var(--cv-text-14);
+  --cv-text-base: var(--cv-text-16);
+  --cv-text-lg: var(--cv-text-20);
+  --cv-text-xl: var(--cv-text-24);
+  --cv-text-2xl: var(--cv-text-32);
+  --cv-text-3xl: var(--cv-text-48);
+  --cv-text-4xl: var(--cv-text-64);
+
+  /* Weights — Max 600 for Headings */
   --cv-font-normal: 400;
   --cv-font-medium: 500;
   --cv-font-semibold: 600;
-  --cv-font-bold: 700;
-  --cv-font-extrabold: 800;
+  --cv-font-bold: 600;
+  --cv-font-extrabold: 600;
 
-  /* Spacing Scale (4px base) */
-  --cv-space-1: 0.25rem; /* 4px */
-  --cv-space-2: 0.5rem; /* 8px */
-  --cv-space-3: 0.75rem; /* 12px */
-  --cv-space-4: 1rem; /* 16px */
-  --cv-space-5: 1.25rem; /* 20px */
-  --cv-space-6: 1.5rem; /* 24px */
-  --cv-space-8: 2rem; /* 32px */
-  --cv-space-10: 2.5rem; /* 40px */
-  --cv-space-12: 3rem; /* 48px */
-  --cv-space-16: 4rem; /* 64px */
+  /* Letter Spacing */
+  --cv-tracking-tight: -0.02em;
+  --cv-tracking-normal: -0.01em;
+
+  /* =========================================================================
+     5. SPACING SCALE (Strict 4px Base Grid)
+     ========================================================================= */
+  --cv-space-1: 4px;
+  --cv-space-2: 8px;
+  --cv-space-3: 12px;
+  --cv-space-4: 16px;
+  --cv-space-5: 20px;
+  --cv-space-6: 24px;
+  --cv-space-7: 28px;
+  --cv-space-8: 32px;
+  --cv-space-9: 36px;
+  --cv-space-10: 40px;
+  --cv-space-12: 48px;
+  --cv-space-16: 64px;
+  --cv-space-20: 80px;
+  --cv-space-24: 96px;
 
   /* Spacing Scale Aliases */
   --cv-spacing-1: var(--cv-space-1);
@@ -119,27 +170,35 @@
   --cv-spacing-12: var(--cv-space-12);
   --cv-spacing-16: var(--cv-space-16);
 
-  /* Apple Squircle Radius Scale */
+  /* =========================================================================
+     6. STRICT RADII (6 for Inputs/Chips, 10 for Cards, 14 for Modals)
+     ========================================================================= */
   --cv-radius-xs: 4px;
-  --cv-radius-sm: 6px;
-  --cv-radius-md: 10px; /* Apple Standard Control */
-  --cv-radius-lg: 16px; /* Apple Standard Card */
-  --cv-radius-xl: 22px; /* Apple Modal & Elevated Sheet */
-  --cv-radius-2xl: 30px; /* Apple Island / Large Container */
+  --cv-radius-sm: 6px;  /* Inputs, chips, badges, buttons */
+  --cv-radius-md: 6px;  /* Standard control radius */
+  --cv-radius-lg: 10px; /* Cards, panels, dropdown containers */
+  --cv-radius-xl: 14px; /* Modals, large dialogs */
+  --cv-radius-2xl: 14px;
   --cv-radius-full: 9999px;
 
-  /* Apple-Tuned Transitions & Springs */
-  --cv-transition-fast: 160ms cubic-bezier(0.16, 1, 0.3, 1);
-  --cv-transition-normal: 260ms cubic-bezier(0.16, 1, 0.3, 1);
-  --cv-transition-slow: 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* =========================================================================
+     7. TRANSITIONS & TIMING
+     ========================================================================= */
+  --cv-transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  --cv-transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --cv-transition-slow: 320ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Layout Constants */
-  --cv-sidebar-width: 260px;
-  --cv-sidebar-collapsed-width: 72px;
-  --cv-topbar-height: 64px;
-  --cv-container-max-width: 1440px;
+  /* =========================================================================
+     8. LAYOUT CONSTANTS
+     ========================================================================= */
+  --cv-sidebar-width: 256px;
+  --cv-sidebar-collapsed-width: 68px;
+  --cv-topbar-height: 56px;
+  --cv-container-max-width: 1280px;
 
-  /* Z-Index Hierarchy */
+  /* =========================================================================
+     9. Z-INDEX HIERARCHY
+     ========================================================================= */
   --cv-z-dropdown: 1000;
   --cv-z-sticky: 1020;
   --cv-z-fixed: 1030;

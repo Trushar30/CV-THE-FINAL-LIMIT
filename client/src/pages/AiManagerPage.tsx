@@ -17,6 +17,12 @@ import { Modal } from '../components/ui/Modal/Modal';
 import { Spinner } from '../components/ui/Spinner/Spinner';
 import { EmptyState } from '../components/ui/EmptyState/EmptyState';
 import { useToast } from '../components/ui/Toast/ToastContext';
+import {
+  BrainCircuitIcon,
+  RefreshCwIcon,
+  SettingsIcon,
+  BarChartIcon,
+} from '../components/ui/Icon';
 import styles from './AiOps.module.css';
 
 export function AiManagerPage(): ReactElement {
@@ -350,8 +356,8 @@ export function AiManagerPage(): ReactElement {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>
-            <span>🧠</span>
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BrainCircuitIcon size={24} color="var(--cv-brand-500)" />
             <span>AI Operations & Infrastructure Console</span>
           </h1>
           <p className={styles.subtitle}>
@@ -377,8 +383,9 @@ export function AiManagerPage(): ReactElement {
             </button>
           </div>
 
-          <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-            {isLoading ? 'Refreshing...' : '🔄 Refresh'}
+          <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCwIcon size={14} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
 
           <Button variant="primary" size="sm" onClick={handleOpenAdd}>
@@ -485,8 +492,8 @@ export function AiManagerPage(): ReactElement {
           {/* Provider List & Priority Reorder */}
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>
-                <span>⚙️</span>
+              <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <SettingsIcon size={18} color="var(--cv-brand-400)" />
                 <span>Provider Routing Hierarchy ({pool} Pool)</span>
               </h2>
               <span style={{ fontSize: '0.8125rem', color: 'var(--cv-text-muted)' }}>
@@ -655,8 +662,8 @@ export function AiManagerPage(): ReactElement {
 
           {/* Usage & Failure Charts */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <span>📊</span>
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChartIcon size={18} color="var(--cv-brand-400)" />
               <span>Telemetry & Failure Distribution</span>
             </h2>
 

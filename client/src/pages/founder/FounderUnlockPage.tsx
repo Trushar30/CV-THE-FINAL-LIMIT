@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { ProgressBar } from '../../components/ui/ProgressBar/ProgressBar';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
+import { RocketIcon, CoinIcon, ZapIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface EligibilityData {
@@ -96,8 +97,8 @@ export function FounderUnlockPage(): ReactElement {
     <div className={styles.container} data-testid="founder-unlock-page">
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>🚀</span> Unlock Founder Mode
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <RocketIcon size={24} color="var(--cv-brand-500)" /> Unlock Founder Mode
           </h1>
           {user?.careerRole === 'FOUNDER' ? (
             <Badge variant="gold">Active Founder</Badge>
@@ -116,7 +117,8 @@ export function FounderUnlockPage(): ReactElement {
       <div className={styles.goldBanner}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 'var(--cv-text-lg)', color: 'var(--cv-gold-400)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>🪙</span> Starter Capital Grant: {starterAmount.toLocaleString()} CorpCoin
+            <CoinIcon size={20} color="var(--cv-gold-400)" />
+            <span>Starter Capital Grant: {starterAmount.toLocaleString()} CorpCoin</span>
           </div>
           <p style={{ margin: '0.25rem 0 0', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
             {starterAvailable
@@ -138,10 +140,10 @@ export function FounderUnlockPage(): ReactElement {
       {/* EXP Progression Meter Card */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>
-            <span>⚡</span> Progression Requirement (Level 9 Lead)
+          <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ZapIcon size={18} color="var(--cv-gold-400)" /> Progression Requirement (Level 9 Lead)
           </h2>
-          <span style={{ fontSize: 'var(--cv-text-sm)', fontWeight: 600, color: isEligible ? 'var(--cv-accent-emerald-400)' : 'var(--cv-text-secondary)' }}>
+          <span className="tabular-nums" style={{ fontSize: 'var(--cv-text-sm)', fontWeight: 600, color: isEligible ? 'var(--cv-accent-emerald-400)' : 'var(--cv-text-secondary)' }}>
             {currentExp.toLocaleString()} / {requiredExp.toLocaleString()} EXP
           </span>
         </div>
@@ -220,7 +222,7 @@ export function FounderUnlockPage(): ReactElement {
             onClick={() => setShowConfirmModal(true)}
             data-testid="unlock-founder-button"
           >
-            Launch Founder Mode ⚡
+            Launch Founder Mode
           </Button>
         </div>
       </div>

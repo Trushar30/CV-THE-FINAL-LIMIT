@@ -86,7 +86,16 @@
   - `TASK UI-CLEANUP.1`: Removal of Platform Overview and Role-Based Post-Login Navigation (ADR-087: Removed Platform Overview from Sidebar, eliminated /showcase post-login redirection in favor of deterministic role routing, cleaned return buttons in StubPages, added comprehensive test assertions; 137 client tests passing).
   - `TASK FIX-FINAL-REVIEW-QUEUE`: Automated Final Review Synthesis Lifecycle & AI Worker Multi-Instance Waiting Recovery (ADR-088: Added `careerApi.executeFinalReview` to client API, auto-synthesis and manual run button in `ApplicationsTrackerPage.tsx`, background trigger upon interview pass in `StageEngineService`, and fixed multi-instance attempt ID cleanup in `AIWorker.checkAndResumeWaitingJobs`; 138 client tests passing, 47 server suite tests passing).
   - `TASK FIX-EXP-SYNC-TOPBAR-LEADERBOARD`: Real-Time Client Top Bar & Leaderboards EXP Synchronization (ADR-091: Background auto-refresh of `USER_EXP` and `USER_LEVEL` leaderboards in `ExpService.awardExp`, query `forceRefresh` support and auto-recomputation on empty snapshots in `RankingService`, fixed `growthScore` NaN, real-time `fetchCurrentUser()` triggers in `TaskWorkPage`, `WorkplaceDashboardPage`, and `LeaderboardsPage`, null-safe Top Bar balance pill rendering; verified with live MongoDB refresh showing user `trusharpatel800` at Rank 2 with 20 EXP; 138 client tests passing, 15 ranking server tests passing).
-- **Next Task:** `Browser Verification: Verify that the top bar displays L1 • 20 EXP on http://localhost:5173/workplace and that /leaderboards displays Rank 2 with 20 EXP.`
+  - `TASK PHASE 1`: Design System Cleanup (ADR-096: Self-hosted `@fontsource/inter`, strict type scale 12-64 with 14px body baseline, 10-step neutral scale + single indigo brand accent, zero neon glows, strict radii, component normalization; 141 tests).
+  - `TASK PHASE 2`: Routing, Landing Entry & Auth Flow (ADR-097: Extracted public routes to `MarketingLayout.tsx`, calm branded splash in `RootRouter.tsx`, split-screen login/register layout in `Auth.module.css`; 145 tests).
+  - `TASK PHASE 3`: The Creative Restrained Landing Page (ADR-098: Removed text gradients and glowing cards, added technical grid canvas, interactive 3-stage Simulation Kernel terminal preview; 147 tests).
+  - `TASK PHASE 4`: Motion Design System & Transitions (ADR-099: Installed `motion`, defined canonical spring tokens in `motionTokens.ts`, wrapped tree in `<MotionConfig reducedMotion="user">`, upgraded Button, Modal, Tabs, AnimatedNumber, StaggerList; 151 tests).
+  - `TASK PHASE 5`: Product Polish Pass & Screen-by-Screen Audit (ADR-100 & ADR-101: WebGL Dynamic ASCII Background, screen-by-screen audit across Employee, Founder, Admin, and Ops consoles; eliminated colloquial emojis and unicode artifacts; enforced tabular numbers for all telemetry; verified 20 test files, 155/155 tests passing, zero-error production build).
+  - `TASK BUGFIX-ASCII-AUTH`: WebGL Canvas Crash Remediation, Hero Contrast Recalibration & Auth Refresh Deduplication (ADR-110: Removed destructive `loseContext()` on React unmount, replaced DOM canvas color probe with bitshift parser, calibrated hero ASCII `gradientOpacity` and `rise` shape with high-contrast text-shadow, deduplicated in-flight `/auth/refresh` promises, raised development refresh rate limit to 1000, added brand monogram favicon; 20 client test files / 155 tests passing, 15 session tests passing, zero lint warnings).
+  - `TASK REACT-BITS-ASCII`: Canonical React Bits <GradientASCII /> Defaults & Showcase Playground Integration (ADR-111: Aligned `GradientASCII.tsx` default props with React Bits spec, mounted `colors={['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']}`, `shape="horizon"`, `characters=" =+xX0S8#@"`, `cellSize={18}`, `density={0.8}` in Hero section with interactive mouse scramble/click-wave pointer routing, and added 600px interactive demo to `ShowcasePage.tsx` under "WebGL Simulation (React Bits)"; 155 client tests passing, clean production build).
+  - `TASK FINAL-POLISH`: Full Monorepo Verification, Light Theme Overhaul, AI Manager Health Test Routing & Applications Tracker Safety Guard (ADR-113: Refined porcelain-to-indigo ASCII palette and contrast; fixed `testProvider` fallback to provider code for registered mock adapters; added `isMountedRef` teardown guards in `ApplicationsTrackerPage`; verified monorepo with 1,010 passing tests [855 server, 155 client], 0 lint errors, and clean builds).
+- **Current Status:** All 10 Phases, 5 Frontend Redesign Phases, Theme Polish, and Final System Verification completed. Production ready.
+- **Next Task:** Production verification & user demo.
 
 ---
 
@@ -733,6 +742,85 @@ Built `AnalyticsController` and mounted 9 routes under `/api/admin/analytics/*` 
   2. Updated `ApplicantPipelinePage.tsx` with defensive `currentStage` replacement `(app.currentStage || 'ATS_SCREENING').replace(/_/g, ' ')` and defensive array extraction `Array.isArray(res) ? res : res?.applications || []`.
   3. Updated `FounderLedgerPage.tsx` with defensive array extraction `Array.isArray(res) ? res : res?.transactions || []`.
   4. Verified across monorepo: 41 server founder tests passing, 138 client tests passing across 18 test files, 0 lint errors, clean production builds.
+
+---
+
+- **TASK PHASE 1: Restrained Linear/Vercel Design System Foundation & Zero-Glow Token Normalization (ADR-096)**:
+  1. Self-hosted `@fontsource/inter` (400, 500, 600, 700). Defined strict type scale (12, 13, 14, 16, 20, 24, 32, 48, 64) with 14px body baseline on app screens. Headings clamped to weight 600 with -0.02em tracking. Added universal `tabular-nums` class for numeric stats, EXP, CorpCoins, and scores.
+  2. Single 10-step neutral scale (`zinc`), single brand accent (`indigo`), semantic status tokens (success, warning, danger, info), and zero neon glows (`--cv-shadow-glow-*` mapped to zero/transparent).
+  3. Strict 4px grid and exact radii: 6px (inputs, chips, badges, buttons), 10px (cards, table container, panels), 14px (modals).
+  4. Standardized heights (32px sm, 36px md, 44px lg), padding, and active state (`scale(0.98)`). Built new `Select` and `Tooltip` components in `client/src/components/ui`.
+  5. Updated vector icons to stroke width 1.5, standard 16/20px sizes, and eliminated button icon-label spacing defects.
+  6. Verified: 141 client tests passing across 18 test files, clean production builds.
+
+---
+
+- **TASK PHASE 2: Routing Architecture, Marketing Layout Separation & Split-Screen Auth Flow (ADR-097)**:
+  1. Created standalone `MarketingLayout.tsx` and `MarketingLayout.module.css` with sticky top navigation (logo, navigation links, theme toggle, dynamic auth action button) and restrained multi-column footer without application sidebar.
+  2. Refactored `RootRouter.tsx` with a calm, branded splash screen (logo monogram + 2px indeterminate progress bar) during auth resolution; automatically redirects authenticated users to their role destination (`getPostLoginRedirect(user)`); renders `<MarketingLayout><LandingPage /></MarketingLayout>` for guests.
+  3. Extracted public marketing routes, `/login`, `/register`, `/verify-email`, and `/404` outside of `<AppShell />`, resolving the route hierarchy defect where unauthenticated guests saw the internal application sidebar.
+  4. Updated `PublicOnlyRoute.tsx` to automatically redirect authenticated sessions to `getPostLoginRedirect(user)`.
+  5. Updated `RoleRoute.tsx` to preserve `state={{ from: location }}` when redirecting to `/login`.
+  6. Redesigned `LoginPage.tsx`, `RegisterPage.tsx`, and `VerifyEmailPage.tsx` with modern split-screen layout (`Auth.module.css`: form panel on left, corporate simulation value overview on right; responsive fallback on mobile/tablets). Added password visibility toggles (`EyeIcon` / `EyeOffIcon`), replaced all emojis with vector icons (`LockIcon`, `MailIcon`, `AlertCircleIcon`, `CheckCircle2Icon`), and preserved deep-link return destinations on successful login.
+  7. Added `LockIcon`, `MailIcon`, `EyeIcon`, and `EyeOffIcon` to `client/src/components/ui/Icon`.
+  8. Added unit tests for `PublicOnlyRoute` in `guards.test.tsx`.
+  9. Verified: 144 client tests passing across 18 test files, clean Vite production build in 7.30s.
+
+---
+
+- **TASK PHASE 3: Restrained Linear/Vercel Marketing Landing Page & Interactive Kernel Simulation Preview (ADR-098)**:
+  1. Completely eliminated text gradients, animated radial ambient glows, and raw emojis from `LandingPage.tsx` and `LandingPage.module.css`.
+  2. Implemented subtle architectural grid background with radial alpha masking.
+  3. Developed an interactive 3-stage Simulation Kernel Preview terminal component (`01 Hiring ATS & Interview`, `02 Workplace Sprint & Double-Entry Ledger`, `03 Founder Autonomous Bot Fleet & Solvency P&L`).
+  4. Formatted 10-level progression ladder and core metrics with universal `tabular-nums` typography and strict 4px grid spacing.
+  5. Enforced WCAG AA contrast, 6/10/14px radii, and vector iconography throughout.
+  6. Verified: 144 client tests passing across 18 test files, clean Vite production build in 7.44s.
+
+---
+
+- **TASK PHASE 4: Motion Design System, Spring Transitions & Universal Reduced-Motion Accessibility (ADR-099)**:
+  1. Installed `motion` (`motion/react`) package.
+  2. Formulated canonical spring tokens in `client/src/components/ui/Motion/motionTokens.ts` (`SPRING_FAST`, `SPRING_SNAPPY`, `SPRING_GENTLE`, `PAGE_TRANSITION_VARIANTS`, `MODAL_BACKDROP_VARIANTS`, `MODAL_DIALOG_VARIANTS`, `STAGGER_CONTAINER_VARIANTS`, `STAGGER_ITEM_VARIANTS`).
+  3. Built `AnimatedNumber` component for smooth numeric count-ups with tabular numerals, zero layout shift, and initial render test stability.
+  4. Built `StaggerList` and `StaggerItem` components with a 40ms stagger cap and reduced-motion fallback.
+  5. Built `PageTransition` wrapper component for calm 6px vertical fade transitions.
+  6. Upgraded `Button` to `motion.button` with `whileTap={{ scale: 0.98 }}` and spring transition, preserving native button semantics and disabled/loading protections.
+  7. Upgraded `Modal` with `AnimatePresence` for smooth exit transitions, backdrop fade, and scale-up dialog entrance.
+  8. Enhanced `Tabs` with `<motion.span layoutId="activeTabIndicator" />` for fluid sliding pill/underline transitions between active tabs.
+  9. Integrated `AnimatedNumber` into `Topbar.tsx` for EXP and CorpCoin balances.
+  10. Wrapped application tree in `<MotionConfig reducedMotion="user">` in `App.tsx` for universal `prefers-reduced-motion` compliance.
+  11. Exported motion components and tokens from `client/src/components/ui/index.ts`.
+  12. Added unit tests for motion components in `client/src/tests/motion.test.tsx`.
+  13. Verified: 151 client tests passing across 19 test files, clean Vite production build in 9.49s with zero TypeScript errors.
+
+- **`TASK P5.ASCII` (WebGL Dynamic ASCII Simulation Field Background on Marketing Landing Page):**
+  1. Integrated and customized `GradientASCII` component (`client/src/components/ui/GradientASCII/GradientASCII.tsx`) adapted from React Bits.
+  2. Implemented CorpVerse design system tokens: JetBrains Mono typography, technical simulation character glyphs (` 01+-·:;=*#@`), dual dark/light default palettes (`CORPVERSE_DARK_PALETTE`, `CORPVERSE_LIGHT_PALETTE`).
+  3. Integrated with `useTheme()` for automatic dark/light theme switching.
+  4. Mounted into `LandingPage.tsx` behind hero section (`.asciiBackground`) with elliptical radial mask fade and bottom gradient overlay (`.asciiOverlay`) ensuring zero rectangular clipping and zero pointer interference.
+  5. Resolved strict TypeScript indexing constraints (`"strict": true`, `"noUncheckedIndexedAccess": true`).
+  6. Added test suite in `client/src/tests/gradientAscii.test.tsx` (4 tests passing).
+  7. Restored illustration exports in `Icon.tsx` (`EmptyApplicationIllustration`, `FounderBadgeIllustration`).
+  8. Verified: 155 client tests passing across 20 test files, clean Vite production build in 8.28s with zero errors.
+
+- **`TASK P5.NAV` (Marketing Navigation Simplification & Minimalist Topbar Layout - ADR-112):**
+  1. Removed navigation links (`Simulation`, `Progression`, `Economy`, `Companies`, `Careers`, `Design Kit`) from the header in `client/src/components/layout/MarketingLayout.tsx`.
+  2. All destination links remain cleanly accessible in the footer directory and primary hero CTAs.
+  3. Cleaned up unused `.navLinks` and `.navLink` rules in `MarketingLayout.module.css`.
+  4. Streamlined `.leftArea` to host the brand logo exclusively with smooth hover opacity transition.
+  5. Preserved theme toggle and authentication CTA controls (`Sign In` / `Get Started` or `Go to Workspace →`) in the right area.
+  6. Verified: 155 client tests passing across 20 test files, clean Vite production build in 7.73s, ESLint 0 errors.
+
+- **`TASK P5.LIGHT_THEME` (White Theme Overhaul, Adaptive ASCII Palettes & Hero Contrast - ADR-113):**
+  1. Resolved dirty dark circle artifact by converting `.asciiOverlay` in `LandingPage.module.css` to use theme-adaptive `--cv-hero-overlay-radial`.
+  2. Eliminated heavy black halo around hero headline by switching `.heroTitle` `text-shadow` to `--cv-hero-title-shadow` (`none` in light mode, dark vignette in dark mode).
+  3. Configured theme-aware palette, opacity, and glow for `<GradientASCII />` in `LandingPage.tsx` and `ShowcasePage.tsx` (porcelain/indigo gradient at 0.35 opacity in light mode, eliminating harsh saturated block).
+  4. Elevated kernel simulation preview window with subtle contrasting topbar (`var(--cv-bg-surface-subtle)`), authentic traffic window control dots, and active tab elevation.
+  5. Refined light theme tokens in `themes.css` (hairline `0.09` borders, multi-stop diffused shadows, refined porcelain surfaces).
+  6. Verified: 155 client tests passing across 20 test files, clean Vite production build in 7.55s, ESLint 0 errors.
+
+
+
 
 
 

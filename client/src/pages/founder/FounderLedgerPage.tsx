@@ -6,6 +6,7 @@ import apiClient from '../../api/client';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { Table, type Column } from '../../components/ui/Table/Table';
+import { FileTextIcon, CoinIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface LedgerTransaction {
@@ -134,14 +135,14 @@ export function FounderLedgerPage(): ReactElement {
       {/* Ledger Table */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>
-            <span>📜</span> Transaction History ({transactions.length})
+          <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileTextIcon size={18} color="var(--cv-brand-500)" /> Transaction History ({transactions.length})
           </h2>
         </div>
 
         {transactions.length === 0 ? (
           <div className={styles.emptyState}>
-            <span>🪙</span>
+            <CoinIcon size={32} color="var(--cv-gold-400)" />
             <h3 className={styles.emptyStateTitle}>No Transactions Recorded</h3>
             <p style={{ margin: 0, fontSize: 'var(--cv-text-sm)' }}>
               Transactions appear here when starter capital is granted or company expenses are incurred.

@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge/Badge';
 import { Button } from '../../components/ui/Button/Button';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { EmptyState } from '../../components/ui/EmptyState/EmptyState';
+import { AlertTriangleIcon, CheckCircle2Icon, AlertCircleIcon } from '../../components/ui/Icon';
 import {
   fetchTaskById,
   fetchTaskEvaluation,
@@ -285,17 +286,23 @@ export function TaskWorkPage(): ReactElement {
           {/* Discipline Warning Alert if Poor score */}
           {performanceRecord.aiScore <= 39 && (
             <div
+              data-testid="poor-score-warning-alert"
               style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--cv-status-danger-bg)',
+                border: '1px solid var(--cv-status-danger-border)',
                 borderRadius: 'var(--cv-radius-md)',
                 padding: '1rem',
-                color: '#ef4444',
+                color: 'var(--cv-status-danger-text)',
                 fontSize: '0.9rem',
               }}
-              data-testid="poor-score-warning-alert"
             >
-              ⚠️ <strong>Performance Warning Issued:</strong> Score fell into Poor band (&le; 39). A disciplinary warning has been logged per corporate policy.
+              <AlertTriangleIcon size={18} color="var(--cv-status-danger-text)" />
+              <div>
+                <strong>Performance Warning Issued:</strong> Score fell into Poor band (&le; 39). A disciplinary warning has been logged per corporate policy.
+              </div>
             </div>
           )}
 
@@ -307,9 +314,9 @@ export function TaskWorkPage(): ReactElement {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
               {performanceRecord.strengths?.length > 0 && (
-                <div style={{ background: 'var(--cv-surface-subtle)', padding: '1rem', borderRadius: 'var(--cv-radius-md)' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#10b981', fontSize: 'var(--cv-text-sm)' }}>
-                    ✓ Observed Strengths
+                <div style={{ background: 'var(--cv-bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--cv-radius-md)' }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 0.5rem 0', color: 'var(--cv-status-success-text)', fontSize: 'var(--cv-text-sm)' }}>
+                    <CheckCircle2Icon size={14} color="var(--cv-status-success-text)" /> Observed Strengths
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--cv-text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                     {performanceRecord.strengths.map((str, i) => (
@@ -320,9 +327,9 @@ export function TaskWorkPage(): ReactElement {
               )}
 
               {performanceRecord.weaknesses?.length > 0 && (
-                <div style={{ background: 'var(--cv-surface-subtle)', padding: '1rem', borderRadius: 'var(--cv-radius-md)' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#f59e0b', fontSize: 'var(--cv-text-sm)' }}>
-                    ▲ Deficiencies & Edge Cases
+                <div style={{ background: 'var(--cv-bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--cv-radius-md)' }}>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 0.5rem 0', color: 'var(--cv-status-warning-text)', fontSize: 'var(--cv-text-sm)' }}>
+                    <AlertCircleIcon size={14} color="var(--cv-status-warning-text)" /> Deficiencies & Edge Cases
                   </h4>
                   <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--cv-text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                     {performanceRecord.weaknesses.map((weak, i) => (

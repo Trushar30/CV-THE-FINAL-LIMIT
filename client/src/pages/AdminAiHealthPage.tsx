@@ -5,6 +5,14 @@ import { Card } from '../components/ui/Card/Card';
 import { Badge } from '../components/ui/Badge/Badge';
 import { Spinner } from '../components/ui/Spinner/Spinner';
 import { EmptyState } from '../components/ui/EmptyState/EmptyState';
+import {
+  ShieldCheckIcon,
+  RefreshCwIcon,
+  ActivityIcon,
+  FileTextIcon,
+  ZapIcon,
+  AlertCircleIcon,
+} from '../components/ui/Icon';
 import styles from './AiOps.module.css';
 
 export function AdminAiHealthPage(): ReactElement {
@@ -66,8 +74,8 @@ export function AdminAiHealthPage(): ReactElement {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.titleArea}>
-          <h1 className={styles.title}>
-            <span>🛡️</span>
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldCheckIcon size={24} color="var(--cv-brand-500)" />
             <span>Platform AI Health & Observability</span>
           </h1>
           <p className={styles.subtitle}>
@@ -92,15 +100,18 @@ export function AdminAiHealthPage(): ReactElement {
             </button>
           </div>
 
-          <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-            {isLoading ? 'Refreshing...' : '🔄 Refresh'}
+          <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCwIcon size={14} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </header>
 
       {/* Admin Read-Only Notice */}
       <div className={styles.readOnlyBanner}>
-        <span className={styles.readOnlyIcon}>ℹ️</span>
+        <span className={styles.readOnlyIcon} style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <AlertCircleIcon size={16} color="var(--cv-brand-400)" />
+        </span>
         <div>
           <strong>Read-Only Administrative Overview:</strong> Provider configuration, API key vault
           mutation, and priority reorganization are restricted exclusively to the{' '}
@@ -205,8 +216,8 @@ export function AdminAiHealthPage(): ReactElement {
 
           {/* Providers Table (Read-Only) */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <span>🔌</span>
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ActivityIcon size={18} color="var(--cv-brand-400)" />
               <span>Active Provider Health Matrix ({pool} Pool)</span>
             </h2>
 
@@ -294,8 +305,8 @@ export function AdminAiHealthPage(): ReactElement {
 
           {/* Recent Diagnostics & Circuit Breaker Logs */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <span>📜</span>
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileTextIcon size={18} color="var(--cv-accent-amber-400)" />
               <span>Recent Diagnostic & Health Incidents</span>
             </h2>
 
@@ -377,8 +388,8 @@ export function AdminAiHealthPage(): ReactElement {
 
           {/* Recent Generation Logs */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              <span>⚡</span>
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ZapIcon size={18} color="var(--cv-brand-400)" />
               <span>Recent Inference Executions</span>
             </h2>
 

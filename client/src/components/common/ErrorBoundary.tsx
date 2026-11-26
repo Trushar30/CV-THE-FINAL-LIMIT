@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '../ui/Button/Button';
+import { AlertTriangleIcon } from '../ui/Icon';
 import styles from './ErrorBoundary.module.css';
 
 export interface ErrorBoundaryProps {
@@ -44,7 +45,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div className={styles.container}>
           <div className={styles.card}>
-            <div className={styles.iconWrapper}>⚠</div>
+            <div className={styles.iconWrapper}>
+              <AlertTriangleIcon size={32} color="var(--cv-accent-amber-400)" />
+            </div>
             <h1 className={styles.title}>System Exception Detected</h1>
             <p className={styles.message}>
               An unexpected application error interrupted the current view. Your state and

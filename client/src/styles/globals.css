@@ -1,3 +1,7 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
 @import './tokens.css';
 @import './themes.css';
 
@@ -18,13 +22,14 @@ html {
 
 body {
   font-family: var(--cv-font-sans);
+  font-size: var(--cv-text-14);
   background-color: var(--cv-bg-app);
   color: var(--cv-text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--cv-tracking-normal);
   transition:
     background-color var(--cv-transition-normal),
     color var(--cv-transition-normal);
@@ -37,16 +42,64 @@ body {
   flex-direction: column;
 }
 
-/* Apple-Style Text Selection */
+/* Headings: Tighter Tracking (-0.02em), Weight 600, Never 800/900 */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--cv-font-sans);
+  font-weight: 600;
+  letter-spacing: var(--cv-tracking-tight);
+  color: var(--cv-text-primary);
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: var(--cv-text-32);
+}
+
+h2 {
+  font-size: var(--cv-text-24);
+}
+
+h3 {
+  font-size: var(--cv-text-20);
+}
+
+h4 {
+  font-size: var(--cv-text-16);
+}
+
+h5 {
+  font-size: var(--cv-text-14);
+}
+
+h6 {
+  font-size: var(--cv-text-12);
+}
+
+/* Tabular Numbers for stats, EXP, coins, scores, counts */
+.tabular-nums,
+[data-tabular],
+.stat-value,
+.stat-number,
+.cv-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' on;
+}
+
+/* Restrained Text Selection */
 ::selection {
-  background-color: rgba(62, 107, 112, 0.35);
+  background-color: rgba(99, 102, 241, 0.25);
   color: var(--cv-text-primary);
 }
 
-/* Custom Scrollbar — Apple Slim Discrete Style */
+/* Slim Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -54,19 +107,24 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--cv-border-strong);
+  background: var(--cv-border-default);
   border-radius: var(--cv-radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--cv-text-muted);
+  background: var(--cv-border-strong);
 }
 
-/* Accessible Global Focus Ring with Apple-Style Soft Ambient Halo */
+/* Clean, Restrained 2px Accent Focus Ring with 2px Offset */
 :focus-visible {
   outline: 2px solid var(--cv-border-focus);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(95, 138, 142, 0.22);
+}
+
+/* Interactive Press State (Scale 0.98) */
+button:active:not(:disabled),
+[role="button"]:active:not([aria-disabled="true"]) {
+  transform: scale(0.98);
 }
 
 /* Mobile Typography & Layout Scaling down to 360px */
@@ -105,7 +163,7 @@ body {
 @keyframes cv-fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -116,7 +174,7 @@ body {
 @keyframes cv-modal-enter {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(-6px);
+    transform: scale(0.97) translateY(-4px);
   }
   to {
     opacity: 1;
@@ -127,7 +185,7 @@ body {
 @keyframes cv-toast-slide {
   from {
     opacity: 0;
-    transform: translateX(30px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;
@@ -144,28 +202,6 @@ body {
   }
 }
 
-@keyframes cv-spring-press {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.96);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes cv-float-ambient {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
 /* Micro-Interaction Utility Classes */
 .cv-spring-interactive {
   transition:
@@ -174,15 +210,11 @@ body {
 }
 
 .cv-spring-interactive:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .cv-spring-interactive:active {
-  transform: scale(0.97);
-}
-
-.cv-float {
-  animation: cv-float-ambient 4s ease-in-out infinite;
+  transform: scale(0.98);
 }
 
 .cv-animate-fade-in {
@@ -205,8 +237,9 @@ body {
 }
 
 .cv-hover-lift:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--cv-shadow-lg), var(--cv-shadow-glow-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--cv-shadow-md);
+  border-color: var(--cv-border-strong);
 }
 
 .cv-card-interactive {
@@ -218,13 +251,12 @@ body {
 }
 
 .cv-card-interactive:hover {
-  transform: translateY(-2px);
-  border-color: var(--cv-brand-primary-400);
-  box-shadow: var(--cv-shadow-md);
+  border-color: var(--cv-border-strong);
+  box-shadow: var(--cv-shadow-sm);
 }
 
 .cv-card-interactive:active {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
 /* Accessible utility */

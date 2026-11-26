@@ -1,5 +1,6 @@
 export * from './Button/Button';
 export * from './Input/Input';
+export * from './Select/Select';
 export * from './Card/Card';
 export * from './Modal/Modal';
 export * from './Table/Table';
@@ -10,4 +11,10 @@ export * from './EmptyState/EmptyState';
 export * from './ProgressBar/ProgressBar';
 export * from './Tabs/Tabs';
 export * from './Skeleton/Skeleton';
+export * from './Tooltip/Tooltip';
 export * from './Icon';
+export * from './Motion/motionTokens';
+export * from './Motion/AnimatedNumber';
+export * from './Motion/StaggerList';
+export * from './Motion/PageTransition';
+export * from './GradientASCII/GradientASCII';

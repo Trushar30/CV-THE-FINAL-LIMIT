@@ -18,6 +18,13 @@ import {
   LaptopIcon,
   CloudIcon,
   BrainCircuitIcon,
+  RocketIcon,
+  AlertTriangleIcon,
+  AlertCircleIcon,
+  CheckIcon,
+  CloseIcon,
+  FileTextIcon,
+  PaperclipIcon,
   FounderBadgeIllustration,
 } from '../components/ui';
 import {
@@ -536,7 +543,7 @@ export function ProfileSetupPage(): ReactElement {
       {/* Wizard Header */}
       <div className={styles.wizardHeader}>
         <div className={styles.wizardBadge}>
-          <span>🚀</span>
+          <RocketIcon size={14} color="var(--cv-brand-500)" />
           <span>Candidate Onboarding</span>
         </div>
         <h1 className={styles.wizardTitle}>Profile Setup Wizard</h1>
@@ -550,7 +557,7 @@ export function ProfileSetupPage(): ReactElement {
       {user && user.emailVerified === false && (
         <div className={styles.emailBanner} role="alert">
           <div className={styles.emailBannerContent}>
-            <span>⚠️</span>
+            <AlertTriangleIcon size={16} color="var(--cv-status-warning-text)" />
             <div>
               <strong>Email Verification Required:</strong> Please verify your email (
               {user.email || 'account'}) before completing onboarding.
@@ -605,7 +612,7 @@ export function ProfileSetupPage(): ReactElement {
                 aria-current={isNodeActive ? 'step' : undefined}
                 aria-disabled={isNodeDisabled}
               >
-                <div className={styles.stepNumber}>{isNodeCompleted ? '✓' : item.num}</div>
+                <div className={styles.stepNumber}>{isNodeCompleted ? <CheckIcon size={12} /> : item.num}</div>
                 <span>{item.label}</span>
               </div>
               {idx < arr.length - 1 && <div className={styles.stepConnector} />}
@@ -617,7 +624,7 @@ export function ProfileSetupPage(): ReactElement {
       {/* Global Error Banner */}
       {errorMessage && (
         <div className={`${styles.alertBox} ${styles.alertDanger}`} role="alert">
-          <span>⚠️</span>
+          <AlertCircleIcon size={16} color="var(--cv-status-danger-text)" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -752,7 +759,7 @@ export function ProfileSetupPage(): ReactElement {
                         onClick={() => handleRemoveSkill(skill)}
                         aria-label={`Remove skill ${skill}`}
                       >
-                        ✕
+                        <CloseIcon size={11} />
                       </button>
                     </span>
                   ))
@@ -870,7 +877,9 @@ export function ProfileSetupPage(): ReactElement {
               }
             }}
           >
-            <div className={styles.dropIconWrap}>📄</div>
+            <div className={styles.dropIconWrap}>
+              <FileTextIcon size={28} color="var(--cv-brand-500)" />
+            </div>
             <h3 className={styles.dropTitle}>Drag & Drop Resume Here</h3>
             <p className={styles.dropSubtitle}>
               or click to browse from your device. PDF or Word (.docx) files only, up to 10 MB.
@@ -897,7 +906,7 @@ export function ProfileSetupPage(): ReactElement {
           {uploadedResumeId && !isUploading && (
             <div className={styles.filePreviewCard}>
               <div className={styles.fileMeta}>
-                <span style={{ fontSize: '1.5rem' }}>📎</span>
+                <PaperclipIcon size={20} color="var(--cv-brand-500)" />
                 <div>
                   <div className={styles.fileName}>
                     {uploadedFileName || 'Resume uploaded successfully'}
@@ -944,7 +953,7 @@ export function ProfileSetupPage(): ReactElement {
                 }`}
                 style={{ textAlign: 'left', width: '100%' }}
               >
-                <span>⚠️</span>
+                <AlertTriangleIcon size={16} color="var(--cv-status-warning-text)" />
                 <div>
                   <strong>
                     {analysisStatus === 'SCANNED_UNREADABLE'

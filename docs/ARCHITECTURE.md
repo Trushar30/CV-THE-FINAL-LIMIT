@@ -564,13 +564,13 @@ The authoritative system configuration schema is stored as a versioned document 
 
 ### 14.1 Design System & CSS Foundation
 
-- **Tokens & Themes:** Defined in `styles/tokens.css` and `styles/themes.css` (ADR-038). Canonical 6-swatch Gamified Learning palette: Child of Light (`#EFF4F8`), Winter Garden (`#C5D0CF`), Charon (`#A1A19C`), Smokehouse (`#706255`), Cascades (`#273E41`), and Vantablack (`#020101`). Apple-level visual polishing includes SF Pro / Inter typography, continuous squircle radii (`6px` to `30px`), tactile specular glass highlights (`inset 0 1px 0 ...`), diffused multi-stop ambient shadows, and smooth spring curves (`cubic-bezier(0.16, 1, 0.3, 1)`).
-- **Pure Vanilla CSS:** Scoped via CSS Modules (`[Component].module.css`) with zero third-party UI dependencies.
+- **Tokens & Themes:** Defined in `styles/tokens.css` and `styles/themes.css` (ADR-096). Linear/Vercel/Stripe level restraint: 10-step neutral scale (`zinc`), single brand accent (`indigo`), semantic status tokens (success, warning, danger, info), and zero neon glows (`--cv-shadow-glow-*` mapped to transparent). Strict 4px spacing grid, exact radii: 6px (inputs, chips, badges, buttons), 10px (cards, table container), 14px (modals). Typography uses self-hosted `@fontsource/inter` across 12–64px scale, 14px body baseline on app screens, weight 600 with `-0.02em` tracking for headings, and universal `tabular-nums` for numeric stats, EXP, coins, and scores.
+- **Pure Vanilla CSS:** Scoped via CSS Modules (`[Component].module.css`) with zero third-party component libraries.
 
 ### 14.2 Reusable UI Component Library
 
-- **Core Primitives:** `Button` (loading spinner, disabled, variants, icons), `Input` (labels, error states, prefixes/suffixes), `Card` (glassmorphism, elevation, hoverable), `Modal` (backdrop blur, accessibility, ESC key, scroll lock), `Table` (responsive wrapper, alignment, striped/hoverable), `Badge` (pill styling, dot indicators), `Toast` (`ToastProvider`, stacked floating notifications, auto-dismiss), `Spinner` (sizes, colors), `EmptyState` (action slot, vector illustrations), `ProgressBar` (level progression, glow, shimmer animation), `Tabs` (pills and underline variants).
-- **Vector Iconography & Illustrations:** Native SVG symbol library (`components/ui/Icon/Icon.tsx`, ADR-039) providing 20+ SF-style 24×24 vector symbols (`BriefcaseIcon`, `BuildingIcon`, `ZapIcon`, `TrophyIcon`, `SparklesIcon`, `RocketIcon`, `BotIcon`, `ShieldCheckIcon`, `BrainCircuitIcon`, `CoinIcon`, `SunIcon`, `MoonIcon`, etc.) and multi-layer vector illustrations (`EmptyApplicationIllustration`, `FounderBadgeIllustration`) replacing OS emojis with theme-reactive visual assets.
+- **Core Primitives:** `Button` (primary, secondary, ghost, danger, outline; sm/md/lg; loading state; icon slot with proper gap; scale 0.98 active press), `Input` (labels, error states, 36px height, 6px radius, 2px focus ring), `Select` (36px height, 6px radius, chevron, error/helper text), `Tooltip` (high-contrast, accessible tooltip role, directional placement), `Card` (10px radius, hairline borders, subtle shadows, no neon glows), `Modal` (14px radius, 8px backdrop blur, ESC key, scroll lock), `Table` (10px radius container, hairline borders, tabular alignment, hover rows), `Badge` (6px radius, restrained status tints), `Toast` (`ToastProvider`, stacked floating notifications, 10px radius, semantic border accents), `Spinner` (sizes, colors), `EmptyState` (10px radius, action slot, vector illustrations), `ProgressBar` (solid fills, tabular percentages, zero glow), `Tabs` (segmented pills and underline variants, 6px radius, scale 0.98 active press).
+- **Vector Iconography & Illustrations:** Native SVG symbol library (`components/ui/Icon/Icon.tsx`, ADR-039, ADR-096) providing 25+ vector symbols with uniform `1.5` stroke width and 16/20px standard sizes (`BriefcaseIcon`, `BuildingIcon`, `ZapIcon`, `TrophyIcon`, `SparklesIcon`, `RocketIcon`, `BotIcon`, `ShieldCheckIcon`, `BrainCircuitIcon`, `CoinIcon`, `SunIcon`, `MoonIcon`, `TrendingUpIcon`, `FlameIcon`, `AwardIcon`, etc.) replacing OS emojis with theme-reactive visual assets.
 
 ### 14.3 App Shell & Responsive Layout
 
@@ -1676,6 +1676,115 @@ All workflows altering balances, roles, company headcount, or multiple relationa
 ### 29.3 Production Observability & Maintenance Tools
 - **Consistency Checker (`server/src/scripts/check-consistency.ts`):** CLI utility reconciling cached balances against double-entry ledgers and detecting orphan documents with automated `--fix` repair capabilities.
 - **Production Checklist (`docs/PRODUCTION_CHECKLIST.md`):** Complete runbook covering secret generation, TLS 1.3 termination, MongoDB replica set PITR backups, structured log redaction, and DDoS/WAF boundaries.
+
+---
+
+## 30. Frontend Route Topology, Layout Segregation & Design System Architecture (TASK PHASE 1 & 2, ADR-096, ADR-097)
+
+### 30.1 Layout Segregation & Shell Boundaries
+- **Marketing Shell (`MarketingLayout.tsx`):**
+  - Standalone layout dedicated to marketing and public orientation.
+  - Sticky header with brand logo, anchored navigation, theme toggle (Sun/Moon), and dynamic action button (`Sign In` / `Get Started` for guests, `Go to Workspace →` for authenticated users).
+  - Restrained multi-column corporate footer and system status indicator.
+  - Excludes internal sidebar and economic balance indicators.
+- **Application Shell (`AppShell.tsx`):**
+  - Dedicated internal layout with responsive collapsible sidebar, system-wide topbar, balance pills (`Total EXP`, `CorpCoin Balance`), role switcher, notification bell, and theme toggle.
+  - Hosts protected application views across Candidate, Employee, Founder, Admin, and AI Ops tracks.
+- **Public-Only Auth Shell (`Auth.module.css`):**
+  - Split-screen layout: calm form panel on left, corporate simulation value overview on right (responsive single-column fallback on mobile/tablet `<960px`).
+  - Isolated from both `AppShell` and `MarketingLayout` to eliminate clutter and maintain high conversion focus.
+
+### 30.2 Route Hierarchy & Resolution Flow
+```
+Browser URL
+    │
+    ├── "/" ────────► RootRouter (Branded Splash -> Authenticated Redirect / Guest Landing)
+    │
+    ├── /landing ───► MarketingLayout
+    │                   └── LandingPage
+    │
+    ├── /login ─────► PublicOnlyRoute ──► LoginPage (Preserves return URL state)
+    ├── /register ──► PublicOnlyRoute ──► RegisterPage (Password criteria checklist)
+    ├── /verify-email ► VerifyEmailPage
+    │
+    ├── /showcase, /leaderboards, /companies, /jobs
+    │   └── AppShell (Public app browsing with sidebar navigation)
+    │
+    ├── /career, /workplace, /founder, /admin, /ai-ops
+    │   └── AppShell + RoleRoute / ProtectedRoute
+    │
+    └── /404, * ────► NotFoundPage (Standalone fallback)
+```
+
+### 30.3 Design Token Normalization & Restraint
+- **Typography:** Self-hosted `@fontsource/inter` (400, 500, 600, 700). Fixed 9-step type scale (12, 13, 14, 16, 20, 24, 32, 48, 64) with 14px body baseline and universal `tabular-nums` for numeric and ledger values.
+- **Color Palette:** 10-step neutral scale (`zinc`), single brand accent (`indigo`), semantic status tokens (success, warning, danger, info), and zero neon glows (`--cv-shadow-glow-*` clamped to zero/transparent).
+- **Geometric Grid & Radii:** 4px spacing grid (`--cv-space-1` through `--cv-space-16`) and strict 6px / 10px / 14px radii.
+- **Iconography:** Pure vector icons (`Icon.tsx`), strokeWidth 1.5, zero emojis across controls, badges, and alerts.
+
+---
+
+## 31. Motion Design System, Spring Transitions & Accessibility Architecture (TASK PHASE 4, ADR-099)
+
+### 31.1 Motion Engine & Canonical Spring Physics
+- **Engine:** `motion` (`motion/react` v12) integrated without runtime performance overhead.
+- **Canonical Spring Parameters (`client/src/components/ui/Motion/motionTokens.ts`):**
+  - `SPRING_FAST`: `{ type: 'spring', stiffness: 400, damping: 30 }` — calibrated for micro-interactions (button press, compact chips, icon rotations). Snappy response with zero perceived bounce.
+  - `SPRING_SNAPPY`: `{ type: 'spring', stiffness: 500, damping: 35 }` — calibrated for tab layout indicators and toggle switches.
+  - `SPRING_GENTLE`: `{ type: 'spring', stiffness: 260, damping: 24 }` — calibrated for container expansions and layout shifts.
+  - `PAGE_TRANSITION_VARIANTS`: 180ms ease-out fade with subtle 6px vertical translation, avoiding disorienting wipes.
+  - `MODAL_BACKDROP_VARIANTS` & `MODAL_DIALOG_VARIANTS`: Snappy scale-up (`0.96` to `1.0`) entrance with 150ms backdrop fade and exit cleanup.
+  - `STAGGER_CONTAINER_VARIANTS` & `STAGGER_ITEM_VARIANTS`: 40ms stagger interval with 5-item animation cap.
+
+### 31.2 Motion-Enhanced Component Kit
+- **`AnimatedNumber` (`client/src/components/ui/Motion/AnimatedNumber.tsx`):**
+  - Smooth count-up easing `[0.16, 1, 0.3, 1]` with `tabular-nums` alignment.
+  - Test-safe synchronous initial render preventing DOM mismatch in Vitest/SSR.
+  - Deployed in `Topbar.tsx` for EXP and CorpCoin balances.
+- **`Button` (`client/src/components/ui/Button/Button.tsx`):**
+  - Backwards-compatible `motion.button` with `whileTap={{ scale: 0.98 }}` and spring transition.
+  - Automatically disables micro-interactions when `disabled` or `loading`.
+- **`Modal` (`client/src/components/ui/Modal/Modal.tsx`):**
+  - Integrated `AnimatePresence` managing mount/unmount animation cycles.
+  - Scale entrance with escape key handling and backdrop click dismissal.
+- **`Tabs` (`client/src/components/ui/Tabs/Tabs.tsx`):**
+  - Smooth sliding active indicator using `<motion.span layoutId="activeTabIndicator" />` for both pill and underline variants.
+- **`PageTransition` (`client/src/components/ui/Motion/PageTransition.tsx`):**
+  - Route and page container wrapper for calm 6px vertical fade transitions.
+
+### 31.3 Universal Accessibility & Reduced-Motion Protocol
+- **Application-Wide Enforcement:** `<MotionConfig reducedMotion="user">` wraps the router in `App.tsx`.
+- **OS Compliance:** Automatically disables all spring transforms and transitions when `prefers-reduced-motion: reduce` is active at the OS level, falling back to instant state changes or subtle opacity fades.
+
+---
+
+## 32. WebGL Dynamic ASCII Background System
+
+### 32.1 Architecture & Shader Pipeline
+The marketing landing page (`/`) integrates an interactive WebGL2 shader field (`client/src/components/ui/GradientASCII/GradientASCII.tsx`) to deliver an authentic corporate engineering simulation kernel experience.
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   GradientASCII                        │
+├────────────────────────────────────────────────────────┤
+│ Vertex Shader: Quad screen projection                  │
+│ Fragment Field: Procedural noise warp + shape gradient │
+│ Fragment Glyph: Monospace 2D canvas atlas sampler      │
+│ Fragment Halo & Blur: Multi-pass separable Gaussian    │
+│ Fragment Composite: Alpha-blended grain & dither       │
+└────────────────────────────────────────────────────────┘
+```
+
+### 32.2 Design System Tokens & Brand Tuning
+- **Typography:** Strict adherence to `--cv-font-mono` (`"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace`).
+- **Character Glyph Set:** Technical simulation kernel characters (` 01+-·:;=*#@`).
+- **Dual Palettes:**
+  - Dark Mode (`CORPVERSE_DARK_PALETTE`): `['#09090b', '#18181b', '#312e81', '#4338ca', '#6366f1', '#38bdf8']`
+  - Light Mode (`CORPVERSE_LIGHT_PALETTE`): `['#ffffff', '#f4f4f5', '#e0e7ff', '#c7d2fe', '#818cf8', '#6366f1']`
+- **Dynamic Theme Awareness:** Connects directly with `useTheme()` (`lightMode={theme === 'light'}`) with automatic opacity/glow adjustments.
+- **Hero Masking:** Nested inside `.asciiBackground` in `LandingPage.module.css` with elliptical radial mask-image and `.asciiOverlay` linear fade, ensuring zero rectangular clipping and zero pointer interference with hero CTAs and navigation.
+
+
 
 
 

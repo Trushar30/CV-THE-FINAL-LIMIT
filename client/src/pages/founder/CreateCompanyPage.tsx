@@ -5,6 +5,7 @@ import { useToast } from '../../components/ui/Toast/ToastContext';
 import apiClient from '../../api/client';
 import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
+import { BuildingIcon, ClipboardListIcon, AlertTriangleIcon, CoinIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 const CREATION_COST = 100;
@@ -66,8 +67,8 @@ export function CreateCompanyPage(): ReactElement {
     <div className={styles.container} data-testid="create-company-page">
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>🏢</span> Establish Your Corporation
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BuildingIcon size={24} color="var(--cv-brand-500)" /> Establish Your Corporation
           </h1>
           <Badge variant="gold">Founder Mode Active</Badge>
         </div>
@@ -80,8 +81,8 @@ export function CreateCompanyPage(): ReactElement {
         {/* Company Creation Form */}
         <div className={styles.sectionCard}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              <span>📝</span> Company Registration Details
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ClipboardListIcon size={18} color="var(--cv-brand-500)" /> Company Registration Details
             </h2>
           </div>
 
@@ -160,30 +161,35 @@ export function CreateCompanyPage(): ReactElement {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-4)' }}>
           <div className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>
-                <span>🪙</span> Incorporation Fee Breakdown
+              <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CoinIcon size={18} color="var(--cv-gold-400)" />
+                Incorporation Fee Breakdown
               </h2>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-3)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
                 <span>Registration Fee</span>
-                <span style={{ fontWeight: 700, color: 'var(--cv-gold-400)' }}>{CREATION_COST} CorpCoin</span>
+                <span style={{ fontWeight: 700, color: 'var(--cv-gold-400)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <CoinIcon size={12} color="var(--cv-gold-400)" />
+                  <span className="tabular-nums">{CREATION_COST} CorpCoin</span>
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
                 <span>Available Personal Balance</span>
-                <span>{currentBalance.toLocaleString()} CorpCoin</span>
+                <span className="tabular-nums">{currentBalance.toLocaleString()} CorpCoin</span>
               </div>
-              <div style={{ height: '1px', background: 'var(--cv-border-subtle)', margin: 'var(--cv-space-1) 0' }} />
+              <div style={{ height: '1px', background: 'var(--cv-border-default)', margin: 'var(--cv-space-1) 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--cv-text-base)', fontWeight: 700, color: balanceAfter >= 0 ? 'var(--cv-text-primary)' : 'var(--cv-status-danger-text)' }}>
                 <span>Estimated Balance After</span>
-                <span>{balanceAfter.toLocaleString()} CorpCoin</span>
+                <span className="tabular-nums">{balanceAfter.toLocaleString()} CorpCoin</span>
               </div>
             </div>
 
             {!hasSufficientFunds && (
-              <div style={{ padding: 'var(--cv-space-3)', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--cv-radius-md)', color: 'var(--cv-status-danger-text)', fontSize: 'var(--cv-text-xs)' }}>
-                ⚠️ You require at least {CREATION_COST} CorpCoin to establish a company.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: 'var(--cv-space-3)', background: 'var(--cv-status-danger-bg)', border: '1px solid var(--cv-status-danger-border)', borderRadius: 'var(--cv-radius-md)', color: 'var(--cv-status-danger-text)', fontSize: 'var(--cv-text-xs)' }}>
+                <AlertTriangleIcon size={14} color="var(--cv-status-danger-text)" />
+                <span>You require at least {CREATION_COST} CorpCoin to establish a company.</span>
               </div>
             )}
           </div>

@@ -6,6 +6,15 @@ import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { Table, type Column } from '../../components/ui/Table/Table';
+import {
+  BuildingIcon,
+  ZapIcon,
+  BotIcon,
+  ClipboardListIcon,
+  UsersIcon,
+  UserIcon,
+  TrendingUpIcon,
+} from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface CompanyData {
@@ -127,21 +136,23 @@ export function FounderDashboardPage(): ReactElement {
     return (
       <div className={styles.container} data-testid="no-company-state">
         <div className={styles.header}>
-          <h1 className={styles.title}>
-            <span>🏢</span> Corporate Command Center
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BuildingIcon size={24} color="var(--cv-brand-500)" /> Corporate Command Center
           </h1>
           <p className={styles.subtitle}>You hold Founder Mode privileges, but do not yet own an active enterprise.</p>
         </div>
 
         <div className={styles.sectionCard} style={{ textAlign: 'center', padding: 'var(--cv-space-8) var(--cv-space-4)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏗️</div>
+          <div style={{ display: 'inline-flex', padding: '16px', borderRadius: 'var(--cv-radius-full)', background: 'var(--cv-bg-surface-elevated)', border: '1px solid var(--cv-border-default)', marginBottom: '1rem' }}>
+            <BuildingIcon size={32} color="var(--cv-gold-400)" />
+          </div>
           <h2 style={{ margin: 0, fontSize: 'var(--cv-text-xl)', color: 'var(--cv-text-primary)' }}>Establish Your Corporation</h2>
           <p style={{ maxWidth: 540, margin: '0.5rem auto 1.5rem', fontSize: 'var(--cv-text-sm)', color: 'var(--cv-text-secondary)' }}>
             Founders receive starter capital to establish a new corporation and acquire an autonomous AI bot workforce.
           </p>
           <div>
             <Button variant="gold" size="lg" onClick={() => navigate('/founder/company/new')} data-testid="start-company-btn">
-              Create New Company (100 CC) 🚀
+              Create New Company (100 CC)
             </Button>
           </div>
         </div>
@@ -222,8 +233,8 @@ export function FounderDashboardPage(): ReactElement {
       <div className={styles.header}>
         <div className={styles.titleRow}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 className={styles.title}>
-              <span>🏛️</span> {company.name}
+            <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BuildingIcon size={24} color="var(--cv-brand-500)" /> {company.name}
             </h1>
             <Badge variant="cyan">
               {(company.domain || (company as unknown as { domainsHired?: string[] }).domainsHired?.[0] || 'SOFTWARE_ENGINEERING').replace(/_/g, ' ')}
@@ -236,14 +247,14 @@ export function FounderDashboardPage(): ReactElement {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/founder/simulation')}>
-              ⚡ Daily Dilemma
+            <Button variant="secondary" size="sm" leftIcon={<ZapIcon size={14} />} onClick={() => navigate('/founder/simulation')}>
+              Daily Dilemma
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/founder/bots')}>
-              🛒 Bot Fleet
+            <Button variant="secondary" size="sm" leftIcon={<BotIcon size={14} />} onClick={() => navigate('/founder/bots')}>
+              Bot Fleet
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => navigate('/founder/jobs')}>
-              📋 Open Requisitions
+            <Button variant="secondary" size="sm" leftIcon={<ClipboardListIcon size={14} />} onClick={() => navigate('/founder/jobs')}>
+              Open Requisitions
             </Button>
           </div>
         </div>
@@ -353,8 +364,8 @@ export function FounderDashboardPage(): ReactElement {
       {/* Employee Roster Section */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>
-            <span>👥</span> Corporate Workforce Roster ({employees.length} Engineers)
+          <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <UsersIcon size={18} color="var(--cv-brand-500)" /> Corporate Workforce Roster ({employees.length} Engineers)
           </h2>
           <Button variant="secondary" size="sm" onClick={() => navigate('/founder/jobs')}>
             + Hire More Staff
@@ -363,7 +374,7 @@ export function FounderDashboardPage(): ReactElement {
 
         {employees.length === 0 ? (
           <div className={styles.emptyState}>
-            <span>👤</span>
+            <UserIcon size={32} color="var(--cv-text-muted)" />
             <h3 className={styles.emptyStateTitle}>No Employees Hired Yet</h3>
             <p style={{ margin: 0, fontSize: 'var(--cv-text-sm)' }}>
               Open a job requisition to recruit talent into your engineering workforce.
@@ -383,8 +394,8 @@ export function FounderDashboardPage(): ReactElement {
       {financials.length > 0 && (
         <div className={styles.sectionCard}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              <span>📈</span> Daily Financial History Snapshots
+            <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <TrendingUpIcon size={18} color="var(--cv-brand-500)" /> Daily Financial History Snapshots
             </h2>
           </div>
 

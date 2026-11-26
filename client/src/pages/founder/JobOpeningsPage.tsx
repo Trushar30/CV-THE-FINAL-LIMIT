@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
 import { Table, type Column } from '../../components/ui/Table/Table';
+import { ClipboardListIcon, BriefcaseIcon } from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface JobPosting {
@@ -189,8 +190,8 @@ export function JobOpeningsPage(): ReactElement {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>📋</span> Corporate Job Requisitions
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ClipboardListIcon size={24} color="var(--cv-brand-500)" /> Corporate Job Requisitions
           </h1>
           <Button
             variant="gold"
@@ -236,8 +237,8 @@ export function JobOpeningsPage(): ReactElement {
       {/* Jobs Table */}
       <div className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>
-            <span>💼</span> Active & Historical Openings ({jobs.length})
+          <h2 className={styles.sectionTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BriefcaseIcon size={18} color="var(--cv-brand-500)" /> Active & Historical Openings ({jobs.length})
           </h2>
           <span style={{ fontSize: 'var(--cv-text-xs)', color: 'var(--cv-text-tertiary)' }}>
             Company Capacity: {company?.employeeCount ?? 0} / {company?.maxEmployees ?? 20}
@@ -246,7 +247,7 @@ export function JobOpeningsPage(): ReactElement {
 
         {jobs.length === 0 ? (
           <div className={styles.emptyState}>
-            <span>📋</span>
+            <ClipboardListIcon size={32} color="var(--cv-text-muted)" />
             <h3 className={styles.emptyStateTitle}>No Requisitions Created</h3>
             <p style={{ margin: 0, fontSize: 'var(--cv-text-sm)' }}>
               Publish a job opening to attract candidate talent.

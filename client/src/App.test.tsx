@@ -7,13 +7,21 @@ describe('Client Smoke & App Suite', () => {
     expect(true).toBe(true);
   });
 
-  it('renders CorpVerse landing page on root route', () => {
-    window.history.pushState({}, '', '/');
+  it('renders CorpVerse landing page on /landing route', () => {
+    window.history.pushState({}, '', '/landing');
     render(<App />);
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toBeDefined();
     expect(heading.textContent).toContain('Experience the Corporate Ladder');
     expect(screen.getByText('Open Career Hub')).toBeDefined();
+  });
+
+  it('redirects authenticated session on root route to role dashboard', () => {
+    window.history.pushState({}, '', '/');
+    render(<App />);
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toBeDefined();
+    expect(heading.textContent).toContain('Hiring Journey & Applications');
   });
 
   it('renders component showcase at /showcase route', () => {

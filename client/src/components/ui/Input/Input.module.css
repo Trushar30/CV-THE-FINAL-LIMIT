@@ -6,11 +6,10 @@
 }
 
 .label {
-  font-size: var(--cv-text-xs);
-  font-weight: var(--cv-font-semibold);
+  font-size: var(--cv-text-12);
+  font-weight: 500;
   color: var(--cv-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--cv-tracking-normal);
 }
 
 .required {
@@ -28,15 +27,19 @@
 .input {
   width: 100%;
   font-family: var(--cv-font-sans);
-  font-size: var(--cv-text-sm);
+  font-size: var(--cv-text-14);
   color: var(--cv-text-primary);
   background-color: var(--cv-bg-input);
   border: 1px solid var(--cv-border-default);
-  border-radius: var(--cv-radius-md);
-  padding: 0.5rem 0.875rem;
-  min-height: 40px;
+  border-radius: var(--cv-radius-sm);
+  padding: 0 12px;
+  height: 36px;
+  min-height: 36px;
   outline: none;
-  transition: all var(--cv-transition-fast);
+  transition:
+    border-color var(--cv-transition-fast),
+    background-color var(--cv-transition-fast),
+    box-shadow var(--cv-transition-fast);
 }
 
 .input::placeholder {
@@ -45,22 +48,22 @@
 
 .input:focus {
   border-color: var(--cv-border-focus);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
-  background-color: var(--cv-bg-surface-elevated);
+  box-shadow: 0 0 0 1px var(--cv-border-focus);
+  background-color: var(--cv-bg-surface);
 }
 
 .input:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   background-color: var(--cv-bg-surface-subtle);
 }
 
 .hasLeftIcon {
-  padding-left: 2.5rem;
+  padding-left: 36px;
 }
 
 .hasRightIcon {
-  padding-right: 2.5rem;
+  padding-right: 36px;
 }
 
 .leftIcon,
@@ -74,31 +77,49 @@
   font-size: 1rem;
 }
 
+.rightIcon button {
+  pointer-events: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cv-text-muted);
+  transition: color var(--cv-transition-fast);
+}
+
+.rightIcon button:hover {
+  color: var(--cv-text-primary);
+}
+
 .leftIcon {
-  left: 0.875rem;
+  left: 10px;
 }
 
 .rightIcon {
-  right: 0.875rem;
+  right: 10px;
 }
+
 
 .hasError {
   border-color: var(--cv-status-danger-text) !important;
 }
 
 .hasError:focus {
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+  box-shadow: 0 0 0 1px var(--cv-status-danger-text) !important;
 }
 
 .helperText {
-  font-size: var(--cv-text-xs);
+  font-size: var(--cv-text-12);
   color: var(--cv-text-muted);
   margin-top: 2px;
 }
 
 .errorMessage {
-  font-size: var(--cv-text-xs);
+  font-size: var(--cv-text-12);
   color: var(--cv-status-danger-text);
-  font-weight: var(--cv-font-medium);
+  font-weight: 500;
   margin-top: 2px;
 }

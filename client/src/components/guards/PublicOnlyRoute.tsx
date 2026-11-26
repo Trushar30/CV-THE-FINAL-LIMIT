@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../store/AuthContext';
+import { useAuth, getPostLoginRedirect } from '../../store/AuthContext';
 
 export interface PublicOnlyRouteProps {
   children: ReactElement;
@@ -9,19 +9,21 @@ export interface PublicOnlyRouteProps {
 
 export function PublicOnlyRoute({
   children,
-  redirectTo = '/',
+  redirectTo,
 }: PublicOnlyRouteProps): ReactElement {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return children;
   }
 
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />;
+    const destination = redirectTo || getPostLoginRedirect(user);
+    return <Navigate to={destination} replace />;
   }
 
   return children;
 }
 
 export default PublicOnlyRoute;
+

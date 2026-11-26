@@ -369,6 +369,9 @@ export class AIManagerService {
     const instanceKey = doc ? doc._id.toString() : (idOrCode as string);
     let adapter = this.router.getAdapter(pool, instanceKey);
     if (!adapter && doc) {
+      adapter = this.router.getAdapter(pool, doc.code);
+    }
+    if (!adapter && doc) {
       const apiKey = doc.encryptedApiKey ? decryptSecret(doc.encryptedApiKey) : undefined;
       try {
         adapter = createDefaultAdapter(doc.code, apiKey, doc.modelId || undefined);

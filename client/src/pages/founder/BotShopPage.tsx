@@ -5,6 +5,18 @@ import apiClient from '../../api/client';
 import { Button } from '../../components/ui/Button/Button';
 import { Badge } from '../../components/ui/Badge/Badge';
 import { Spinner } from '../../components/ui/Spinner/Spinner';
+import {
+  BotIcon,
+  ZapIcon,
+  ScaleIcon,
+  ShoppingCartIcon,
+  CoinIcon,
+  CheckCircle2Icon,
+  AlertTriangleIcon,
+  CheckIcon,
+  LockIcon,
+  BrainCircuitIcon,
+} from '../../components/ui/Icon';
 import styles from './Founder.module.css';
 
 interface BotRosterItem {
@@ -26,7 +38,7 @@ interface BotCatalogItem {
   type: 'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT';
   title: string;
   subtitle: string;
-  icon: string;
+  icon: ReactElement;
   cost: number;
   features: string[];
 }
@@ -36,7 +48,7 @@ const BASIC_BOT_CATALOG: BotCatalogItem[] = [
     type: 'HIRING_BOT',
     title: 'Basic Hiring Bot',
     subtitle: 'Automated ATS & Technical Screening',
-    icon: '🤖',
+    icon: <BotIcon size={24} color="var(--cv-brand-500)" />,
     cost: 250,
     features: [
       'Executes candidate ATS keyword and rubric screening',
@@ -48,7 +60,7 @@ const BASIC_BOT_CATALOG: BotCatalogItem[] = [
     type: 'TASK_BOT',
     title: 'Basic Task Bot',
     subtitle: 'Engineering Problem Generator',
-    icon: '⚡',
+    icon: <ZapIcon size={24} color="var(--cv-gold-400)" />,
     cost: 250,
     features: [
       'Generates daily primary and bonus engineering challenges',
@@ -60,7 +72,7 @@ const BASIC_BOT_CATALOG: BotCatalogItem[] = [
     type: 'EVALUATION_BOT',
     title: 'Basic Evaluation Bot',
     subtitle: 'Code & Architectural Assessment',
-    icon: '⚖️',
+    icon: <ScaleIcon size={24} color="var(--cv-brand-500)" />,
     cost: 250,
     features: [
       'Authoritatively evaluates employee task code submissions',
@@ -74,58 +86,63 @@ export function BotShopPage(): ReactElement {
   const { user, fetchCurrentUser } = useAuth();
   const { success, error } = useToast();
 
-  const [loading, setLoading] = useState(true);
-  const [purchasingType, setPurchasingType] = useState<string | null>(null);
   const [company, setCompany] = useState<CompanyDetails | null>(null);
   const [ownedBots, setOwnedBots] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [purchasingType, setPurchasingType] = useState<string | null>(null);
 
   const loadData = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const res = await apiClient.get<{ company: CompanyDetails; bots: BotRosterItem[] }>('/founder/bots');
       setCompany(res.company);
 
-      const ownedMap: Record<string, boolean> = {};
+      const botsMap: Record<string, boolean> = {};
       if (res.bots && Array.isArray(res.bots)) {
         res.bots.forEach((b) => {
-          if (b.isActive) {
-            ownedMap[b.botType] = true;
-          }
+          if (b.isActive) botsMap[b.botType] = true;
         });
       }
-      setOwnedBots(ownedMap);
+      setOwnedBots(botsMap);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load bot storefront';
       error(msg);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [error]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
-  const handlePurchase = async (botType: 'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT'): Promise<void> => {
+  const handlePurchase = async (botType: 'HIRING_BOT' | 'TASK_BOT' | 'EVALUATION_BOT') => {
     try {
       setPurchasingType(botType);
       await apiClient.post('/founder/bots/purchase', { botType });
-      success(`${botType.replace('_', ' ')} acquired successfully!`);
-      await fetchCurrentUser();
-      await loadData();
+
+      success(`Successfully commissioned ${botType.replace('_', ' ')} for 250 CorpCoin.`, 'AI Bot Acquired');
+
+      await Promise.all([loadData(), fetchCurrentUser()]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to purchase bot';
-      error(msg);
+      const errorMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message
+          : 'Failed to complete bot acquisition.';
+
+      error(errorMsg || 'Transaction rejected by backend.', 'Acquisition Failed');
     } finally {
       setPurchasingType(null);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className={styles.container} style={{ alignItems: 'center', justifyContent: 'center', minHeight: 350 }}>
+      <div className={styles.loadingContainer}>
         <Spinner size="lg" />
-        <p style={{ color: 'var(--cv-text-secondary)', marginTop: '1rem' }}>Accessing AI Bot Marketplace...</p>
+        <span style={{ marginTop: 'var(--cv-space-4)', color: 'var(--cv-text-secondary)', fontSize: 'var(--cv-text-sm)' }}>
+          Loading AI Workforce Inventory...
+        </span>
       </div>
     );
   }
@@ -138,12 +155,15 @@ export function BotShopPage(): ReactElement {
     <div className={styles.container} data-testid="bot-shop-page">
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <h1 className={styles.title}>
-            <span>🛒</span> AI Workforce Storefront
+          <h1 className={styles.title} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShoppingCartIcon size={22} color="var(--cv-brand-500)" /> AI Workforce Storefront
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Badge variant="gold">
-              🪙 Balance: {currentBalance.toLocaleString()} CC
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <CoinIcon size={12} color="var(--cv-gold-400)" />
+                Balance: <strong className="tabular-nums">{currentBalance.toLocaleString()} CC</strong>
+              </span>
             </Badge>
             {allBasicBotsOwned ? (
               <Badge variant="success">Open for Hiring Active</Badge>
@@ -161,8 +181,9 @@ export function BotShopPage(): ReactElement {
       {allBasicBotsOwned ? (
         <div className={styles.cyanBanner} data-testid="hiring-active-banner">
           <div>
-            <div style={{ fontWeight: 700, fontSize: 'var(--cv-text-base)', color: 'var(--cv-accent-cyan-400)' }}>
-              ✨ Complete Basic Suite Deployed: {company?.name || 'Company'} is Open for Hiring
+            <div style={{ fontWeight: 700, fontSize: 'var(--cv-text-base)', color: 'var(--cv-accent-cyan-400)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2Icon size={16} color="var(--cv-accent-cyan-400)" />
+              Complete Basic Suite Deployed: {company?.name || 'Company'} is Open for Hiring
             </div>
             <p style={{ margin: '0.25rem 0 0', fontSize: 'var(--cv-text-xs)', color: 'var(--cv-text-secondary)' }}>
               All 3 basic workforce bots (Hiring, Task, Evaluation) are active. You can now post requisitions and process job applications.
@@ -173,8 +194,9 @@ export function BotShopPage(): ReactElement {
       ) : (
         <div className={styles.goldBanner} data-testid="hiring-inactive-banner">
           <div>
-            <div style={{ fontWeight: 700, fontSize: 'var(--cv-text-base)', color: 'var(--cv-gold-400)' }}>
-              ⚠️ Hiring Suspended: Workforce Incomplete ({ownedCount}/3 Bots)
+            <div style={{ fontWeight: 700, fontSize: 'var(--cv-text-base)', color: 'var(--cv-gold-400)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertTriangleIcon size={16} color="var(--cv-gold-400)" />
+              Hiring Suspended: Workforce Incomplete ({ownedCount}/3 Bots)
             </div>
             <p style={{ margin: '0.25rem 0 0', fontSize: 'var(--cv-text-xs)', color: 'var(--cv-text-secondary)' }}>
               Purchase all 3 basic bots (750 CC total) to activate candidate intake and task generation.
@@ -216,7 +238,7 @@ export function BotShopPage(): ReactElement {
                   <ul className={styles.botFeatureList}>
                     {bot.features.map((feat, idx) => (
                       <li key={idx} className={styles.botFeatureItem}>
-                        <span style={{ color: isOwned ? 'var(--cv-accent-emerald-400)' : 'var(--cv-gold-400)' }}>✓</span>
+                        <CheckIcon size={14} color={isOwned ? 'var(--cv-status-success-text)' : 'var(--cv-gold-400)'} />
                         <span>{feat}</span>
                       </li>
                     ))}
@@ -225,8 +247,9 @@ export function BotShopPage(): ReactElement {
               </div>
 
               <div className={styles.botFooter}>
-                <div className={styles.botPrice}>
-                  <span>🪙 {bot.cost}</span>
+                <div className={styles.botPrice} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CoinIcon size={14} color="var(--cv-gold-400)" />
+                  <span className="tabular-nums">{bot.cost}</span>
                   <span style={{ fontSize: 'var(--cv-text-xs)', color: 'var(--cv-text-tertiary)', fontWeight: 400 }}>CC</span>
                 </div>
 
@@ -256,7 +279,7 @@ export function BotShopPage(): ReactElement {
           <div>
             <div className={styles.botHeader}>
               <div className={styles.botIconCircle} style={{ background: 'rgba(167, 139, 250, 0.15)', color: 'var(--cv-violet-400)' }}>
-                🧠
+                <BrainCircuitIcon size={24} color="var(--cv-violet-400)" />
               </div>
               <Badge variant="default">Coming in v2</Badge>
             </div>
@@ -267,24 +290,29 @@ export function BotShopPage(): ReactElement {
             <div style={{ margin: 'var(--cv-space-4) 0' }}>
               <ul className={styles.botFeatureList}>
                 <li className={styles.botFeatureItem}>
-                  <span>🔒</span> Bounded autonomous market operations
+                  <LockIcon size={14} color="var(--cv-text-muted)" />
+                  <span>Bounded autonomous market operations</span>
                 </li>
                 <li className={styles.botFeatureItem}>
-                  <span>🔒</span> Enhanced productivity coefficient ($+15\%$)
+                  <LockIcon size={14} color="var(--cv-text-muted)" />
+                  <span>Enhanced productivity coefficient (+15%)</span>
                 </li>
                 <li className={styles.botFeatureItem}>
-                  <span>🔒</span> Config price: 400 CorpCoin
+                  <LockIcon size={14} color="var(--cv-text-muted)" />
+                  <span>Config price: 400 CorpCoin</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div className={styles.botFooter}>
-            <div className={styles.botPrice} style={{ color: 'var(--cv-text-tertiary)' }}>
-              <span>🪙 400 CC</span>
+            <div className={styles.botPrice} style={{ color: 'var(--cv-text-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <CoinIcon size={14} color="var(--cv-text-tertiary)" />
+              <span className="tabular-nums">400 CC</span>
             </div>
-            <Button variant="secondary" size="sm" disabled>
-              Locked in v1
+
+            <Button variant="outline" size="sm" disabled>
+              Locked (v2 Feature)
             </Button>
           </div>
         </div>
@@ -292,3 +320,5 @@ export function BotShopPage(): ReactElement {
     </div>
   );
 }
+
+export default BotShopPage;

@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { useTheme } from '../store/ThemeContext';
 import {
   Button,
   Input,
@@ -19,6 +20,7 @@ import {
   RocketIcon,
   ClipboardListIcon,
   EmptyApplicationIllustration,
+  GradientASCII,
 } from '../components/ui';
 import styles from './ShowcasePage.module.css';
 
@@ -72,6 +74,7 @@ const DEMO_TABLE_DATA: DemoTableRow[] = [
 ];
 
 export function ShowcasePage(): ReactElement {
+  const { theme } = useTheme();
   const toast = useToast();
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('components');
@@ -89,6 +92,7 @@ export function ShowcasePage(): ReactElement {
     },
     { id: 'typography', label: 'Design System Tokens', icon: <SparklesIcon size={16} /> },
     { id: 'interactive', label: 'State & Overlays', icon: <ZapIcon size={16} /> },
+    { id: 'visuals', label: 'WebGL Simulation (React Bits)', icon: <SparklesIcon size={16} /> },
   ];
 
   const tableColumns: Column<DemoTableRow>[] = [
@@ -735,6 +739,52 @@ export function ShowcasePage(): ReactElement {
               <Button variant="primary" onClick={() => setModalOpen(true)}>
                 Open Modal Demonstration
               </Button>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'visuals' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--cv-space-6)' }}>
+            <Card
+              title="React Bits — <GradientASCII /> Component"
+              subtitle="Interactive WebGL ASCII light simulation with cursor trail scramble and click ripple effects"
+            >
+              <p
+                style={{
+                  color: 'var(--cv-text-secondary)',
+                  marginBottom: 'var(--cv-space-4)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Hover over the viewport to scramble characters under the cursor. Click anywhere to trigger the ripple wave.
+              </p>
+              <div
+                style={{
+                  width: '100%',
+                  height: '600px',
+                  position: 'relative',
+                  borderRadius: 'var(--cv-radius-xl)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--cv-border-default)',
+                  background: 'var(--cv-bg-app)',
+                }}
+              >
+                <GradientASCII
+                  colors={
+                    theme === 'light'
+                      ? ['#ffffff', '#f0f4ff', '#e0e7ff', '#c7d2fe', '#818cf8', '#6366f1']
+                      : ['#1e3fd8', '#f6f8ff', '#a5d8ff', '#38bdf8']
+                  }
+                  shape="horizon"
+                  characters=" =+xX0S8#@"
+                  cellSize={18}
+                  density={theme === 'light' ? 0.72 : 0.8}
+                  gradientOpacity={theme === 'light' ? 0.35 : 0.9}
+                  glyphOpacity={theme === 'light' ? 0.65 : 0.85}
+                  glow={theme === 'light' ? 0.12 : 0.2}
+                  lightMode={theme === 'light'}
+                />
+              </div>
             </Card>
           </div>
         )}

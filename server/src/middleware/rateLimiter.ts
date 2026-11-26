@@ -58,7 +58,7 @@ export const loginLimiter = rateLimit({
  */
 export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: env.NODE_ENV === 'development' ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => env.NODE_ENV === 'test',

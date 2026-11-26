@@ -1,12 +1,14 @@
-import type { ReactElement, ReactNode, ButtonHTMLAttributes } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { motion, type HTMLMotionProps } from 'motion/react';
 import { Spinner } from '../Spinner/Spinner';
+import { SPRING_FAST } from '../Motion/motionTokens';
 import styles from './Button.module.css';
 
 export type ButtonVariant =
   'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'cyan' | 'gold';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
@@ -26,6 +28,7 @@ export function Button({
   disabled,
   children,
   className = '',
+  type = 'button',
   ...props
 }: ButtonProps): ReactElement {
   const spinnerColor =
@@ -35,10 +38,14 @@ export function Button({
         ? 'muted'
         : 'primary';
 
+  const isDisabled = disabled || loading;
+
   return (
-    <button
-      type="button"
-      disabled={disabled || loading}
+    <motion.button
+      type={type}
+      disabled={isDisabled}
+      whileTap={isDisabled ? undefined : { scale: 0.98 }}
+      transition={SPRING_FAST}
       className={`
         ${styles.button}
         ${styles[`variant-${variant}`]}
@@ -51,9 +58,9 @@ export function Button({
     >
       {loading && <Spinner size={size === 'lg' ? 'md' : 'sm'} color={spinnerColor} />}
       {!loading && leftIcon && <span className={styles.icon}>{leftIcon}</span>}
-      <span>{children}</span>
+      <span className={styles.content}>{children}</span>
       {!loading && rightIcon && <span className={styles.icon}>{rightIcon}</span>}
-    </button>
+    </motion.button>
   );
 }
 
