@@ -31,20 +31,27 @@ export function verifyCsrfOrigin(req: Request, _res: Response, next: NextFunctio
   const allowedOrigins = [
     env.CLIENT_ORIGIN,
     'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
     'http://127.0.0.1:3000',
   ];
 
-  const isAllowed = allowedOrigins.some((allowed) => {
-    try {
-      const allowedUrl = new URL(allowed);
-      const requestUrl = new URL(originHeader);
-      return allowedUrl.origin === requestUrl.origin;
-    } catch {
-      return originHeader.startsWith(allowed);
-    }
-  });
+  const isAllowed =
+    allowedOrigins.some((allowed) => {
+      try {
+        const allowedUrl = new URL(allowed);
+        const requestUrl = new URL(originHeader);
+        return allowedUrl.origin === requestUrl.origin;
+      } catch {
+        return originHeader.startsWith(allowed);
+      }
+    }) ||
+    (env.NODE_ENV === 'development' &&
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(originHeader));
 
   if (!isAllowed) {
     return next(

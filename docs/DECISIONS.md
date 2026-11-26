@@ -84,6 +84,7 @@ This document tracks all foundational architectural and technical decisions made
 - [ADR-111: Canonical React Bits <GradientASCII /> Defaults & Showcase Integration](#adr-111-canonical-react-bits-gradientascii--defaults--showcase-integration)
 - [ADR-112: Marketing Navigation Simplification & Minimalist Topbar Layout](#adr-112-marketing-navigation-simplification--minimalist-topbar-layout)
 - [ADR-113: Light (White) Theme Overhaul, Theme-Adaptive Hero Contrast, and ASCII Palettes](#adr-113-light-white-theme-overhaul-theme-adaptive-hero-contrast-and-ascii-palettes)
+- [ADR-114: Multi-Port Localhost CORS & CSRF Origin Resolution](#adr-114-multi-port-localhost-cors--csrf-origin-resolution)
 
 ---
 
@@ -2195,6 +2196,25 @@ This document tracks all foundational architectural and technical decisions made
   - Client Vitest Suite: 20 test files, 155/155 tests passing.
   - Client Production Build: Clean compilation in 7.55s.
   - Monorepo Lint: 0 errors, 0 warnings.
+
+---
+
+### ADR-114: Multi-Port Localhost CORS & CSRF Origin Resolution
+
+- **Status:** ACCEPTED
+- **Context:**
+  - When port 5173 is occupied by another local process, Vite automatically increments its development port to 5174 (or 5175).
+  - The browser requests `http://localhost:5000/api/v1/auth/login` from `Origin: http://localhost:5174`.
+  - Previously, `cors` in `app.ts` only returned `Access-Control-Allow-Origin: http://localhost:5173`, causing browsers (e.g. Brave/Chrome) to block responses with `Failed to fetch`.
+  - Additionally, `verifyCsrfOrigin` only listed port 5173 and 3000 in `allowedOrigins`.
+- **Decision:**
+  - Updated `app.ts` to accept dynamic origins in development: matches standard client origins (`localhost:5173`, `5174`, `5175`, `3000`, `127.0.0.1:*`) and any `localhost`/`127.0.0.1` port when `NODE_ENV === 'development'`.
+  - Updated `csrf.middleware.ts` to include ports 5174 and 5175, and regex match `localhost`/`127.0.0.1` on any port in development.
+  - Added `/api` proxy in `client/vite.config.ts` targeting `http://localhost:5000` with `changeOrigin: true`.
+- **Verification:**
+  - Tested preflight `OPTIONS http://localhost:5000/api/v1/auth/login` with `Origin: http://localhost:5174` returning HTTP 204 with `Access-Control-Allow-Origin: http://localhost:5174` and `Access-Control-Allow-Credentials: true`.
+  - Tested `POST http://localhost:5000/api/v1/auth/login` with `Origin: http://localhost:5174` returning HTTP 200 OK with valid JWT and user payload.
+  - Monorepo test suite: 1,010/1,010 tests passing.
 
 
 

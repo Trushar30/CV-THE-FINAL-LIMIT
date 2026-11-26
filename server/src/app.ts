@@ -38,9 +38,30 @@ export function createApp(additionalRouter?: Router, options?: AppOptions): Expr
   app.use(helmet());
 
   // 2. Cross-Origin Resource Sharing
+  const allowedOrigins = [
+    env.CLIENT_ORIGIN,
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
+    'http://127.0.0.1:3000',
+  ];
+
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (
+          allowedOrigins.includes(origin) ||
+          (env.NODE_ENV === 'development' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
+        ) {
+          return callback(null, true);
+        }
+        return callback(null, false);
+      },
       credentials: true,
     })
   );
